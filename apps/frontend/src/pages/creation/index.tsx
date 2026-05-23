@@ -7,7 +7,7 @@ function CreationPage() {
   const [progress, setProgress] = useState(0);
   const [taskId, setTaskId] = useState('');
 
-  const handleCreate = async (values: any) => {
+  const handleCreate = async (_values: any) => {
     setLoading(true);
     setProgress(0);
     
