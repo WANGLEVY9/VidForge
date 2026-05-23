@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "dev": "pnpm --filter=@vidforge/frontend dev & pnpm --filter=@vidforge/backend start:dev",
-    "build": "pnpm --filter=@vidforge/frontend build && pnpm --filter=@vidforge/backend build",
+    "build": "cd apps/frontend && npm run build && cd ../backend && npm run build",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "prettier": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
