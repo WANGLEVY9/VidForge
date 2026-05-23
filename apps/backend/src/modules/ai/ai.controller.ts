@@ -16,7 +16,7 @@ export class AiController {
   @Get('health')
   @ApiOperation({ summary: '健康检查' })
   health() {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+    return { status: 'ok', timestamp: new Date().toISOString(), service: 'ai' };
   }
 
   @Get('ark/configs')

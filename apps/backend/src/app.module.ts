@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiModule } from './modules/ai/ai.module';
+import { HealthController } from './modules/common/health.controller';
 
 @Module({
   imports: [
@@ -45,5 +46,6 @@ import { AiModule } from './modules/ai/ai.module';
     // AI模块
     AiModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
