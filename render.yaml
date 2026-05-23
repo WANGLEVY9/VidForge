@@ -1,0 +1,55 @@
+services:
+  # Web Service (Backend)
+  - type: web
+    name: vidforge-api
+    env: node
+    region: singapore
+    plan: starter
+    buildCommand: cd apps/backend && npm install && npm run build
+    startCommand: cd apps/backend && npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vidforge-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: vidforge-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: VOLC_ENGINE_ACCESS_KEY
+        sync: false
+      - key: VOLC_ENGINE_SECRET_KEY
+        sync: false
+      - key: VOLC_ENGINE_REGION
+        value: cn-beijing
+      - key: OSS_ACCESS_KEY
+        sync: false
+      - key: OSS_SECRET_KEY
+        sync: false
+      - key: OSS_BUCKET
+        value: vidforge-assets
+      - key: OSS_ENDPOINT
+        value: oss-cn-beijing.aliyuncs.com
+
+  # Redis
+  - type: redis
+    name: vidforge-redis
+    region: singapore
+    plan: free
+    maxmemoryPolicy: noeviction
+
+databases:
+  # PostgreSQL
+  - name: vidforge-db
+    region: singapore
+    plan: starter
+    user: vidforge
+    databaseName: vidforge
