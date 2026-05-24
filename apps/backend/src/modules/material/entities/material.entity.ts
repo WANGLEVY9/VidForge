@@ -23,6 +23,15 @@ export class Material {
   @Column('simple-array', { nullable: true })
   tags: string[];
 
+  @Column({ type: 'json', nullable: true })
+  productTags: Record<string, any>;
+
+  @Column({ type: 'json', nullable: true })
+  videoTags: Record<string, any>;
+
+  @Column({ type: 'json', nullable: true })
+  clipTags: Record<string, any>;
+
   @Column({ nullable: true })
   category: string;
 

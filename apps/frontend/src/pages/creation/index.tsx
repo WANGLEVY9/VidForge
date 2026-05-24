@@ -1,17 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Button, Input, Form, Space, Typography, Steps, Progress,
-  Tag, Row, Col, Slider, Switch, Tooltip, message,
+  Tag, Row, Col, Slider, Switch, message,
   Timeline, Segmented, Radio,
 } from 'antd';
 import {
-  PlayCircleOutlined, PauseCircleOutlined, ReloadOutlined,
-  VideoCameraOutlined, PictureOutlined,
+  PlayCircleOutlined, ReloadOutlined,
   ThunderboltOutlined, CheckCircleOutlined, ClockCircleOutlined,
-  LoadingOutlined, EyeOutlined, DownloadOutlined, SettingOutlined,
-  FileTextOutlined, PlusOutlined, DeleteOutlined, EditOutlined,
+  LoadingOutlined, DownloadOutlined, SettingOutlined,
+  FileTextOutlined, EditOutlined,
 } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
+import { StoryboardEditor } from '../../components/storyboard/StoryboardEditor';
+import { useStoryboardStore, Shot } from '../../store/useStoryboardStore';
+import '../../components/storyboard/storyboard.css';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -59,6 +61,36 @@ function CreationPage() {
   const [form] = Form.useForm();
   const progressTimer = useRef<NodeJS.Timeout | null>(null);
 
+  const setShots = useStoryboardStore((s) => s.setShots);
+  const setActiveShot = useStoryboardStore((s) => s.setActiveShot);
+
+  useEffect(() => {
+    const shots: Shot[] = mockStoryboard.map((m) => ({
+      id: m.id,
+      order: m.order,
+      description: m.description,
+      duration: m.duration,
+      type: m.type,
+      script: '',
+      status: m.status,
+      videoUrl: m.videoUrl,
+    }));
+    setShots(shots);
+    setActiveShot(shots[0]?.id ?? null);
+  }, []);
+
+  const handleRegenerateShot = useCallback((shotId: string) => {
+    setStoryboard((prev) => prev.map((item) =>
+      item.id === shotId ? { ...item, status: 'generating' as const } : item
+    ));
+    setTimeout(() => {
+      setStoryboard((prev) => prev.map((item) =>
+        item.id === shotId ? { ...item, status: 'completed' as const, videoUrl: '#' } : item
+      ));
+      message.success('分镜重新生成成功');
+    }, 3000);
+  }, []);
+
   const completedCount = storyboard.filter((s) => s.status === 'completed').length;
   const totalCount = storyboard.length;
 
@@ -104,18 +136,6 @@ function CreationPage() {
       if (progressTimer.current) clearTimeout(progressTimer.current);
     };
   }, []);
-
-  const handleRetryFailed = (id: string) => {
-    setStoryboard((prev) => prev.map((item) =>
-      item.id === id ? { ...item, status: 'generating' as const } : item
-    ));
-    setTimeout(() => {
-      setStoryboard((prev) => prev.map((item) =>
-        item.id === id ? { ...item, status: 'completed' as const, videoUrl: '#' } : item
-      ));
-      message.success('重新生成成功');
-    }, 3000);
-  };
 
   const stepItems = [
     { title: '配置参数', icon: <SettingOutlined /> },
@@ -248,123 +268,8 @@ function CreationPage() {
 
           {/* 右侧分镜 */}
           <Col xs={24} lg={16}>
-            <GlassPanel variant="card" style={{ overflow: 'hidden' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: 'var(--spacing-lg) var(--spacing-xl)',
-                borderBottom: '1px solid var(--border-color)',
-              }}>
-                <Space>
-                  <VideoCameraOutlined style={{ color: 'var(--brand-primary)' }} />
-                  <Text strong style={{ color: 'var(--text-primary)' }}>分镜脚本</Text>
-                  <Tag color="blue" style={{ borderRadius: 20 }}>{totalCount} 个分镜</Tag>
-                  <Tag color="green" style={{ borderRadius: 20 }}>{completedCount} 已完成</Tag>
-                </Space>
-                <Button icon={<PlusOutlined />} type="dashed">添加分镜</Button>
-              </div>
-              {storyboard.map((item) => {
-                const statusConfig: Record<string, { color: string; icon: React.ReactNode; text: string }> = {
-                  pending: { color: 'default', icon: <ClockCircleOutlined />, text: '等待中' },
-                  generating: { color: 'processing', icon: <LoadingOutlined />, text: '生成中' },
-                  completed: { color: 'success', icon: <CheckCircleOutlined />, text: '已完成' },
-                  failed: { color: 'error', icon: <ClockCircleOutlined />, text: '失败' },
-                };
-                const st = statusConfig[item.status];
-
-                return (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'stretch',
-                      borderBottom: '1px solid var(--border-color)',
-                      minHeight: 100,
-                    }}
-                  >
-                    {/* 序号 */}
-                    <div style={{
-                      width: 56, display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center',
-                      background: 'var(--bg-surface-2)', flexShrink: 0,
-                    }}>
-                      <Text strong style={{ fontSize: 20, color: 'var(--brand-primary)' }}>{item.order}</Text>
-                      <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{item.duration}s</Text>
-                    </div>
-
-                    {/* 预览区 */}
-                    <div style={{
-                      width: 160, display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', background: 'var(--bg-surface-2)',
-                      borderRight: '1px solid var(--border-color)',
-                      flexShrink: 0,
-                    }}>
-                      {item.status === 'completed' ? (
-                        <div style={{
-                          width: 120, height: 68, borderRadius: 'var(--radius-sm)',
-                          background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                        }}>
-                          <PlayCircleOutlined style={{ fontSize: 28, color: '#fff', opacity: 0.9 }} />
-                        </div>
-                      ) : item.status === 'generating' ? (
-                        <div style={{ textAlign: 'center' }}>
-                          <LoadingOutlined style={{ fontSize: 24, color: 'var(--brand-primary)' }} spin />
-                          <div style={{ marginTop: 4 }}><Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>生成中...</Text></div>
-                        </div>
-                      ) : (
-                        <div style={{
-                          width: 120, height: 68, borderRadius: 'var(--radius-sm)',
-                          border: '2px dashed var(--border-color)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <PictureOutlined style={{ fontSize: 24, color: 'var(--text-tertiary)' }} />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 内容区 */}
-                    <div style={{ flex: 1, padding: 'var(--spacing-md) var(--spacing-lg)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                      <Space style={{ marginBottom: 4 }}>
-                        <Text strong style={{ color: 'var(--text-primary)' }}>{item.description}</Text>
-                        <Tag color={st.color} icon={st.icon} style={{ borderRadius: 20, fontSize: 11 }}>{st.text}</Tag>
-                      </Space>
-                      <Space size={12}>
-                        <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                          {item.type === 'text-to-video' ? '文生视频' : '图生视频'}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>时长 {item.duration}s</Text>
-                      </Space>
-                    </div>
-
-                    {/* 操作区 */}
-                    <div style={{
-                      width: 80, display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center', gap: 4,
-                      borderLeft: '1px solid var(--border-color)',
-                      flexShrink: 0,
-                    }}>
-                      {item.status === 'completed' && (
-                        <>
-                          <Tooltip title="预览"><Button type="text" size="small" icon={<EyeOutlined />} /></Tooltip>
-                          <Tooltip title="重新生成"><Button type="text" size="small" icon={<ReloadOutlined />} /></Tooltip>
-                        </>
-                      )}
-                      {item.status === 'pending' && (
-                        <>
-                          <Tooltip title="编辑"><Button type="text" size="small" icon={<EditOutlined />} /></Tooltip>
-                          <Tooltip title="删除"><Button type="text" size="small" icon={<DeleteOutlined />} style={{ color: '#ef4444' }} /></Tooltip>
-                        </>
-                      )}
-                      {item.status === 'generating' && (
-                        <Tooltip title="取消"><Button type="text" size="small" icon={<PauseCircleOutlined />} /></Tooltip>
-                      )}
-                      {item.status === 'failed' && (
-                        <Tooltip title="重试"><Button type="text" size="small" icon={<ReloadOutlined />} onClick={() => handleRetryFailed(item.id)} style={{ color: '#f59e0b' }} /></Tooltip>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <GlassPanel variant="card" style={{ overflow: 'hidden', padding: 0 }}>
+              <StoryboardEditor onRegenerateShot={handleRegenerateShot} />
             </GlassPanel>
           </Col>
         </Row>
