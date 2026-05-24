@@ -73,4 +73,4 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
   );
 };
 
-export default StudioHeader;
+export { StudioHeader };

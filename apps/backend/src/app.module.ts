@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiModule } from './modules/ai/ai.module';
+import { MaterialModule } from './modules/material/material.module';
+import { ScriptModule } from './modules/script/script.module';
+import { CreationModule } from './modules/creation/creation.module';
 import { HealthController } from './modules/common/health.controller';
 
 @Module({
@@ -23,8 +26,8 @@ import { HealthController } from './modules/common/health.controller';
             entities: [__dirname + '/**/*.entity{.ts,.js}'],
             synchronize: configService.get('NODE_ENV') === 'development',
             logging: configService.get('NODE_ENV') === 'development',
-            ssl: configService.get('NODE_ENV') === 'production' 
-              ? { rejectUnauthorized: false } 
+            ssl: configService.get('NODE_ENV') === 'production'
+              ? { rejectUnauthorized: false }
               : false,
           };
         }
@@ -43,8 +46,11 @@ import { HealthController } from './modules/common/health.controller';
       inject: [ConfigService],
     }),
 
-    // AI模块
+    // 业务模块
     AiModule,
+    MaterialModule,
+    ScriptModule,
+    CreationModule,
   ],
   controllers: [HealthController],
 })
