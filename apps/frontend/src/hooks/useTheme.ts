@@ -1,4 +1,4 @@
-import { useSyncExternalStore, useCallback } from 'react';
+import { useSyncExternalStore, useCallback, useEffect } from 'react';
 
 const STORAGE_KEY = 'vidforge_theme';
 
@@ -45,10 +45,22 @@ function emitChange(): void {
   listeners.forEach((listener) => listener());
 }
 
+// Initialize theme on first import (before React renders)
+if (typeof document !== 'undefined') {
+  const initialTheme = resolveTheme();
+  document.documentElement.classList.remove('dark-mode', 'light-mode');
+  document.documentElement.classList.add(initialTheme === 'dark' ? 'dark-mode' : 'light-mode');
+}
+
 export function useTheme() {
   const theme = useSyncExternalStore(subscribeToThemeChanges, getSnapshot, getSnapshot);
 
   const isDark = theme === 'dark';
+
+  // Apply theme classes on mount and when theme changes
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   const setTheme = useCallback((newTheme: ThemeMode) => {
     localStorage.setItem(STORAGE_KEY, newTheme);
