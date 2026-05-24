@@ -4,7 +4,13 @@
       "WebFetch(domain:vid-forge-frontend-3qxpfe5an-wanglevy9s-projects.vercel.app)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://vid-forge-frontend-3qxpfe5an-wanglevy9s-projects.vercel.app/)",
       "Bash(scripts/start-server.sh *)",
-      "Bash(C:/Users/22166/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/brainstorming/scripts/start-server.sh *)"
+      "Bash(C:/Users/22166/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/brainstorming/scripts/start-server.sh *)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npx vite *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npm run *)"
     ]
   }
 }

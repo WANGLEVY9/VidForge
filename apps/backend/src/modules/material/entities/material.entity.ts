@@ -1,0 +1,37 @@
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+@Entity('materials')
+export class Material {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column()
+  name: string;
+
+  @Column()
+  type: 'image' | 'video' | 'audio';
+
+  @Column({ nullable: true })
+  url: string;
+
+  @Column({ nullable: true })
+  thumbnailUrl: string;
+
+  @Column({ nullable: true })
+  size: number;
+
+  @Column('simple-array', { nullable: true })
+  tags: string[];
+
+  @Column({ nullable: true })
+  category: string;
+
+  @Column({ type: 'json', nullable: true })
+  metadata: Record<string, any>;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+}

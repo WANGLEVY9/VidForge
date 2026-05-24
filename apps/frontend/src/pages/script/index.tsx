@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Card, Button, Input, Form, Select, Slider, Switch, Space, Typography,
+  Button, Input, Form, Select, Slider, Switch, Space, Typography,
   Tag, Divider, message, Row, Col, Steps, Tooltip, Spin, Alert,
 } from 'antd';
 import {
@@ -9,7 +9,7 @@ import {
   ExperimentOutlined, CustomerServiceOutlined, ShoppingCartOutlined,
   VideoCameraOutlined, SoundOutlined, AimOutlined,
 } from '@ant-design/icons';
-import { theme } from '../../theme/tokens';
+import { GlassPanel } from '../../components/studio/GlassPanel';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -88,147 +88,149 @@ function ScriptPage() {
       <Row gutter={24}>
         {/* 左侧：输入面板 */}
         <Col xs={24} lg={10}>
-          <Card
-            title={<Space><ThunderboltOutlined style={{ color: theme.colors.primary }} />剧本配置</Space>}
-            style={{ borderRadius: theme.borderRadius.lg, border: 'none', marginBottom: theme.spacing.lg }}
-            styles={{ body: { padding: theme.spacing.xl } }}
-          >
-            <Form form={form} layout="vertical" size="large">
-              <Form.Item
-                name="productName"
-                label={<Text strong>商品名称</Text>}
-                rules={[{ required: true, message: '请输入商品名称' }]}
-              >
-                <Input placeholder="例如：清爽防晒霜 SPF50+" style={{ borderRadius: theme.borderRadius.md }} />
-              </Form.Item>
+          <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+            <div style={{ padding: 'var(--spacing-xl)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 'var(--spacing-xl)' }}>
+                <ThunderboltOutlined style={{ color: 'var(--brand-primary)', fontSize: 18 }} />
+                <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>剧本配置</Text>
+              </div>
+              <Form form={form} layout="vertical" size="large">
+                <Form.Item
+                  name="productName"
+                  label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>商品名称</Text>}
+                  rules={[{ required: true, message: '请输入商品名称' }]}
+                >
+                  <Input placeholder="例如：清爽防晒霜 SPF50+" style={{ borderRadius: 'var(--radius-md)' }} />
+                </Form.Item>
 
-              <Form.Item
-                name="category"
-                label={<Text strong>商品品类</Text>}
-                rules={[{ required: true, message: '请选择品类' }]}
-              >
-                <Select
-                  placeholder="选择品类"
-                  style={{ borderRadius: theme.borderRadius.md }}
-                  options={[
-                    { value: 'clothing', label: '服饰鞋包' },
-                    { value: 'beauty', label: '美妆护肤' },
-                    { value: 'digital', label: '数码3C' },
-                    { value: 'food', label: '食品饮料' },
-                    { value: 'home', label: '家居生活' },
-                    { value: 'mother', label: '母婴用品' },
-                  ]}
-                />
-              </Form.Item>
+                <Form.Item
+                  name="category"
+                  label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>商品品类</Text>}
+                  rules={[{ required: true, message: '请选择品类' }]}
+                >
+                  <Select
+                    placeholder="选择品类"
+                    style={{ borderRadius: 'var(--radius-md)' }}
+                    options={[
+                      { value: 'clothing', label: '服饰鞋包' },
+                      { value: 'beauty', label: '美妆护肤' },
+                      { value: 'digital', label: '数码3C' },
+                      { value: 'food', label: '食品饮料' },
+                      { value: 'home', label: '家居生活' },
+                      { value: 'mother', label: '母婴用品' },
+                    ]}
+                  />
+                </Form.Item>
 
-              <Form.Item
-                name="sellingPoints"
-                label={<Text strong>核心卖点</Text>}
-                rules={[{ required: true, message: '请输入至少一个卖点' }]}
-                extra="多个卖点用逗号分隔"
-              >
-                <TextArea
-                  placeholder="例如：轻薄不油腻, 3秒成膜, 不假白, 防水防汗"
-                  rows={3}
-                  style={{ borderRadius: theme.borderRadius.md }}
-                />
-              </Form.Item>
+                <Form.Item
+                  name="sellingPoints"
+                  label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>核心卖点</Text>}
+                  rules={[{ required: true, message: '请输入至少一个卖点' }]}
+                  extra={<Text style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>多个卖点用逗号分隔</Text>}
+                >
+                  <TextArea
+                    placeholder="例如：轻薄不油腻, 3秒成膜, 不假白, 防水防汗"
+                    rows={3}
+                    style={{ borderRadius: 'var(--radius-md)' }}
+                  />
+                </Form.Item>
 
-              <Form.Item
-                name="targetAudience"
-                label={<Text strong>目标人群</Text>}
-              >
-                <Select
-                  mode="tags"
-                  placeholder="输入或选择目标人群"
-                  style={{ borderRadius: theme.borderRadius.md }}
-                  options={[
-                    { value: '年轻女性', label: '年轻女性' },
-                    { value: '学生党', label: '学生党' },
-                    { value: '宝妈', label: '宝妈' },
-                    { value: '上班族', label: '上班族' },
-                    { value: '健身人群', label: '健身人群' },
-                  ]}
-                />
-              </Form.Item>
+                <Form.Item
+                  name="targetAudience"
+                  label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>目标人群</Text>}
+                >
+                  <Select
+                    mode="tags"
+                    placeholder="输入或选择目标人群"
+                    style={{ borderRadius: 'var(--radius-md)' }}
+                    options={[
+                      { value: '年轻女性', label: '年轻女性' },
+                      { value: '学生党', label: '学生党' },
+                      { value: '宝妈', label: '宝妈' },
+                      { value: '上班族', label: '上班族' },
+                      { value: '健身人群', label: '健身人群' },
+                    ]}
+                  />
+                </Form.Item>
 
-              <Divider style={{ margin: `${theme.spacing.lg}px 0` }} />
+                <Divider style={{ margin: 'var(--spacing-lg) 0', borderColor: 'var(--border-color)' }} />
 
-              <Form.Item label={<Text strong>视频风格</Text>}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {styleOptions.map((opt) => (
-                    <div
-                      key={opt.value}
-                      onClick={() => setScriptStyle(opt.value)}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: theme.borderRadius.md,
-                        border: `2px solid ${scriptStyle === opt.value ? theme.colors.primary : theme.colors.borderColor}`,
-                        background: scriptStyle === opt.value ? theme.colors.primaryBg : 'transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      <Space>
-                        <span style={{ color: scriptStyle === opt.value ? theme.colors.primary : theme.colors.textSecondary }}>{opt.icon}</span>
-                        <Text style={{ fontSize: 13, color: scriptStyle === opt.value ? theme.colors.primary : theme.colors.textPrimary }}>{opt.label}</Text>
-                      </Space>
+                <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频风格</Text>}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {styleOptions.map((opt) => (
+                      <div
+                        key={opt.value}
+                        onClick={() => setScriptStyle(opt.value)}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: 'var(--radius-md)',
+                          border: `2px solid ${scriptStyle === opt.value ? '#6366f1' : 'var(--border-color)'}`,
+                          background: scriptStyle === opt.value ? 'rgba(99,102,241,0.1)' : 'transparent',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <Space>
+                          <span style={{ color: scriptStyle === opt.value ? '#6366f1' : 'var(--text-secondary)' }}>{opt.icon}</span>
+                          <Text style={{ fontSize: 13, color: scriptStyle === opt.value ? '#6366f1' : 'var(--text-primary)' }}>{opt.label}</Text>
+                        </Space>
+                      </div>
+                    ))}
+                  </div>
+                </Form.Item>
+
+                <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频时长</Text>}>
+                  <Slider
+                    min={15}
+                    max={120}
+                    step={5}
+                    marks={{ 15: '15s', 30: '30s', 45: '45s', 60: '1min', 90: '1.5min', 120: '2min' }}
+                    defaultValue={45}
+                    tooltip={{ formatter: (v) => `${v}秒` }}
+                  />
+                </Form.Item>
+
+                <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>附加选项</Text>}>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: 'var(--text-primary)' }}>自动添加字幕</Text>
+                      <Switch defaultChecked />
                     </div>
-                  ))}
-                </div>
-              </Form.Item>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: 'var(--text-primary)' }}>推荐 BGM</Text>
+                      <Switch defaultChecked />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: 'var(--text-primary)' }}>生成配音脚本</Text>
+                      <Switch />
+                    </div>
+                  </Space>
+                </Form.Item>
 
-              <Form.Item label={<Text strong>视频时长</Text>}>
-                <Slider
-                  min={15}
-                  max={120}
-                  step={5}
-                  marks={{ 15: '15s', 30: '30s', 45: '45s', 60: '1min', 90: '1.5min', 120: '2min' }}
-                  defaultValue={45}
-                  tooltip={{ formatter: (v) => `${v}秒` }}
-                />
-              </Form.Item>
-
-              <Form.Item label={<Text strong>附加选项</Text>}>
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text>自动添加字幕</Text>
-                    <Switch defaultChecked />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text>推荐 BGM</Text>
-                    <Switch defaultChecked />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text>生成配音脚本</Text>
-                    <Switch />
-                  </div>
-                </Space>
-              </Form.Item>
-
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<RocketOutlined />}
-                loading={loading}
-                onClick={handleGenerate}
-                block
-                size="large"
-                style={{ borderRadius: theme.borderRadius.md, height: 48, fontSize: 16 }}
-              >
-                {loading ? 'AI 创作中...' : '生成剧本'}
-              </Button>
-            </Form>
-          </Card>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  icon={<RocketOutlined />}
+                  loading={loading}
+                  onClick={handleGenerate}
+                  block
+                  size="large"
+                  style={{ borderRadius: 'var(--radius-md)', height: 48, fontSize: 16 }}
+                >
+                  {loading ? 'AI 创作中...' : '生成剧本'}
+                </Button>
+              </Form>
+            </div>
+          </GlassPanel>
         </Col>
 
         {/* 右侧：结果面板 */}
         <Col xs={24} lg={14}>
           {loading && (
-            <Card style={{ borderRadius: theme.borderRadius.lg, border: 'none', textAlign: 'center', padding: 60 }}>
+            <GlassPanel variant="card" style={{ textAlign: 'center', padding: 60 }}>
               <Spin size="large" />
               <div style={{ marginTop: 16 }}>
-                <Text type="secondary">AI 正在创作剧本，请稍候...</Text>
+                <Text style={{ color: 'var(--text-tertiary)' }}>AI 正在创作剧本，请稍候...</Text>
               </div>
               <Steps
                 current={1}
@@ -241,19 +243,19 @@ function ScriptPage() {
                   { title: '优化润色' },
                 ]}
               />
-            </Card>
+            </GlassPanel>
           )}
 
           {!loading && !generated && (
-            <Card style={{ borderRadius: theme.borderRadius.lg, border: 'none', textAlign: 'center', padding: '60px 40px' }}>
-              <div style={{ fontSize: 64, color: theme.colors.textTertiary, marginBottom: 16 }}>
+            <GlassPanel variant="card" style={{ textAlign: 'center', padding: '60px 40px' }}>
+              <div style={{ fontSize: 64, color: 'var(--text-tertiary)', marginBottom: 16 }}>
                 <FileTextOutlined />
               </div>
-              <Title level={4} style={{ color: theme.colors.textSecondary, marginBottom: 8 }}>等待创作</Title>
+              <Title level={4} style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>等待创作</Title>
               <Paragraph type="secondary" style={{ maxWidth: 360, margin: '0 auto' }}>
                 填写左侧商品信息，AI 将为你生成专业带货剧本，包含分镜脚本、配音文案和 BGM 推荐
               </Paragraph>
-            </Card>
+            </GlassPanel>
           )}
 
           {!loading && generated && (
@@ -265,76 +267,103 @@ function ScriptPage() {
                 icon={<BulbOutlined />}
                 message={
                   <Space>
-                    <Text strong style={{ fontSize: 16 }}>{mockScriptResult.title}</Text>
+                    <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>{mockScriptResult.title}</Text>
                     <Tag color="blue">⏱ {mockScriptResult.duration}</Tag>
                   </Space>
                 }
-                style={{ borderRadius: theme.borderRadius.lg, marginBottom: theme.spacing.lg, padding: '12px 16px' }}
+                style={{ borderRadius: 'var(--radius-lg)', marginBottom: 'var(--spacing-lg)', padding: '12px 16px' }}
               />
 
               {/* 分镜脚本 */}
-              <Card
-                title={<Space><VideoCameraOutlined style={{ color: theme.colors.primary }} />分镜脚本</Space>}
-                extra={<Space><Button icon={<CopyOutlined />} onClick={() => handleCopy(mockScriptResult.hooks.map(h => h.content).join('\n'))}>复制全部</Button><Button icon={<SaveOutlined />}>保存</Button></Space>}
-                style={{ borderRadius: theme.borderRadius.lg, border: 'none', marginBottom: theme.spacing.lg }}
-                styles={{ body: { padding: 0 } }}
-              >
+              <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)', overflow: 'hidden' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: 'var(--spacing-lg) var(--spacing-xl)',
+                  borderBottom: '1px solid var(--border-color)',
+                }}>
+                  <Space>
+                    <VideoCameraOutlined style={{ color: 'var(--brand-primary)' }} />
+                    <Text strong style={{ color: 'var(--text-primary)' }}>分镜脚本</Text>
+                  </Space>
+                  <Space>
+                    <Button icon={<CopyOutlined />} onClick={() => handleCopy(mockScriptResult.hooks.map(h => h.content).join('\n'))}>复制全部</Button>
+                    <Button icon={<SaveOutlined />}>保存</Button>
+                  </Space>
+                </div>
                 {mockScriptResult.hooks.map((hook, idx) => (
                   <div
                     key={idx}
                     style={{
                       display: 'flex',
-                      padding: `${theme.spacing.md}px ${theme.spacing.xl}px`,
-                      borderBottom: `1px solid ${theme.colors.borderColorSecondary}`,
+                      padding: 'var(--spacing-md) var(--spacing-xl)',
+                      borderBottom: `1px solid var(--border-color)`,
                       borderLeft: `3px solid ${hookTypeColors[hook.type]}`,
                       transition: 'background 0.2s',
                       cursor: 'pointer',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.bgSpotlight)}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
                     <div style={{ width: 72, flexShrink: 0 }}>
                       <Tag color={hookTypeColors[hook.type]} style={{ borderRadius: 20, fontSize: 11 }}>{hookTypeLabels[hook.type]}</Tag>
-                      <div style={{ marginTop: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>{hook.time}</Text></div>
+                      <div style={{ marginTop: 4 }}><Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{hook.time}</Text></div>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <Text style={{ color: theme.colors.textPrimary, lineHeight: 1.6 }}>{hook.content}</Text>
+                      <Text style={{ color: 'var(--text-primary)', lineHeight: 1.6 }}>{hook.content}</Text>
                     </div>
                     <Tooltip title="复制"><Button type="text" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(hook.content)} /></Tooltip>
                   </div>
                 ))}
-              </Card>
+              </GlassPanel>
 
               {/* 配音建议 */}
-              <Card
-                title={<Space><SoundOutlined style={{ color: theme.colors.secondary }} />配音建议</Space>}
-                style={{ borderRadius: theme.borderRadius.lg, border: 'none', marginBottom: theme.spacing.lg }}
-                styles={{ body: { padding: theme.spacing.xl } }}
-              >
-                <Paragraph style={{ color: theme.colors.textPrimary, margin: 0 }}>{mockScriptResult.voiceover}</Paragraph>
-              </Card>
+              <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: 'var(--spacing-lg) var(--spacing-xl)',
+                  borderBottom: '1px solid var(--border-color)',
+                }}>
+                  <SoundOutlined style={{ color: '#ec4899' }} />
+                  <Text strong style={{ color: 'var(--text-primary)' }}>配音建议</Text>
+                </div>
+                <div style={{ padding: 'var(--spacing-xl)' }}>
+                  <Paragraph style={{ color: 'var(--text-primary)', margin: 0 }}>{mockScriptResult.voiceover}</Paragraph>
+                </div>
+              </GlassPanel>
 
               {/* BGM 推荐 */}
-              <Card
-                title={<Space><CustomerServiceOutlined style={{ color: theme.colors.success }} />BGM 推荐</Space>}
-                style={{ borderRadius: theme.borderRadius.lg, border: 'none', marginBottom: theme.spacing.lg }}
-                styles={{ body: { padding: theme.spacing.xl } }}
-              >
-                <Paragraph style={{ color: theme.colors.textPrimary, margin: 0 }}>{mockScriptResult.bgmSuggestion}</Paragraph>
-              </Card>
+              <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: 'var(--spacing-lg) var(--spacing-xl)',
+                  borderBottom: '1px solid var(--border-color)',
+                }}>
+                  <CustomerServiceOutlined style={{ color: '#10b981' }} />
+                  <Text strong style={{ color: 'var(--text-primary)' }}>BGM 推荐</Text>
+                </div>
+                <div style={{ padding: 'var(--spacing-xl)' }}>
+                  <Paragraph style={{ color: 'var(--text-primary)', margin: 0 }}>{mockScriptResult.bgmSuggestion}</Paragraph>
+                </div>
+              </GlassPanel>
 
               {/* 标签 */}
-              <Card
-                title={<Space><AimOutlined style={{ color: theme.colors.warning }} />推荐标签</Space>}
-                style={{ borderRadius: theme.borderRadius.lg, border: 'none' }}
-                styles={{ body: { padding: theme.spacing.xl } }}
-              >
-                <Space size={8} wrap>
-                  {mockScriptResult.tags.map((tag, i) => (
-                    <Tag key={i} color="blue" style={{ borderRadius: 20, padding: '4px 12px', fontSize: 13 }}>#{tag}</Tag>
-                  ))}
-                </Space>
-              </Card>
+              <GlassPanel variant="card">
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: 'var(--spacing-lg) var(--spacing-xl)',
+                  borderBottom: '1px solid var(--border-color)',
+                }}>
+                  <AimOutlined style={{ color: '#f59e0b' }} />
+                  <Text strong style={{ color: 'var(--text-primary)' }}>推荐标签</Text>
+                </div>
+                <div style={{ padding: 'var(--spacing-xl)' }}>
+                  <Space size={8} wrap>
+                    {mockScriptResult.tags.map((tag, i) => (
+                      <Tag key={i} color="blue" style={{ borderRadius: 20, padding: '4px 12px', fontSize: 13 }}>#{tag}</Tag>
+                    ))}
+                  </Space>
+                </div>
+              </GlassPanel>
             </>
           )}
         </Col>
