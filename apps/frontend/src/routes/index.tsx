@@ -2,6 +2,7 @@ const DashboardPage = () => import('@/pages/dashboard');
 const MaterialPage = () => import('@/pages/material');
 const ScriptPage = () => import('@/pages/script');
 const CreationPage = () => import('@/pages/creation');
+const AbComparePage = () => import('@/pages/ab-compare');
 
 export interface RouteConfig {
   path: string;
@@ -29,6 +30,11 @@ const routes: RouteConfig[] = [
     path: '/creation',
     name: '视频创作',
     element: CreationPage,
+  },
+  {
+    path: '/ab-compare',
+    name: 'A/B 对比',
+    element: AbComparePage,
   },
 ];
 

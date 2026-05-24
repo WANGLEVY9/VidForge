@@ -1,0 +1,94 @@
+<h2>Agent 架构设计 — LangGraph.js</h2>
+<p class="subtitle">全栈 TypeScript，NestJS 内嵌 LangGraph 工作流</p>
+
+<div class="section">
+  <h3>Agent 工作流拓扑</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="padding:0;font-family:monospace;font-size:13px;line-height:1.8">
+      <pre style="margin:0;padding:16px;background:var(--bg-surface)">
+┌─────────────────────────────────────────────────────────┐
+│                    Orchestrator Agent                    │
+│              (入口：接收请求 → 派发 → 汇总)                │
+└────┬──────────┬──────────┬────────────────────┬──────────┘
+     │          │          │                    │
+     ▼          ▼          ▼                    ▼
+┌────────┐ ┌────────┐ ┌────────────┐    ┌──────────────┐
+│Material│ │ Script │ │   Video    │    │  Quality     │
+│Analyze │ │Gen     │ │ Composition│    │  Control     │
+│  Agent │ │ Agent  │ │   Agent    │    │   Agent      │
+├────────┤ ├────────┤ ├────────────┤    ├──────────────┤
+│•素材匹  │ │•风格选  │ │•素材拼接   │    │•内容审核      │
+│ 配     │ │ 择     │ │•TTS 配音   │    │•质量评分      │
+│•标签补  │ │•分镜生  │ │•字幕生成   │    │•A/B 对比     │
+│ 充     │ │ 成     │ │•BGM 合成   │    │              │
+└────────┘ └────────┘ └────────────┘    └──────────────┘
+     │          │          │                    │
+     └──────────┴──────────┴────────────────────┘
+                    │
+                    ▼
+           ┌────────────────┐
+           │   Result       │
+           │   Aggregator   │
+           │ (任务结果组装)   │
+           └────────────────┘
+</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>模块结构</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="padding:0;font-family:monospace;font-size:13px;line-height:1.6">
+      <pre style="margin:0;padding:16px;background:var(--bg-surface)">
+apps/backend/src/modules/agent/
+├── agent.module.ts          # 注册 AgentModule
+├── agent.controller.ts      # POST /agent/run 启动工作流
+├── agent.service.ts         # 工作流调度入口
+├── orchestrator.service.ts  # Orchestrator Agent (LangGraph StateGraph)
+├── agents/
+│   ├── material-agent.service.ts    # 素材分析 Agent
+│   ├── script-agent.service.ts      # 剧本生成 Agent
+│   ├── composition-agent.service.ts # 视频合成 Agent
+│   └── quality-agent.service.ts     # 质量审核 Agent
+├── interfaces/
+│   ├── agent-state.interface.ts     # AgentState 类型定义
+│   └── agent-result.interface.ts    # 各 Agent 输出类型
+└── dto/
+    └── run-agent.dto.ts            # 请求 DTO
+</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Agent State Graph (关键设计)</h3>
+  <p>LangGraph 的核心是 StateGraph，每个节点是 Agent，边是状态转换：</p>
+  <div class="mockup">
+    <div class="mockup-body" style="padding:12px 16px;font-family:monospace;font-size:12px;line-height:1.6;background:var(--bg-surface)">
+      <pre style="margin:0">
+StateGraph(AgentState)
+  ├── Node: "orchestrator"      → 解析请求，规划任务
+  ├── Node: "material_analysis" → 智能素材匹配 + 标签补充
+  ├── Node: "script_generation" → 风格选择 + 分镜生成 + 文案
+  ├── Node: "video_composition" → 拼接 + TTS + 字幕 + BGM
+  ├── Node: "quality_control"   → 审核 + 评分 + 对比
+  └── Edge: 顺序执行，每个节点读取/写入共享 AgentState
+      </pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>这个架构的评委亮点</h3>
+  <ul>
+    <li><strong>可视化 Graph:</strong> 答辩时可以展示 LangGraph Studio 或自定义的 Agent 流程图，直观看到每个节点的状态转换</li>
+    <li><strong>State 可追溯:</strong> 每个 Agent 的输入/输出都记录在 AgentState 中，可以展示"AI 是如何一步步决策的"</li>
+    <li><strong>全栈 TypeScript:</strong> 前端 → 后端 → Agent 统一语言，架构整洁</li>
+    <li><strong>可中断/恢复:</strong> AgentState 可序列化，支持任务中断恢复</li>
+  </ul>
+</div>
+
+<div class="section">
+  <p>这个架构设计你觉得合适吗？有没有想调整的地方？</p>
+</div>

@@ -21,7 +21,21 @@
       "Bash(curl -s --connect-timeout 3 -x http://127.0.0.1:1081 https://github.com)",
       "Bash(echo \"远程 HEAD: $\\(git ls-remote origin HEAD)",
       "Bash(ssh -T git@github.com)",
-      "Bash(ssh -vT git@github.com)"
+      "Bash(ssh -vT git@github.com)",
+      "Bash(C:\\\\Users\\\\22166\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.1.0\\\\skills\\\\brainstorming\\\\scripts\\\\start-server.sh *)",
+      "WebSearch",
+      "Bash(C:\\\\Users\\\\22166\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.1.0\\\\skills\\\\brainstorming\\\\scripts\\\\stop-server.sh *)",
+      "mcp__plugin_context7-plugin_context7__resolve-library-id",
+      "mcp__plugin_context7-plugin_context7__query-docs",
+      "Bash(npm cache *)",
+      "Bash(cmd.exe /c \"del /f /q \\\\\"E:\\\\Codes\\\\2026\\\\2026-VidForge\\\\node_modules\\\\js-tiktoken\\\\dist\\\\ranks\\\\o200k_base.js.DELETE.8e1e76bc93aed63c266271598d7528f4\\\\\" 2>&1\")",
+      "Bash(cmd.exe /c \"handle -accepteula \\\\\"js-tiktoken\\\\\" 2>nul || echo handle.exe not available\")",
+      "Bash(cmd.exe *)",
+      "Bash(powershell.exe *)",
+      "Bash(npm view *)",
+      "Bash(npm pack *)",
+      "Bash(node -e \"const lg = require\\('@langchain/langgraph'\\); console.log\\(Object.keys\\(lg\\).filter\\(k => k.includes\\('State'\\) || k.includes\\('Graph'\\) || k.includes\\('END'\\) || k.includes\\('START'\\) || k.includes\\('Annotation'\\)\\).join\\(', '\\)\\)\")",
+      "Bash(node -e ' *)"
     ]
   }
 }
