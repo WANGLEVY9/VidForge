@@ -42,12 +42,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--text-tertiary);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--text-secondary);
 }
 
 /* Ant Design 主题覆盖 */
@@ -87,8 +87,8 @@ body {
 }
 
 .ant-menu-item-selected {
-  background: #eef2ff !important;
-  color: #6366f1 !important;
+  background: var(--brand-primary) !important;
+  color: #fff !important;
   font-weight: 500 !important;
 }
 
@@ -117,11 +117,4 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-}
-
-/* 玻璃效果 */
-.glass-effect {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
 }
