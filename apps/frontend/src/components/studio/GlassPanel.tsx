@@ -8,7 +8,7 @@ interface GlassPanelProps {
   onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
-const variantClassMap: Record<string, string> = {
+const variantClassMap: Record<'default' | 'strong' | 'card', string> = {
   default: 'glass',
   strong: 'glass-strong',
   card: 'glass-card',
@@ -25,7 +25,7 @@ const GlassPanel: React.FC<GlassPanelProps> = ({
 
   return (
     <div
-      className={`${variantClass} ${className}`.trim()}
+      className={[variantClass, className].filter(Boolean).join(' ')}
       style={style}
       onClick={onClick}
     >

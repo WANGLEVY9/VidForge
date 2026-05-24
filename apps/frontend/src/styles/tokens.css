@@ -1,7 +1,6 @@
 /* VidForge Design Tokens - CSS Custom Properties */
 
-:root,
-.dark-mode {
+:root { /* :root defaults to dark mode */
   --bg-primary: #0f0f13;
   --bg-surface: #1a1a23;
   --bg-surface-2: #24242f;
@@ -42,7 +41,7 @@
   --font-size-lg: 16px;
   --font-size-xl: 18px;
   --font-size-xxl: 20px;
-  --font-size-title: 24px;
+  --font-size-title: 30px;
   --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
   --duration-fast: 0.15s;
   --duration-normal: 0.3s;
