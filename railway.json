@@ -9,5 +9,14 @@
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
+  },
+  "watch": {
+    "patterns": [
+      "apps/**",
+      "packages/**",
+      "package.json",
+      "nixpacks.toml",
+      "railway.json"
+    ]
   }
 }
