@@ -1,49 +1,38 @@
-import { lazy } from 'react';
-import {
-  UploadOutlined,
-  FileTextOutlined,
-  VideoCameraOutlined,
-  DashboardOutlined,
-} from '@ant-design/icons';
+import { Navigate } from 'react-router-dom';
+import BasicLayout from '@/layouts/BasicLayout';
 
-const MaterialPage = lazy(() => import('@/pages/material'));
-const ScriptPage = lazy(() => import('@/pages/script'));
-const CreationPage = lazy(() => import('@/pages/creation'));
-const DashboardPage = lazy(() => import('@/pages/dashboard'));
+const DashboardPage = () => import('@/pages/dashboard');
+const MaterialPage = () => import('@/pages/material');
+const ScriptPage = () => import('@/pages/script');
+const CreationPage = () => import('@/pages/creation');
 
 export interface RouteConfig {
   path: string;
   name: string;
-  icon: React.ReactNode;
-  element: React.ReactNode;
+  element: React.LazyExoticComponent<() => JSX.Element>;
 }
 
 const routes: RouteConfig[] = [
   {
+    path: '/dashboard',
+    name: '工作台',
+    element: DashboardPage,
+  },
+  {
     path: '/material',
-    name: '素材管理',
-    icon: <UploadOutlined />,
-    element: <MaterialPage />,
+    name: '素材库',
+    element: MaterialPage,
   },
   {
     path: '/script',
-    name: '剧本生成',
-    icon: <FileTextOutlined />,
-    element: <ScriptPage />,
+    name: '剧本创作',
+    element: ScriptPage,
   },
   {
     path: '/creation',
     name: '视频创作',
-    icon: <VideoCameraOutlined />,
-    element: <CreationPage />,
-  },
-  {
-    path: '/dashboard',
-    name: '数据看板',
-    icon: <DashboardOutlined />,
-    element: <DashboardPage />,
+    element: CreationPage,
   },
 ];
 
-export const menuRoutes = routes;
 export default routes;
