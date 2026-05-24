@@ -1,5 +1,8 @@
+[phases.setup]
+nixPkgs = ['nodejs_20', 'npm-10_x']
+
 [phases.install]
-cmd = "npm install --legacy-peer-deps"
+cmd = "npm install --legacy-peer-deps && cd apps/frontend && npm install --legacy-peer-deps && cd ../backend && npm install --legacy-peer-deps"
 
 [phases.build]
-cmd = "npm run build"
+cmd = "cd apps/frontend && npm run build && cd ../backend && npm run build"
