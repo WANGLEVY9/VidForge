@@ -1,0 +1,46 @@
+export interface OverviewData {
+  totalMaterials: number;
+  totalScripts: number;
+  totalCreations: number;
+  todayCreations: number;
+  successRate: number;
+  avgDuration: number;
+  momChanges: {
+    materials: string;
+    scripts: string;
+    creations: string;
+    successRate: string;
+    avgDuration: string;
+  };
+}
+
+export interface TrendPoint {
+  date: string;
+  count: number;
+  successRate: number;
+}
+
+export interface DistributionItem {
+  name: string;
+  value: number;
+}
+
+export interface QueueStatus {
+  depth: number;
+  processing: number;
+  waiting: number;
+  avgWaitTime: number;
+  throughput: number;
+}
+
+export interface AttributionMatrix {
+  factors: string[];
+  levels: string[];
+  data: number[][];
+}
+
+export interface TraceItem {
+  taskId: string;
+  totalDuration: number;
+  nodes: Array<{ name: string; duration: number; status: string }>;
+}

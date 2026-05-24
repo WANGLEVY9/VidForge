@@ -2,17 +2,19 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Button, Input, Form, Space, Typography, Steps, Progress,
   Tag, Row, Col, Slider, Switch, message,
-  Timeline, Segmented, Radio,
+  Timeline, Segmented, Radio, Badge,
 } from 'antd';
 import {
   PlayCircleOutlined, ReloadOutlined,
   ThunderboltOutlined, CheckCircleOutlined, ClockCircleOutlined,
   LoadingOutlined, DownloadOutlined, SettingOutlined,
-  FileTextOutlined, EditOutlined,
+  FileTextOutlined, EditOutlined, RobotOutlined,
 } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { StoryboardEditor } from '../../components/storyboard/StoryboardEditor';
 import { useStoryboardStore, Shot } from '../../store/useStoryboardStore';
+import { agentApi } from '../../services/agent';
+import { ExportPanel } from './components/ExportPanel';
 import '../../components/storyboard/storyboard.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -60,6 +62,9 @@ function CreationPage() {
   const [quality, setQuality] = useState('hd');
   const [form] = Form.useForm();
   const progressTimer = useRef<NodeJS.Timeout | null>(null);
+  const [, setAgentTaskId] = useState<string | null>(null);
+  const [agentStatus, setAgentStatus] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const setShots = useStoryboardStore((s) => s.setShots);
   const setActiveShot = useStoryboardStore((s) => s.setActiveShot);
@@ -129,6 +134,41 @@ function CreationPage() {
     };
 
     progressTimer.current = setTimeout(simulateGeneration, 1000);
+  };
+
+  const handleAgentRun = async () => {
+    try {
+      await form.validateFields();
+      const values = form.getFieldsValue();
+      const result = await agentApi.run({
+        productName: values.prompt || '视频',
+        category: '通用',
+        sellingPoints: '品质优良',
+        targetAudience: '大众',
+        style: 'professional',
+        duration: 30,
+      });
+      setAgentTaskId(result.taskId);
+      setAgentStatus('running');
+
+      const poll = setInterval(async () => {
+        try {
+          const status = await agentApi.getStatus(result.taskId);
+          setAgentStatus(status.status);
+          if (status.status === 'completed' || status.status === 'failed') {
+            clearInterval(poll);
+            if (status.status === 'completed') {
+              message.success('AI 工作流完成！');
+              setCurrentStep('complete');
+            }
+          }
+        } catch {
+          clearInterval(poll);
+        }
+      }, 2000);
+    } catch {
+      return;
+    }
   };
 
   useEffect(() => {
@@ -260,6 +300,16 @@ function CreationPage() {
                     >
                       一键生成视频
                     </Button>
+                    <Button
+                      icon={<RobotOutlined />}
+                      block
+                      size="large"
+                      style={{ borderRadius: 'var(--radius-md)', height: 44 }}
+                      onClick={handleAgentRun}
+                      loading={agentStatus === 'running'}
+                    >
+                      AI 一键成片 {agentStatus === 'running' && <Badge status="processing" style={{ marginLeft: 8 }} />}
+                    </Button>
                   </Space>
                 </Form>
               </div>
@@ -390,8 +440,8 @@ function CreationPage() {
           </GlassPanel>
 
           <Space size="middle">
-            <Button type="primary" icon={<DownloadOutlined />} size="large" style={{ borderRadius: 'var(--radius-md)', height: 44 }}>
-              下载视频
+            <Button type="primary" icon={<DownloadOutlined />} size="large" onClick={() => setExportOpen(true)} style={{ borderRadius: 'var(--radius-md)', height: 44 }}>
+              导出视频
             </Button>
             <Button icon={<ReloadOutlined />} size="large" style={{ borderRadius: 'var(--radius-md)', height: 44 }}>
               重新生成
@@ -400,6 +450,8 @@ function CreationPage() {
               编辑分镜
             </Button>
           </Space>
+
+          <ExportPanel creationTaskId="current" open={exportOpen} onClose={() => setExportOpen(false)} />
         </div>
       )}
     </div>

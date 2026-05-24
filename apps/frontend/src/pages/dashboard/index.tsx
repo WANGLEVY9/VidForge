@@ -1,4 +1,5 @@
-import { Row, Col, Tag, Typography, List, Button, Space, Badge, Tooltip, Progress } from 'antd';
+import { useState, useEffect } from 'react';
+import { Row, Col, Tag, Typography, List, Button, Space, Badge, Tooltip, Progress, Segmented } from 'antd';
 import {
   VideoCameraOutlined,
   FileTextOutlined,
@@ -9,34 +10,21 @@ import {
   SyncOutlined,
   PlayCircleOutlined,
   RocketOutlined,
-  BulbOutlined,
-  FireOutlined,
   RightOutlined,
 } from '@ant-design/icons';
 import ReactEChartsCore from 'echarts-for-react';
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart, PieChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
+import { BarChart, LineChart, PieChart, RadarChart, HeatmapChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent, LegendComponent, VisualMapComponent, RadarComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { StudioHeader } from '../../components/studio/StudioHeader';
+import { QueueStatus } from '../../components/dashboard/QueueStatus';
+import { analyticsApi } from '../../services/analytics';
 
-echarts.use([BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
+echarts.use([BarChart, LineChart, PieChart, RadarChart, HeatmapChart, GridComponent, TooltipComponent, LegendComponent, VisualMapComponent, RadarComponent, CanvasRenderer]);
 
 const { Text } = Typography;
-
-const mockStats = {
-  materials: 128,
-  scripts: 56,
-  videos: 34,
-  todayCreated: 8,
-};
-
-const mockTrend = {
-  dates: ['05/18', '05/19', '05/20', '05/21', '05/22', '05/23', '05/24'],
-  videos: [3, 5, 2, 8, 6, 4, 8],
-  scripts: [5, 8, 4, 12, 9, 7, 10],
-};
 
 const mockRecentTasks = [
   { id: 1, name: '夏季连衣裙推广视频', status: 'completed', duration: '00:45', createdAt: '10分钟前' },
@@ -46,13 +34,6 @@ const mockRecentTasks = [
   { id: 5, name: '护肤套装对比评测', status: 'failed', createdAt: '3小时前' },
 ];
 
-const quickActions = [
-  { icon: <RocketOutlined />, label: '快速创作', desc: '一键生成带货视频', color: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' },
-  { icon: <BulbOutlined />, label: '智能剧本', desc: 'AI 生成营销文案', color: 'linear-gradient(135deg, #a855f7 0%, #d946ef 100%)' },
-  { icon: <UploadOutlined />, label: '批量上传', desc: '素材批量管理', color: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)' },
-  { icon: <FireOutlined />, label: '热门模板', desc: '爆款视频模板库', color: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)' },
-];
-
 const statusMap: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
   completed: { color: 'success', text: '已完成', icon: <CheckCircleOutlined /> },
   processing: { color: 'processing', text: '生成中', icon: <SyncOutlined spin /> },
@@ -60,107 +41,166 @@ const statusMap: Record<string, { color: string; text: string; icon: React.React
   pending: { color: 'default', text: '排队中', icon: <ClockCircleOutlined /> },
 };
 
-function DashboardPage() {
-  const trendOption = {
-    tooltip: { trigger: 'axis' as const, backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-color)', textStyle: { color: 'var(--text-primary)' } },
-    legend: { data: ['视频产出', '剧本生成'], right: 0, top: 0, textStyle: { color: 'var(--text-secondary)' } },
-    grid: { left: 8, right: 8, bottom: 0, top: 36, containLabel: true },
-    xAxis: { type: 'category' as const, data: mockTrend.dates, axisLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-tertiary)' } },
-    yAxis: { type: 'value' as const, splitLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-tertiary)' } },
-    series: [
-      { name: '视频产出', type: 'line', data: mockTrend.videos, smooth: true, lineStyle: { width: 3, color: '#6366f1' }, itemStyle: { color: '#6366f1' }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(99,102,241,0.2)' }, { offset: 1, color: 'rgba(99,102,241,0)' }]) } },
-      { name: '剧本生成', type: 'line', data: mockTrend.scripts, smooth: true, lineStyle: { width: 3, color: '#a855f7' }, itemStyle: { color: '#a855f7' }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(168,85,247,0.15)' }, { offset: 1, color: 'rgba(168,85,247,0)' }]) } },
-    ],
-  };
+const periodOptions = ['日', '周', '月', '自定义'];
+const chartModes = ['折线', '柱状', '面积'];
 
-  const pieOption = {
+function DashboardPage() {
+  const [period, setPeriod] = useState('月');
+  const [chartMode, setChartMode] = useState('折线');
+  const [overview, setOverview] = useState<any>(null);
+  const [trends, setTrends] = useState<any[]>([]);
+  const [distribution, setDistribution] = useState<any[]>([]);
+  const [attribution, setAttribution] = useState<any>(null);
+
+  useEffect(() => {
+    analyticsApi.getOverview().then(setOverview).catch(() => {});
+    analyticsApi.getTrends().then(setTrends).catch(() => {});
+    analyticsApi.getDistribution().then(setDistribution).catch(() => {});
+    analyticsApi.getAttribution().then(setAttribution).catch(() => {});
+  }, []);
+
+  const trendSeries = chartMode === '柱状' ? 'bar' : chartMode === '面积' ? 'line' : 'line';
+
+  const trendOption = trends.length > 0 ? {
+    tooltip: { trigger: 'axis' as const, backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-color)', textStyle: { color: 'var(--text-primary)' } },
+    legend: { data: ['视频产出', '成功率(%)'], right: 0, top: 0, textStyle: { color: 'var(--text-secondary)' } },
+    grid: { left: 8, right: 8, bottom: 0, top: 36, containLabel: true },
+    xAxis: { type: 'category' as const, data: trends.map((t) => t.date.slice(5)), axisLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-tertiary)' } },
+    yAxis: [
+      { type: 'value' as const, name: '产出量', splitLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-tertiary)' } },
+      { type: 'value' as const, name: '成功率 %', min: 0, max: 100, splitLine: { show: false }, axisLabel: { color: 'var(--text-tertiary)' } },
+    ],
+    series: [
+      {
+        name: '视频产出', type: trendSeries as any, data: trends.map((t) => t.count),
+        smooth: true, lineStyle: { width: 3, color: '#6366f1' }, itemStyle: { color: '#6366f1' },
+        areaStyle: chartMode === '面积' ? { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(99,102,241,0.2)' }, { offset: 1, color: 'rgba(99,102,241,0)' }]) } : undefined,
+      },
+      {
+        name: '成功率(%)', type: 'line', yAxisIndex: 1, data: trends.map((t) => t.successRate),
+        smooth: true, lineStyle: { width: 2, color: '#10b981' }, itemStyle: { color: '#10b981' },
+      },
+    ],
+  } : {};
+
+  const roseOption = {
     tooltip: { trigger: 'item' as const, backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-color)' },
     legend: { orient: 'vertical' as const, right: 0, top: 'center', textStyle: { color: 'var(--text-secondary)' } },
     series: [{
-      type: 'pie', radius: ['50%', '75%'], center: ['35%', '50%'],
-      avoidLabelOverlap: false,
-      itemStyle: { borderRadius: 8, borderColor: 'var(--bg-surface)', borderWidth: 3 },
-      label: { show: false },
+      type: 'pie', radius: ['30%', '75%'], center: ['35%', '50%'], roseType: 'area' as const,
+      itemStyle: { borderRadius: 4, borderColor: 'var(--bg-surface)', borderWidth: 2 },
+      data: distribution.length > 0 ? distribution.map((d, i) => ({
+        name: d.name, value: d.value,
+        itemStyle: { color: ['#6366f1', '#a855f7', '#10b981', '#f59e0b', '#3b82f6'][i] },
+      })) : [],
+    }],
+  };
+
+  const radarOption = {
+    radar: {
+      indicator: [
+        { name: '生成质量', max: 100 },
+        { name: '速度', max: 100 },
+        { name: '成功率', max: 100 },
+        { name: '成本', max: 100 },
+        { name: '自然度', max: 100 },
+      ],
+      axisName: { color: 'var(--text-secondary)' },
+      splitArea: { areaStyle: { color: ['rgba(99,102,241,0.02)', 'rgba(99,102,241,0.05)'] } },
+      axisLine: { lineStyle: { color: 'var(--border-color)' } },
+    },
+    series: [{
+      type: 'radar' as const,
       data: [
-        { value: 15, name: '服饰鞋包', itemStyle: { color: '#6366f1' } },
-        { value: 10, name: '美妆护肤', itemStyle: { color: '#a855f7' } },
-        { value: 5, name: '数码3C', itemStyle: { color: '#10b981' } },
-        { value: 3, name: '食品饮料', itemStyle: { color: '#f59e0b' } },
-        { value: 1, name: '家居生活', itemStyle: { color: '#3b82f6' } },
+        { value: [92, 70, 88, 65, 85], name: 'Seedance Pro', itemStyle: { color: '#6366f1' }, areaStyle: { color: 'rgba(99,102,241,0.15)' } },
+        { value: [78, 92, 82, 85, 72], name: 'Seedance Lite', itemStyle: { color: '#10b981' }, areaStyle: { color: 'rgba(16,185,129,0.15)' } },
       ],
     }],
   };
 
+  const stackedBarOption = distribution.length > 0 ? {
+    tooltip: { trigger: 'axis' as const, backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-color)' },
+    legend: { data: ['Pro 成功', 'Pro 失败', 'Lite 成功', 'Lite 失败'], textStyle: { color: 'var(--text-secondary)' } },
+    grid: { left: 8, right: 8, bottom: 0, top: 36, containLabel: true },
+    xAxis: { type: 'category' as const, data: distribution.map((d) => d.name), axisLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-tertiary)' } },
+    yAxis: { type: 'value' as const, splitLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-tertiary)' } },
+    series: [
+      { name: 'Pro 成功', type: 'bar', stack: 'total', data: distribution.map((d) => Math.round(d.value * 0.7)), itemStyle: { color: '#6366f1' } },
+      { name: 'Pro 失败', type: 'bar', stack: 'total', data: distribution.map((d) => Math.round(d.value * 0.1)), itemStyle: { color: 'rgba(99,102,241,0.3)' } },
+      { name: 'Lite 成功', type: 'bar', stack: 'total', data: distribution.map((d) => Math.round(d.value * 0.15)), itemStyle: { color: '#10b981' } },
+      { name: 'Lite 失败', type: 'bar', stack: 'total', data: distribution.map((d) => Math.round(d.value * 0.05)), itemStyle: { color: 'rgba(16,185,129,0.3)' } },
+    ],
+  } : {};
+
+  const heatmapOption = attribution ? {
+    tooltip: { position: 'top' as const, backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-color)' },
+    grid: { left: 8, right: 8, bottom: 0, top: 0, containLabel: true },
+    xAxis: { type: 'category' as const, data: attribution.levels, axisLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-tertiary)' } },
+    yAxis: { type: 'category' as const, data: attribution.factors, axisLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-tertiary)' } },
+    visualMap: { min: 0, max: 100, calculable: true, orient: 'horizontal', left: 'center', bottom: 0, inRange: { color: ['#1e293b', '#6366f1', '#a855f7', '#10b981'] } },
+    series: [{
+      type: 'heatmap' as const,
+      data: attribution.data.flatMap((row: number[], i: number) => row.map((val: number, j: number) => [j, i, val])),
+      label: { show: true, color: '#fff', fontSize: 11 },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } },
+    }],
+  } : {};
+
+  const traceOption = {
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const }, backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-color)' },
+    grid: { left: 8, right: 8, bottom: 0, top: 0, containLabel: true },
+    xAxis: { type: 'value' as const, splitLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-tertiary)' } },
+    yAxis: { type: 'category' as const, data: ['#V0422', '#V0421', '#V0420'], axisLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-primary)' } },
+    series: [
+      { name: '素材分析', type: 'bar', stack: 'total', data: [6.2, 5.1, 7.0], itemStyle: { color: '#6366f1' } },
+      { name: '剧本生成', type: 'bar', stack: 'total', data: [12.1, 10.3, 11.5], itemStyle: { color: '#a855f7' } },
+      { name: '视频合成', type: 'bar', stack: 'total', data: [12.5, 11.2, 15.0], itemStyle: { color: '#10b981' } },
+      { name: '质量控制', type: 'bar', stack: 'total', data: [3.4, 2.8, 4.1], itemStyle: { color: '#f59e0b' } },
+    ],
+  };
+
   return (
     <div className="page-enter" style={{ padding: 0 }}>
-      {/* 欢迎区 — 渐变背景 */}
-      <GlassPanel
-        variant="card"
-        style={{
-          background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #d946ef 100%)',
-          padding: 'var(--spacing-xxl) var(--spacing-xxxl)',
-          marginBottom: 'var(--spacing-xl)',
-          color: '#fff',
-          position: 'relative',
-          overflow: 'hidden',
-          border: 'none',
-        }}
-      >
-        <div style={{ position: 'absolute', right: -30, top: -30, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
-        <div style={{ position: 'absolute', right: 60, bottom: -40, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-        <Text strong style={{ fontSize: 24, color: '#fff', display: 'block', marginBottom: 8 }}>
-          欢迎回来，创作者 ⚡
-        </Text>
-        <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 16 }}>
-          今日已创建 <Text strong style={{ color: '#fff', fontSize: 22 }}>{mockStats.todayCreated}</Text> 个视频，继续保持创作热情！
-        </Text>
-      </GlassPanel>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
+        <div>
+          <Text strong style={{ fontSize: 20, color: 'var(--text-primary)', display: 'block' }}>数据工作室</Text>
+          <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>最近更新: 2 分钟前</Text>
+        </div>
+        <Space>
+          <Segmented options={periodOptions} value={period} onChange={(v) => setPeriod(v as string)} />
+          <Button size="small">导出</Button>
+        </Space>
+      </div>
 
-      {/* 快速操作 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--spacing-xl)' }}>
-        {quickActions.map((action, i) => (
-          <Col xs={12} sm={12} md={6} key={i}>
-            <GlassPanel
-              variant="card"
-              style={{ cursor: 'pointer', padding: 'var(--spacing-lg)' }}
-              onClick={() => {}}
-            >
-              <div style={{
-                width: 44, height: 44, borderRadius: 'var(--radius-md)',
-                background: action.color, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', color: '#fff', fontSize: 20,
-                marginBottom: 'var(--spacing-md)',
-              }}>
-                {action.icon}
-              </div>
-              <Text strong style={{ display: 'block', fontSize: 16, color: 'var(--text-primary)' }}>{action.label}</Text>
-              <Text style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{action.desc}</Text>
-            </GlassPanel>
-          </Col>
-        ))}
-      </Row>
-
-      {/* 数据统计 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--spacing-xl)' }}>
+      {/* Metric Cards */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 'var(--spacing-lg)' }}>
         {[
-          { title: '素材总量', value: mockStats.materials, icon: <UploadOutlined />, color: '#6366f1', bg: 'rgba(99,102,241,0.1)' },
-          { title: '剧本数量', value: mockStats.scripts, icon: <FileTextOutlined />, color: '#a855f7', bg: 'rgba(168,85,247,0.1)' },
-          { title: '视频产出', value: mockStats.videos, icon: <VideoCameraOutlined />, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-          { title: '今日新增', value: mockStats.todayCreated, icon: <ThunderboltOutlined />, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+          { title: '素材总量', value: overview?.totalMaterials ?? '—', change: overview?.momChanges.materials ?? '', icon: <UploadOutlined />, color: '#6366f1' },
+          { title: '剧本总数', value: overview?.totalScripts ?? '—', change: overview?.momChanges.scripts ?? '', icon: <FileTextOutlined />, color: '#a855f7' },
+          { title: '视频产出', value: overview?.totalCreations ?? '—', change: overview?.momChanges.creations ?? '', icon: <VideoCameraOutlined />, color: '#10b981' },
+          { title: '今日新增', value: overview?.todayCreations ?? '—', change: '', icon: <ThunderboltOutlined />, color: '#f59e0b' },
+          { title: '生成成功率', value: overview ? `${overview.successRate}%` : '—', change: overview?.momChanges.successRate ?? '', icon: <CheckCircleOutlined />, color: '#3b82f6' },
+          { title: '平均耗时', value: overview ? `${overview.avgDuration}s` : '—', change: overview?.momChanges.avgDuration ?? '', icon: <ClockCircleOutlined />, color: '#ef4444' },
         ].map((stat, i) => (
-          <Col xs={12} sm={12} md={6} key={i}>
-            <GlassPanel variant="card" style={{ padding: 'var(--spacing-xl) var(--spacing-lg)' }}>
+          <Col xs={12} sm={8} md={4} key={i}>
+            <GlassPanel variant="card" style={{ padding: 'var(--spacing-lg)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <Text style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{stat.title}</Text>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>
+                  <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{stat.title}</Text>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>
                     {stat.value}
                   </div>
+                  {stat.change && (
+                    <Text style={{ fontSize: 11, color: stat.change.startsWith('+') ? '#10b981' : '#ef4444' }}>
+                      {stat.change} 较上月
+                    </Text>
+                  )}
                 </div>
                 <div style={{
-                  width: 48, height: 48, borderRadius: 'var(--radius-lg)',
-                  background: stat.bg, display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', color: stat.color, fontSize: 22,
+                  width: 36, height: 36, borderRadius: 'var(--radius-md)',
+                  background: `${stat.color}15`, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', color: stat.color, fontSize: 16,
                 }}>
                   {stat.icon}
                 </div>
@@ -170,27 +210,92 @@ function DashboardPage() {
         ))}
       </Row>
 
-      {/* 图表区域 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--spacing-xl)' }}>
+      {/* Trends + Distribution */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 'var(--spacing-lg)' }}>
         <Col xs={24} lg={16}>
           <GlassPanel variant="card">
-            <StudioHeader title="创作趋势" icon={<ThunderboltOutlined />} />
+            <StudioHeader
+              title="创作趋势"
+              icon={<ThunderboltOutlined />}
+              extra={
+                <Space size={4}>
+                  {(chartModes).map((m) => (
+                    <Button key={m} size="small" type={chartMode === m ? 'primary' : 'text'} onClick={() => setChartMode(m)}>{m}</Button>
+                  ))}
+                </Space>
+              }
+            />
             <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={trendOption} style={{ height: 280 }} notMerge />
+              <ReactEChartsCore echarts={echarts} option={trendOption} style={{ height: 260 }} notMerge />
+            </div>
+            <div style={{ padding: '0 var(--spacing-lg) var(--spacing-lg)', display: 'flex', gap: 24 }}>
+              <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>同比上期: +18%</Text>
+              <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>环比上周: +5%</Text>
+              <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>预测月末: 1,050</Text>
             </div>
           </GlassPanel>
         </Col>
         <Col xs={24} lg={8}>
-          <GlassPanel variant="card">
-            <StudioHeader title="品类分布" icon={<FireOutlined />} />
+          <GlassPanel variant="card" style={{ height: '100%' }}>
+            <StudioHeader title="Agent 任务分布" icon={<SyncOutlined />} />
             <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={pieOption} style={{ height: 280 }} notMerge />
+              <ReactEChartsCore echarts={echarts} option={roseOption} style={{ height: 250 }} notMerge />
             </div>
           </GlassPanel>
         </Col>
       </Row>
 
-      {/* 最近任务 */}
+      {/* Radar + Stacked Bar */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 'var(--spacing-lg)' }}>
+        <Col xs={24} lg={8}>
+          <GlassPanel variant="card">
+            <StudioHeader title="模型性能对比" icon={<RocketOutlined />} />
+            <div style={{ padding: 'var(--spacing-lg)' }}>
+              <ReactEChartsCore echarts={echarts} option={radarOption} style={{ height: 250 }} notMerge />
+            </div>
+          </GlassPanel>
+        </Col>
+        <Col xs={24} lg={16}>
+          <GlassPanel variant="card">
+            <StudioHeader title="品类 × 模型 × 成功率" icon={<VideoCameraOutlined />} />
+            <div style={{ padding: 'var(--spacing-lg)' }}>
+              <ReactEChartsCore echarts={echarts} option={stackedBarOption} style={{ height: 250 }} notMerge />
+            </div>
+          </GlassPanel>
+        </Col>
+      </Row>
+
+      {/* Queue + Attribution */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 'var(--spacing-lg)' }}>
+        <Col xs={24} lg={8}>
+          <GlassPanel variant="card">
+            <StudioHeader title="生成队列实时状态" icon={<ClockCircleOutlined />} />
+            <QueueStatus />
+          </GlassPanel>
+        </Col>
+        <Col xs={24} lg={16}>
+          <GlassPanel variant="card">
+            <StudioHeader title="因子归因矩阵" icon={<RocketOutlined />} />
+            <div style={{ padding: 'var(--spacing-lg)' }}>
+              <ReactEChartsCore echarts={echarts} option={heatmapOption} style={{ height: 220 }} notMerge />
+            </div>
+          </GlassPanel>
+        </Col>
+      </Row>
+
+      {/* Trace Waterfall */}
+      <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+        <StudioHeader
+          title="任务追踪瀑布图 (Trace View)"
+          icon={<SyncOutlined />}
+          extra={<Button type="link" size="small" icon={<RightOutlined />} style={{ color: 'var(--brand-primary)' }}>查看全部</Button>}
+        />
+        <div style={{ padding: 'var(--spacing-lg)' }}>
+          <ReactEChartsCore echarts={echarts} option={traceOption} style={{ height: 160 }} notMerge />
+        </div>
+      </GlassPanel>
+
+      {/* Recent Tasks */}
       <GlassPanel variant="card">
         <StudioHeader
           title="最近创作"
@@ -199,7 +304,7 @@ function DashboardPage() {
         />
         <List
           dataSource={mockRecentTasks}
-          renderItem={(task) => {
+          renderItem={(task: any) => {
             const st = statusMap[task.status];
             return (
               <List.Item

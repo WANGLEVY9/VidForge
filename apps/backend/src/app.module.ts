@@ -5,6 +5,9 @@ import { AiModule } from './modules/ai/ai.module';
 import { MaterialModule } from './modules/material/material.module';
 import { ScriptModule } from './modules/script/script.module';
 import { CreationModule } from './modules/creation/creation.module';
+import { AgentModule } from './modules/agent/agent.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { ExportModule } from './modules/export/export.module';
 import { HealthController } from './modules/common/health.controller';
 
 @Module({
@@ -51,6 +54,9 @@ import { HealthController } from './modules/common/health.controller';
     MaterialModule,
     ScriptModule,
     CreationModule,
+    AgentModule,
+    AnalyticsModule,
+    ExportModule,
   ],
   controllers: [HealthController],
 })
