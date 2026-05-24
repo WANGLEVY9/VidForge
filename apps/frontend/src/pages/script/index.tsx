@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import {
   Card, Button, Input, Form, Select, Slider, Switch, Space, Typography,
-  Tag, Divider, message, Row, Col, Steps, Tooltip, Spin, Alert, List,
-  Segmented, Radio,
+  Tag, Divider, message, Row, Col, Steps, Tooltip, Spin, Alert,
 } from 'antd';
 import {
   RocketOutlined, BulbOutlined, CopyOutlined, SaveOutlined,
-  ReloadOutlined, FileTextOutlined, ThunderboltOutlined,
+  FileTextOutlined, ThunderboltOutlined,
   ExperimentOutlined, CustomerServiceOutlined, ShoppingCartOutlined,
   VideoCameraOutlined, SoundOutlined, AimOutlined,
 } from '@ant-design/icons';
@@ -73,7 +72,6 @@ function ScriptPage() {
     }
     setLoading(true);
     setGenerated(false);
-    // 模拟 AI 生成
     setTimeout(() => {
       setLoading(false);
       setGenerated(true);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Row, Col, Card, Statistic, Tag, Typography, List, Button, Space, Badge, Tooltip, Progress } from 'antd';
 import {
   VideoCameraOutlined,
@@ -67,13 +67,6 @@ const statusMap: Record<string, { color: string; text: string; icon: React.React
 };
 
 function DashboardPage() {
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(timer);
-  }, []);
-
   const trendOption = {
     tooltip: { trigger: 'axis' as const, backgroundColor: '#fff', borderColor: theme.colors.borderColor, textStyle: { color: theme.colors.textPrimary } },
     legend: { data: ['视频产出', '剧本生成'], right: 0, top: 0, textStyle: { color: theme.colors.textSecondary } },

@@ -1,16 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  Card, Button, Input, Form, Select, Space, Typography, Steps, Progress,
-  Tag, Divider, Row, Col, Slider, Switch, Tooltip, message, Alert,
-  Timeline, Empty, Modal, Radio,
+  Card, Button, Input, Form, Space, Typography, Steps, Progress,
+  Tag, Row, Col, Slider, Switch, Tooltip, message,
+  Timeline, Segmented, Radio,
 } from 'antd';
 import {
   PlayCircleOutlined, PauseCircleOutlined, ReloadOutlined,
-  VideoCameraOutlined, PictureOutlined, SoundOutlined,
+  VideoCameraOutlined, PictureOutlined,
   ThunderboltOutlined, CheckCircleOutlined, ClockCircleOutlined,
   LoadingOutlined, EyeOutlined, DownloadOutlined, SettingOutlined,
   FileTextOutlined, PlusOutlined, DeleteOutlined, EditOutlined,
-  SwapOutlined, FullscreenOutlined,
 } from '@ant-design/icons';
 import { theme } from '../../theme/tokens';
 
@@ -52,7 +51,6 @@ const qualityOptions = [
 
 function CreationPage() {
   const [currentStep, setCurrentStep] = useState<CreationStep>('config');
-  const [generating, setGenerating] = useState(false);
   const [overallProgress, setOverallProgress] = useState(0);
   const [storyboard, setStoryboard] = useState<StoryboardItem[]>(mockStoryboard);
   const [selectedModel, setSelectedModel] = useState('seedance-1.5-pro');
@@ -71,28 +69,23 @@ function CreationPage() {
       return;
     }
     setCurrentStep('generating');
-    setGenerating(true);
     setOverallProgress(Math.round((completedCount / totalCount) * 100));
 
-    // 模拟逐个生成分镜
     let currentIdx = storyboard.findIndex((s) => s.status === 'pending');
-    if (currentIdx === -1) currentIdx = storyboard.length; // all done
+    if (currentIdx === -1) currentIdx = totalCount;
 
     const simulateGeneration = () => {
       if (currentIdx >= totalCount) {
-        setGenerating(false);
         setCurrentStep('complete');
         setOverallProgress(100);
         message.success('所有分镜生成完成！');
         return;
       }
 
-      // 标记当前为生成中
       setStoryboard((prev) => prev.map((item, i) =>
         i === currentIdx ? { ...item, status: 'generating' as const } : item
       ));
 
-      // 模拟生成完成
       setTimeout(() => {
         setStoryboard((prev) => prev.map((item, i) =>
           i === currentIdx ? { ...item, status: 'completed' as const, videoUrl: '#' } : item
@@ -262,7 +255,7 @@ function CreationPage() {
               style={{ borderRadius: theme.borderRadius.lg, border: 'none' }}
               styles={{ body: { padding: 0 } }}
             >
-              {storyboard.map((item, idx) => {
+              {storyboard.map((item) => {
                 const statusConfig: Record<string, { color: string; icon: React.ReactNode; text: string }> = {
                   pending: { color: 'default', icon: <ClockCircleOutlined />, text: '等待中' },
                   generating: { color: 'processing', icon: <LoadingOutlined />, text: '生成中' },

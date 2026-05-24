@@ -1,6 +1,3 @@
-import { Navigate } from 'react-router-dom';
-import BasicLayout from '@/layouts/BasicLayout';
-
 const DashboardPage = () => import('@/pages/dashboard');
 const MaterialPage = () => import('@/pages/material');
 const ScriptPage = () => import('@/pages/script');
@@ -9,7 +6,7 @@ const CreationPage = () => import('@/pages/creation');
 export interface RouteConfig {
   path: string;
   name: string;
-  element: React.LazyExoticComponent<() => JSX.Element>;
+  element: () => Promise<typeof import('*.tsx')>;
 }
 
 const routes: RouteConfig[] = [

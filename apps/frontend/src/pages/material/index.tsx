@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import {
-  Row, Col, Card, Button, Upload, Tabs, Input, Space, Tag, Typography,
-  Dropdown, Modal, message, Image, Empty, Tooltip, Segmented, Badge,
+  Row, Col, Card, Button, Upload, Input, Space, Tag, Typography,
+  Dropdown, Modal, message, Empty, Tooltip, Segmented,
 } from 'antd';
 import {
-  UploadOutlined, SearchOutlined, DeleteOutlined, EyeOutlined,
+  SearchOutlined, DeleteOutlined, EyeOutlined,
   PictureOutlined, VideoCameraOutlined, FileImageOutlined,
-  FolderOutlined, FilterOutlined, PlusOutlined, CloudUploadOutlined,
+  FilterOutlined, PlusOutlined, CloudUploadOutlined,
   DownloadOutlined, CopyOutlined, AppstoreOutlined, UnorderedListOutlined,
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import { theme } from '../../theme/tokens';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Dragger } = Upload;
 
 type ViewMode = 'grid' | 'list';
@@ -73,7 +73,7 @@ function MaterialPage() {
     },
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (_id: string) => {
     Modal.confirm({
       title: '确认删除',
       content: '删除后无法恢复，是否继续？',
@@ -183,7 +183,7 @@ function MaterialPage() {
         </Card>
       ) : viewMode === 'grid' ? (
         <Row gutter={[16, 16]}>
-          {filteredMaterials.map((item, idx) => {
+          {filteredMaterials.map((item) => {
             const tc = typeConfig[item.type];
             return (
               <Col xs={12} sm={8} md={6} lg={6} xl={4} key={item.id}>
@@ -240,7 +240,7 @@ function MaterialPage() {
         </Row>
       ) : (
         <Card style={{ borderRadius: theme.borderRadius.lg, border: 'none' }} styles={{ body: { padding: 0 } }}>
-          {filteredMaterials.map((item, idx) => {
+          {filteredMaterials.map((item) => {
             const tc = typeConfig[item.type];
             return (
               <div
