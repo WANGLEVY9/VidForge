@@ -1,0 +1,47 @@
+<h2>选择升级策略</h2>
+<p class="subtitle">结合"创意工作室风"和功能优先级，以下三种策略各有侧重</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>渐进增强</h3>
+      <p><strong>方式：</strong>在现有代码上逐层叠加新功能，先改设计系统主题，再逐个页面升级交互</p>
+      <p><strong>设计：</strong>保留 Ant Design，通过主题覆盖 + CSS 变量实现视觉升级</p>
+      <p><strong>节奏：</strong>快速出效果，但底层架构约束仍在</p>
+      <div class="pros-cons" style="margin-top: 8px; font-size: 13px;">
+        <div class="pros"><h4>Pros</h4><ul><li>最快看到效果</li><li>风险最低</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>代码质量混合新旧</li><li>约束于 Ant Design 框架</li></ul></div>
+      </div>
+      <div class="tag" style="background:#dbeafe;color:#1d4ed8;display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;margin-top:8px;">稳妥型</div>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>模块级重构 ⭐</h3>
+      <p><strong>方式：</strong>以"页面=功能模块"为单位，每个模块独立重构。保留现有路由壳，逐个重写内部实现</p>
+      <p><strong>设计：</strong>自定义组件体系（创意工作室风）+ 保留 Ant Design 作为基础 UI 库</p>
+      <p><strong>节奏：</strong>可并行开发，每个模块完成后立即可用</p>
+      <div class="pros-cons" style="margin-top: 8px; font-size: 13px;">
+        <div class="pros"><h4>Pros</h4><ul><li>模块间独立，可并行开发</li><li>新旧代码边界清晰</li><li>每完成一个模块即可上线</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>边界管理需注意</li><li>前后端联调需同步</li></ul></div>
+      </div>
+      <div class="tag" style="background:#fef3c7;color:#d97706;display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;margin-top:8px;">均衡型 ⭐ 推荐</div>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>全量重构</h3>
+      <p><strong>方式：</strong>推倒重来，全部用自定义组件系统（TailwindCSS + Radix UI 替代 Ant Design）</p>
+      <p><strong>设计：</strong>完全自定义设计系统，零框架约束</p>
+      <p><strong>节奏：</strong>前期基建时间长，但后期开发体验最佳</p>
+      <div class="pros-cons" style="margin-top: 8px; font-size: 13px;">
+        <div class="pros"><h4>Pros</h4><ul><li>最干净的代码库</li><li>设计完全自控</li><li>最佳性能</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>耗时最长</li><li>弃用已有 Ant Design 投资</li><li>风险最高</li></ul></div>
+      </div>
+      <div class="tag" style="background:#fce7f3;color:#db2777;display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;margin-top:8px;">激进型</div>
+    </div>
+  </div>
+</div>
