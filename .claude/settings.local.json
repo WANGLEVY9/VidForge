@@ -10,7 +10,18 @@
       "Bash(npx vite *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git config *)",
+      "Bash(git remote *)",
+      "Bash(GIT_TRACE=1 GIT_CURL_VERBOSE=1 git push origin main)",
+      "Bash(git push *)",
+      "Bash(git ls-remote *)",
+      "Bash(curl -s --connect-timeout 3 -x http://127.0.0.1:7890 https://github.com)",
+      "Bash(curl -s --connect-timeout 3 -x http://127.0.0.1:10809 https://github.com)",
+      "Bash(curl -s --connect-timeout 3 -x http://127.0.0.1:1081 https://github.com)",
+      "Bash(echo \"远程 HEAD: $\\(git ls-remote origin HEAD)",
+      "Bash(ssh -T git@github.com)",
+      "Bash(ssh -vT git@github.com)"
     ]
   }
 }

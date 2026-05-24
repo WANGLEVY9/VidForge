@@ -35,6 +35,10 @@ export class CreationGateway implements OnGatewayConnection, OnGatewayDisconnect
     this.logger.log(`客户端 ${client.id} 订阅任务: ${taskId}`);
   }
 
+  emitShotProgress(taskId: string, data: { shotId: string; progress: number; status: string; message?: string }) {
+    this.server.to(`task:${taskId}`).emit('shot-progress', data);
+  }
+
   emitProgress(taskId: string, data: { progress: number; status: string; message?: string }) {
     this.server.to(`task:${taskId}`).emit('progress', data);
   }

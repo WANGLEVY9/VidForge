@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { CreationTask } from './entities/creation-task.entity';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { CreationGateway } from './gateway/creation.gateway';
+import { RegenerateShotDto } from './dto/regenerate-shot.dto';
 
 @Injectable()
 export class CreationService {
@@ -72,6 +73,48 @@ export class CreationService {
 
   async findOne(id: string): Promise<CreationTask> {
     return this.taskRepository.findOneOrFail({ where: { id } });
+  }
+
+  async regenerateShot(taskId: string, dto: RegenerateShotDto): Promise<void> {
+    const task = await this.taskRepository.findOneOrFail({ where: { id: taskId } });
+    const storyboard = [...(task.storyboard || [])];
+    const idx = storyboard.findIndex((s: any) => s.id === dto.shotId);
+    if (idx === -1) throw new Error(`Shot ${dto.shotId} not found`);
+
+    // Update shot description if provided
+    if (dto.description) {
+      storyboard[idx] = { ...storyboard[idx], description: dto.description };
+    }
+
+    // Mark as generating
+    storyboard[idx] = { ...storyboard[idx], status: 'generating' };
+    task.storyboard = storyboard;
+    task.status = 'processing';
+    await this.taskRepository.save(task);
+
+    this.creationGateway.emitProgress(taskId, {
+      progress: task.progress || 0,
+      status: 'processing',
+      message: `正在重新生成分镜 ${idx + 1}...`,
+    });
+
+    // Simulate regeneration (replace with actual AI call in production)
+    await this.delay(3000);
+    storyboard[idx] = {
+      ...storyboard[idx],
+      status: 'completed',
+      videoUrl: '#',
+      thumbnailUrl: '#',
+    };
+    task.storyboard = storyboard;
+    await this.taskRepository.save(task);
+
+    this.creationGateway.emitComplete(taskId, {
+      progress: 100,
+      status: 'completed',
+      shotId: dto.shotId,
+      result: storyboard[idx],
+    });
   }
 
   private delay(ms: number) {
