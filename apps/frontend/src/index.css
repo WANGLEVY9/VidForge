@@ -1,5 +1,9 @@
 /* VidForge 全局样式 */
 
+@import './styles/tokens.css';
+@import './styles/glassmorphism.css';
+@import './styles/animations.css';
+
 /* CSS Reset */
 *,
 *::before,
@@ -16,11 +20,11 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  background: #f8fafc;
-  color: #1e293b;
+  font-family: var(--font-family);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   line-height: 1.5;
+  transition: background var(--duration-normal) var(--ease-out), color var(--duration-normal) var(--ease-out);
 }
 
 #root {
@@ -48,26 +52,26 @@ body {
 
 /* Ant Design 主题覆盖 */
 .ant-layout {
-  background: #f8fafc !important;
+  background: var(--bg-primary) !important;
 }
 
 .ant-card {
-  border-radius: 12px !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
-  transition: box-shadow 0.3s ease, transform 0.3s ease !important;
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-card) !important;
+  transition: box-shadow var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out) !important;
 }
 
 .ant-card:hover {
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: var(--shadow-elevated) !important;
 }
 
 .ant-btn-primary {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%) !important;
   border: none !important;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
   font-weight: 500 !important;
-  border-radius: 8px !important;
+  border-radius: var(--radius-md) !important;
   height: 40px !important;
   padding: 0 24px !important;
 }
@@ -78,7 +82,7 @@ body {
 }
 
 .ant-menu-item {
-  border-radius: 8px !important;
+  border-radius: var(--radius-md) !important;
   margin: 4px 8px !important;
 }
 
@@ -89,7 +93,7 @@ body {
 }
 
 .ant-statistic-title {
-  color: #64748b !important;
+  color: var(--text-secondary) !important;
   font-size: 13px !important;
 }
 
@@ -97,31 +101,19 @@ body {
   font-weight: 600 !important;
 }
 
-/* 页面过渡动画 */
-.page-enter {
-  opacity: 0;
-  transform: translateY(8px);
-}
-
-.page-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
 /* 卡片悬浮效果 */
 .hover-lift {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 .hover-lift:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-elevated);
 }
 
 /* 渐变文字 */
 .gradient-text {
-  background: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
+  background: linear-gradient(135deg, var(--brand-primary) 0%, #ec4899 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
