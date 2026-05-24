@@ -8,11 +8,11 @@ export const theme = {
     primaryHover: '#818cf8',
     primaryActive: '#4f46e5',
     primaryBg: '#eef2ff',
-    
+
     // 辅助色
     secondary: '#ec4899',
     secondaryHover: '#f472b6',
-    
+
     // 功能色
     success: '#10b981',
     successBg: '#ecfdf5',
@@ -22,30 +22,30 @@ export const theme = {
     errorBg: '#fef2f2',
     info: '#3b82f6',
     infoBg: '#eff6ff',
-    
+
     // 中性色
     textPrimary: '#1e293b',
     textSecondary: '#64748b',
     textTertiary: '#94a3b8',
     textDisabled: '#cbd5e1',
-    
+
     // 背景色
     bgLayout: '#f8fafc',
     bgContainer: '#ffffff',
     bgElevated: '#ffffff',
     bgSpotlight: '#f1f5f9',
-    
+
     // 边框
     borderColor: '#e2e8f0',
     borderColorSecondary: '#f1f5f9',
-    
+
     // 渐变
     gradientPrimary: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
     gradientSecondary: 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)',
     gradientDark: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
     gradientCard: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
   },
-  
+
   borderRadius: {
     sm: 6,
     md: 8,
@@ -53,7 +53,7 @@ export const theme = {
     xl: 16,
     xxl: 24,
   },
-  
+
   spacing: {
     xs: 4,
     sm: 8,
@@ -63,7 +63,7 @@ export const theme = {
     xxl: 32,
     xxxl: 48,
   },
-  
+
   shadows: {
     card: '0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
     cardHover: '0 10px 25px rgba(0, 0, 0, 0.08), 0 4px 10px rgba(0, 0, 0, 0.04)',
@@ -71,7 +71,7 @@ export const theme = {
     modal: '0 20px 60px rgba(0, 0, 0, 0.15)',
     glow: '0 0 20px rgba(99, 102, 241, 0.3)',
   },
-  
+
   fonts: {
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
     fontSize: {
@@ -96,7 +96,7 @@ export const theme = {
       relaxed: 1.75,
     },
   },
-  
+
   animation: {
     durationFast: '0.15s',
     durationNormal: '0.3s',
@@ -106,3 +106,53 @@ export const theme = {
 } as const;
 
 export type Theme = typeof theme;
+
+// 深色主题 tokens
+export const darkTheme = {
+  colors: {
+    textPrimary: 'rgba(255, 255, 255, 0.90)',
+    textSecondary: 'rgba(255, 255, 255, 0.65)',
+    textTertiary: 'rgba(255, 255, 255, 0.40)',
+    textDisabled: 'rgba(255, 255, 255, 0.20)',
+    bgLayout: '#0f0f13',
+    bgContainer: '#1a1a23',
+    bgElevated: '#2a2a36',
+    bgSpotlight: '#24242f',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColorSecondary: 'rgba(255, 255, 255, 0.12)',
+  },
+  shadows: {
+    card: '0 1px 3px rgba(0, 0, 0, 0.3)',
+    cardHover: '0 10px 40px rgba(0, 0, 0, 0.4)',
+    dropdown: '0 10px 40px rgba(0, 0, 0, 0.4)',
+    modal: '0 20px 60px rgba(0, 0, 0, 0.5)',
+    glow: '0 0 20px rgba(99, 102, 241, 0.3)',
+  },
+} as const;
+
+export type DarkTheme = typeof darkTheme;
+
+// 浅色主题 tokens
+export const lightTheme = {
+  colors: {
+    textPrimary: '#1e293b',
+    textSecondary: '#64748b',
+    textTertiary: '#94a3b8',
+    textDisabled: '#cbd5e1',
+    bgLayout: '#f8fafc',
+    bgContainer: '#ffffff',
+    bgElevated: '#ffffff',
+    bgSpotlight: '#f1f5f9',
+    borderColor: '#e2e8f0',
+    borderColorSecondary: '#f1f5f9',
+  },
+  shadows: {
+    card: '0 1px 3px rgba(0, 0, 0, 0.06)',
+    cardHover: '0 10px 25px rgba(0, 0, 0, 0.08)',
+    dropdown: '0 10px 40px rgba(0, 0, 0, 0.12)',
+    modal: '0 20px 60px rgba(0, 0, 0, 0.15)',
+    glow: '0 0 20px rgba(99, 102, 241, 0.3)',
+  },
+} as const;
+
+export type LightTheme = typeof lightTheme;
