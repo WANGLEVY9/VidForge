@@ -1,4 +1,4 @@
-import { Layout, Menu, Avatar, Badge, Tooltip, Tag } from 'antd';
+import { Layout, Menu, Avatar, Badge, Tooltip, Tag, Dropdown } from 'antd';
 import {
   RocketOutlined,
   UploadOutlined,
@@ -10,11 +10,15 @@ import {
   ExperimentOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  UserOutlined,
+  QuestionCircleOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
-import { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useAppStore } from '../store/useAppStore';
+import ThemeToggle from '../components/common/ThemeToggle';
 
-const { Sider, Content, Header } = Layout;
+const { Content, Header } = Layout;
 
 const menuItems = [
   {
@@ -39,30 +43,58 @@ const menuItems = [
   },
 ];
 
+const userMenuItems = [
+  {
+    key: 'profile',
+    icon: <UserOutlined />,
+    label: '个人中心',
+  },
+  {
+    key: 'help',
+    icon: <QuestionCircleOutlined />,
+    label: '帮助中心',
+  },
+  { type: 'divider' as const },
+  {
+    key: 'logout',
+    icon: <LogoutOutlined />,
+    label: '退出登录',
+  },
+];
+
 function BasicLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
+  const { sidebarCollapsed: collapsed, toggleSidebar } = useAppStore();
+
+  const handleUserMenuClick = ({ key }: { key: string }) => {
+    if (key === 'logout') {
+      console.log('Logout');
+    } else if (key === 'profile') {
+      navigate('/profile');
+    } else if (key === 'help') {
+      navigate('/help');
+    }
+  };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      {/* 侧边栏 */}
-      <Sider
-        trigger={null}
-        collapsible
-        collapsed={collapsed}
-        width={240}
+    <Layout style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      {/* 暗色玻璃侧边栏 */}
+      <div
+        className="glass-strong"
         style={{
-          background: '#fff',
-          borderRight: '1px solid #e2e8f0',
+          width: collapsed ? 80 : 240,
           position: 'fixed',
           left: 0,
           top: 0,
           bottom: 0,
           zIndex: 100,
-          boxShadow: '2px 0 8px rgba(0,0,0,0.04)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          transition: 'width var(--duration-normal) var(--ease-out)',
+          borderRight: '1px solid var(--border-color)',
         }}
-        theme="light"
       >
         {/* Logo */}
         <div
@@ -72,15 +104,16 @@ function BasicLayout() {
             alignItems: 'center',
             justifyContent: collapsed ? 'center' : 'flex-start',
             padding: collapsed ? '0' : '0 20px',
-            borderBottom: '1px solid #f1f5f9',
+            borderBottom: '1px solid var(--border-color)',
             cursor: 'pointer',
+            flexShrink: 0,
           }}
           onClick={() => navigate('/dashboard')}
         >
           <RocketOutlined
             style={{
               fontSize: 28,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              background: 'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -91,7 +124,7 @@ function BasicLayout() {
                 marginLeft: 12,
                 fontSize: 20,
                 fontWeight: 700,
-                background: 'linear-gradient(135deg, #6366f1 0%, #ec4899 100%)',
+                background: 'linear-gradient(135deg, var(--brand-primary) 0%, #ec4899 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 letterSpacing: '-0.5px',
@@ -109,114 +142,130 @@ function BasicLayout() {
           style={{
             border: 'none',
             padding: '12px 8px',
-            height: 'calc(100% - 64px)',
+            flex: 1,
             overflow: 'auto',
+            background: 'transparent',
           }}
+          theme="dark"
           items={menuItems}
           onClick={({ key }) => navigate(key)}
         />
 
-        {/* 底部信息 */}
+        {/* 底部 AI 标签 */}
         {!collapsed && (
           <div
             style={{
-              position: 'absolute',
-              bottom: 16,
-              left: 16,
-              right: 16,
               padding: '12px 16px',
-              background: 'linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%)',
-              borderRadius: 12,
-              fontSize: 12,
-              color: '#64748b',
+              margin: '0 12px 16px',
+              background: 'var(--bg-surface)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--font-size-xs)',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border-color)',
+              flexShrink: 0,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ExperimentOutlined style={{ color: '#6366f1' }} />
+              <ExperimentOutlined style={{ color: 'var(--brand-primary)' }} />
               <span>AI 驱动电商视频创作</span>
             </div>
           </div>
         )}
-      </Sider>
+      </div>
 
       {/* 主内容区 */}
       <Layout
         style={{
           marginLeft: collapsed ? 80 : 240,
-          transition: 'margin-left 0.3s ease',
+          transition: 'margin-left var(--duration-normal) var(--ease-out)',
+          background: 'var(--bg-primary)',
         }}
       >
         {/* 顶部导航 */}
         <Header
+          className="glass"
           style={{
-          background: '#fff',
-          padding: '0 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid #e2e8f0',
-          position: 'sticky',
-          top: 0,
-          zIndex: 99,
-          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-          height: 64,
-        }}
+            padding: '0 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            position: 'sticky',
+            top: 0,
+            zIndex: 99,
+            height: 64,
+            borderBottom: '1px solid var(--border-color)',
+          }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {/* 折叠按钮 */}
             <div
-              onClick={() => setCollapsed(!collapsed)}
+              onClick={toggleSidebar}
               style={{
                 fontSize: 18,
                 cursor: 'pointer',
-                color: '#64748b',
+                color: 'var(--text-secondary)',
                 width: 32,
                 height: 32,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: 8,
-                transition: 'background 0.2s',
+                borderRadius: 'var(--radius-md)',
+                transition: 'background var(--duration-fast) var(--ease-out)',
               }}
-              >
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--bg-surface-2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
               {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             </div>
 
             {/* 面包屑 */}
-            <span style={{ color: '#64748b', fontSize: 13 }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
               {menuItems.find((m) => m.key === location.pathname)?.label || '工作台'}
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {/* 主题切换 */}
+            <ThemeToggle />
+
             {/* API 状态 */}
-            <Tag color="success" style={{ borderRadius: 12, margin: 0 }}>
+            <Tag color="success" style={{ borderRadius: 'var(--radius-md)', margin: 0 }}>
               API 已连接
             </Tag>
 
             {/* 通知 */}
             <Tooltip title="通知">
               <Badge count={3} size="small">
-                <BellOutlined style={{ fontSize: 18, color: '#64748b', cursor: 'pointer' }} />
+                <BellOutlined style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }} />
               </Badge>
             </Tooltip>
 
             {/* 设置 */}
             <Tooltip title="设置">
-              <SettingOutlined style={{ fontSize: 18, color: '#64748b', cursor: 'pointer' }} />
+              <SettingOutlined style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }} />
             </Tooltip>
 
-            {/* 用户头像 */}
-            <Avatar
-              size={36}
-              style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                cursor: 'pointer',
-                marginLeft: 4,
-              }}
+            {/* 用户头像下拉 */}
+            <Dropdown
+              menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
+              placement="bottomRight"
+              trigger={['click']}
             >
-              U
-            </Avatar>
+              <Avatar
+                size={36}
+                style={{
+                  background: 'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
+                  cursor: 'pointer',
+                  marginLeft: 4,
+                }}
+              >
+                U
+              </Avatar>
+            </Dropdown>
           </div>
         </Header>
 
@@ -225,7 +274,7 @@ function BasicLayout() {
           style={{
             padding: 24,
             minHeight: 'calc(100vh - 64px)',
-            background: '#f8fafc',
+            background: 'var(--bg-primary)',
           }}
         >
           <Outlet />
