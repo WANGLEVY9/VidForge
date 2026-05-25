@@ -1,21 +1,27 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('数据统计')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('overview')
-  @ApiOperation({ summary: '概览指标卡片' })
-  getOverview() {
-    return this.analyticsService.getOverview();
+  @ApiOperation({ summary: '概览指标卡片（按当前用户隔离）' })
+  getOverview(@CurrentUser() user: JwtPayload, @Query('spaceId') spaceId?: string) {
+    return this.analyticsService.getOverview(user.sub, spaceId);
   }
 
   @Get('trends')
   @ApiOperation({ summary: '创作趋势' })
-  getTrends(@Query('period') period: string = 'month') {
+  getTrends(@CurrentUser() user: JwtPayload, @Query('period') period: string = 'month') {
+    void user;
     return this.analyticsService.getTrends(period);
   }
 

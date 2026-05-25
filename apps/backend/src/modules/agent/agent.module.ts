@@ -6,8 +6,10 @@ import { MaterialAgentService } from './agents/material-agent.service';
 import { ScriptAgentService } from './agents/script-agent.service';
 import { CompositionAgentService } from './agents/composition-agent.service';
 import { QualityAgentService } from './agents/quality-agent.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
+  imports: [AuthModule],
   controllers: [AgentController],
   providers: [
     AgentService,

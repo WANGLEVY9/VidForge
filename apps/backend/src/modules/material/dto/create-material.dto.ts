@@ -27,4 +27,8 @@ export class CreateMaterialDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @IsOptional()
+  @IsString()
+  productSpaceId?: string;
 }

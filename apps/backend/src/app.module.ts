@@ -8,6 +8,8 @@ import { CreationModule } from './modules/creation/creation.module';
 import { AgentModule } from './modules/agent/agent.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ExportModule } from './modules/export/export.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { ProductSpaceModule } from './modules/product-space/product-space.module';
 import { HealthController } from './modules/common/health.controller';
 
 @Module({
@@ -61,6 +63,8 @@ import { HealthController } from './modules/common/health.controller';
     }),
 
     // 业务模块
+    AuthModule,
+    ProductSpaceModule,
     AiModule,
     MaterialModule,
     ScriptModule,

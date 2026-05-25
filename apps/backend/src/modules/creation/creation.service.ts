@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreationTask } from './entities/creation-task.entity';
@@ -37,7 +37,7 @@ export class CreationService {
     private readonly arkConfigService: ArkConfigService,
   ) {}
 
-  async createTask(dto: CreateTaskDto): Promise<CreationTask> {
+  async createTask(userId: string, dto: CreateTaskDto): Promise<CreationTask> {
     // 规范化 storyboard：补 id / 默认状态
     const inputShots = Array.isArray(dto.storyboard) ? dto.storyboard : [];
     const shots: ShotState[] = inputShots.slice(0, 5).map((s, i) => ({
@@ -51,6 +51,8 @@ export class CreationService {
     }));
 
     const task = this.taskRepository.create({
+      userId,
+      productSpaceId: dto.productSpaceId,
       title: dto.title,
       storyboard: shots as any,
       status: 'pending',
@@ -348,19 +350,26 @@ export class CreationService {
     });
   }
 
-  async findAll(): Promise<CreationTask[]> {
-    return this.taskRepository.find({ order: { createdAt: 'DESC' } });
+  async findAll(userId: string, productSpaceId?: string): Promise<CreationTask[]> {
+    const where: any = { userId };
+    if (productSpaceId) where.productSpaceId = productSpaceId;
+    return this.taskRepository.find({ where, order: { createdAt: 'DESC' } });
   }
 
-  async findOne(id: string): Promise<CreationTask> {
-    return this.taskRepository.findOneOrFail({ where: { id } });
+  async findOne(userId: string, id: string): Promise<CreationTask> {
+    const task = await this.taskRepository.findOne({ where: { id } });
+    if (!task) throw new NotFoundException('任务不存在');
+    if (task.userId && task.userId !== userId) {
+      throw new ForbiddenException('无权访问该任务');
+    }
+    return task;
   }
 
   /**
    * 单分镜重新生成：复用真实 ARK 流程
    */
-  async regenerateShot(taskId: string, dto: RegenerateShotDto): Promise<{ ok: true }> {
-    const task = await this.taskRepository.findOneOrFail({ where: { id: taskId } });
+  async regenerateShot(userId: string, taskId: string, dto: RegenerateShotDto): Promise<{ ok: true }> {
+    const task = await this.findOne(userId, taskId);
     const shots: ShotState[] = ((task.storyboard as any) ?? []).slice();
     const idx = shots.findIndex((s) => s.id === dto.shotId);
     if (idx === -1) throw new Error(`Shot ${dto.shotId} not found`);

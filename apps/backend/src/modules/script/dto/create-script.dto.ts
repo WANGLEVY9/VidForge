@@ -41,4 +41,12 @@ export class CreateScriptDto {
   @IsOptional()
   @IsNumber()
   duration?: number;
+
+  @IsOptional()
+  @IsString()
+  productSpaceId?: string;
+
+  @IsOptional()
+  @IsString()
+  parentScriptId?: string;
 }

@@ -1,9 +1,12 @@
-import { Controller, Post, Get, Param, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Controller, Post, Get, Param, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AgentService } from './agent.service';
 import { RunAgentDto } from './dto/run-agent.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Agent 编排')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('agent')
 export class AgentController {
   constructor(private readonly agentService: AgentService) {}
