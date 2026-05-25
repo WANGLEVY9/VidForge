@@ -1,0 +1,128 @@
+<h2>Responsive CSS Strategy</h2>
+<p class="subtitle">Extend existing dark-theme tokens for mobile, container queries, touch adaptations.</p>
+
+<div class="section">
+  <h3>1. Token Extensions — <code>tokens.css</code></h3>
+  <div style="background:#1a1a23;border-radius:8px;padding:12px;font-family:monospace;font-size:12px;line-height:1.5;margin-bottom:12px">
+<span style="color:#6366f1">/* Mobile-specific tokens */</span>
+<span style="color:#94a3b8">:root {</span>
+  <span style="color:#6366f1">/* Safe areas */</span>
+  <span style="color:#a855f7">--safe-area-top</span>: env(safe-area-inset-top, 0px);
+  <span style="color:#a855f7">--safe-area-bottom</span>: env(safe-area-inset-bottom, 0px);
+  <span style="color:#a855f7">--safe-area-left</span>: env(safe-area-inset-left, 0px);
+  <span style="color:#a855f7">--safe-area-right</span>: env(safe-area-inset-right, 0px);
+
+  <span style="color:#6366f1">/* Shell dimensions */</span>
+  <span style="color:#a855f7">--top-bar-height</span>: 48px;
+  <span style="color:#a855f7">--tab-bar-height</span>: 56px;
+  <span style="color:#a855f7">--tab-bar-height-total</span>: calc(56px + var(--safe-area-bottom));
+  <span style="color:#a855f7">--fab-size</span>: 56px;
+  <span style="color:#a855f7">--fab-bottom</span>: calc(var(--tab-bar-height) + 16px);
+
+  <span style="color:#6366f1">/* Breakpoints (for reference in JS) */</span>
+  <span style="color:#6366f1">/* --bp-mobile: 768px; */</span>
+  <span style="color:#6366f1">/* --bp-tablet: 1024px; */</span>
+
+  <span style="color:#6366f1">/* Touch */</span>
+  <span style="color:#a855f7">--touch-target-min</span>: 44px;  <span style="color:#6366f1">/* Apple HIG minimum */</span>
+<span style="color:#94a3b8">}</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. Container Queries — <code>responsive.css</code> (new)</h3>
+  <div style="background:#1a1a23;border-radius:8px;padding:12px;font-family:monospace;font-size:12px;line-height:1.5;margin-bottom:12px">
+<span style="color:#6366f1">/* Page container for CQ */</span>
+<span style="color:#94a3b8">.page-container {</span>
+  <span style="color:#a855f7">container-type</span>: inline-size;
+  <span style="color:#a855f7">container-name</span>: page;
+<span style="color:#94a3b8">}</span>
+
+<span style="color:#6366f1">/* Show/hide sidebar vs tab bar */</span>
+<span style="color:#94a3b8">@container page (width &lt; 768px) {</span>
+  <span style="color:#a855f7">.desktop-sidebar</span> { display: none; }
+  <span style="color:#a855f7">.mobile-tab-bar</span>  { display: flex; }
+  <span style="color:#a855f7">.page-content</span>   { padding-bottom: var(--tab-bar-height-total); }
+<span style="color:#94a3b8">}</span>
+
+<span style="color:#94a3b8">@container page (width &gt;= 768px) {</span>
+  <span style="color:#a855f7">.desktop-sidebar</span> { display: flex; }
+  <span style="color:#a855f7">.mobile-tab-bar</span>  { display: none; }
+  <span style="color:#a855f7">.page-content</span>   { padding-bottom: 0; }
+<span style="color:#94a3b8">}</span>
+
+<span style="color:#6366f1">/* Mobile 2-column grid auto-switch */</span>
+<span style="color:#94a3b8">@container page (width &lt; 480px) {</span>
+  <span style="color:#a855f7">.material-grid</span> { grid-template-columns: repeat(2, 1fr); }
+<span style="color:#94a3b8">}</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3. Touch vs Pointer Adaptations</h3>
+  <table style="width:100%;border-collapse:collapse;margin:12px 0">
+    <tr style="background:#1a1a23">
+      <th style="padding:8px;border:1px solid #333;text-align:left">CSS Rule</th>
+      <th style="padding:8px;border:1px solid #333;text-align:left">效果</th>
+    </tr>
+    <tr>
+      <td style="padding:8px;border:1px solid #333"><code>@media (hover: hover) and (pointer: fine)</code></td>
+      <td style="padding:8px;border:1px solid #333">桌面悬停效果（hover-lift, card:hover）仅在支持悬停的设备启用</td>
+    </tr>
+    <tr style="background:#1a1a23">
+      <td style="padding:8px;border:1px solid #333"><code>@media (hover: none) and (pointer: coarse)</code></td>
+      <td style="padding:8px;border:1px solid #333">触控设备：增大点击区域 <code>min-height: var(--touch-target-min)</code></td>
+    </tr>
+    <tr>
+      <td style="padding:8px;border:1px solid #333"><code>@media (prefers-reduced-motion)</code></td>
+      <td style="padding:8px;border:1px solid #333">减弱动效：减少 transition/animation 复杂度</td>
+    </tr>
+    <tr style="background:#1a1a23">
+      <td style="padding:8px;border:1px solid #333"><code>-webkit-tap-highlight-color: transparent</code></td>
+      <td style="padding:8px;border:1px solid #333">去除移动端默认触摸高亮</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>4. Existing CSS Updates</h3>
+
+  <p><strong>glassmorphism.css</strong> — 新增移动端底部标签栏玻璃效果：</p>
+  <div style="background:#1a1a23;border-radius:8px;padding:12px;font-family:monospace;font-size:12px;line-height:1.5;margin-bottom:12px">
+<span style="color:#94a3b8">.glass-tab-bar {</span>
+  <span style="color:#a855f7">background</span>: rgba(15, 15, 19, 0.85);
+  <span style="color:#a855f7">backdrop-filter</span>: blur(20px);
+  <span style="color:#a855f7">-webkit-backdrop-filter</span>: blur(20px);
+  <span style="color:#a855f7">border-top</span>: 1px solid rgba(255, 255, 255, 0.06);
+  <span style="color:#a855f7">padding-bottom</span>: var(--safe-area-bottom);
+<span style="color:#94a3b8">}</span>
+  </div>
+
+  <p><strong>animations.css</strong> — 新增移动端切换动效：</p>
+  <div style="background:#1a1a23;border-radius:8px;padding:12px;font-family:monospace;font-size:12px;line-height:1.5;margin-bottom:12px">
+<span style="color:#6366f1">/* Tab bar active indicator slide */</span>
+<span style="color:#94a3b8">@keyframes tabIndicator {</span>
+  <span style="color:#a855f7">from</span> { width: 0; opacity: 0; }
+  <span style="color:#a855f7">to</span>   { width: 20px; opacity: 1; }
+<span style="color:#94a3b8">}</span>
+
+<span style="color:#6366f1">/* FAB menu spring animation */</span>
+<span style="color:#94a3b8">@keyframes fabEnter {</span>
+  <span style="color:#a855f7">0%</span>   { transform: scale(0) translateY(10px); opacity: 0; }
+  <span style="color:#a855f7">60%</span>  { transform: scale(1.1) translateY(-2px); opacity: 1; }
+  <span style="color:#a855f7">100%</span> { transform: scale(1) translateY(0); opacity: 1; }
+<span style="color:#94a3b8">}</span>
+
+<span style="color:#6366f1">/* Page slide transition for SwipeableView */</span>
+<span style="color:#94a3b8">.page-slide {</span>
+  <span style="color:#a855f7">transition</span>: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  <span style="color:#a855f7">will-change</span>: transform;
+<span style="color:#94a3b8">}</span>
+  </div>
+</div>
+
+<div class="section" style="background:#0f0f1a;border-radius:8px;padding:16px;margin-top:16px">
+  <p style="color:#94a3b8;margin:0">
+    <strong>至此设计阶段完成。</strong>涵盖：导航模式 → 布局架构 → 页面适配 → 组件设计 → CSS 策略。准备进入设计文档撰写阶段。
+  </p>
+</div>

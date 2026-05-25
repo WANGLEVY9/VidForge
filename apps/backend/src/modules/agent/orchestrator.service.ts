@@ -8,6 +8,8 @@ import { ScriptAgentService } from './agents/script-agent.service';
 import { CompositionAgentService } from './agents/composition-agent.service';
 import { QualityAgentService } from './agents/quality-agent.service';
 
+type NodeReturn = Partial<AgentState>;
+
 @Injectable()
 export class OrchestratorService {
   private readonly logger = new Logger(OrchestratorService.name);
@@ -24,45 +26,45 @@ export class OrchestratorService {
     const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const startedAt = new Date();
 
-    const workflow = new StateGraph<AgentState>({
-      channels: {
-        taskId: { value: (a: string, b: string) => b ?? a, default: () => taskId },
-        status: { value: (a: string, b: string) => b ?? a, default: () => 'pending' as const },
-        currentNode: { value: (a: string, b: string) => b ?? a, default: () => '' },
-        progress: { value: (a: number, b: number) => b ?? a, default: () => 0 },
-        productName: { value: (a: string, b: string) => b ?? a, default: () => dto.productName },
-        category: { value: (a: string, b: string) => b ?? a, default: () => dto.category },
-        sellingPoints: { value: (a: string, b: string) => b ?? a, default: () => dto.sellingPoints },
-        targetAudience: { value: (a: string | undefined, b: string | undefined) => b ?? a, default: () => dto.targetAudience },
-        style: { value: (a: string | undefined, b: string | undefined) => b ?? a, default: () => dto.style },
-        duration: { value: (a: number | undefined, b: number | undefined) => b ?? a, default: () => dto.duration },
-        materialAnalysis: { value: (a: any, b: any) => b ?? a, default: () => undefined },
-        scriptGeneration: { value: (a: any, b: any) => b ?? a, default: () => undefined },
-        videoComposition: { value: (a: any, b: any) => b ?? a, default: () => undefined },
-        qualityControl: { value: (a: any, b: any) => b ?? a, default: () => undefined },
-        errors: { value: (a: any[], b: any[]) => [...(a ?? []), ...(b ?? [])], default: () => [] },
-        retryCount: { value: (a: number, b: number) => b ?? a, default: () => 0 },
-      },
-    })
-      .addNode('orchestrator', async (state: AgentState) => {
+    const channels: Record<string, { value: (...args: any[]) => any; default: () => any }> = {
+      taskId: { value: (a: any, b: any) => b ?? a, default: () => taskId },
+      status: { value: (a: any, b: any) => b ?? a, default: () => 'pending' },
+      currentNode: { value: (a: any, b: any) => b ?? a, default: () => '' },
+      progress: { value: (a: any, b: any) => b ?? a, default: () => 0 },
+      productName: { value: (a: any, b: any) => b ?? a, default: () => dto.productName },
+      category: { value: (a: any, b: any) => b ?? a, default: () => dto.category },
+      sellingPoints: { value: (a: any, b: any) => b ?? a, default: () => dto.sellingPoints },
+      targetAudience: { value: (a: any, b: any) => b ?? a, default: () => dto.targetAudience },
+      style: { value: (a: any, b: any) => b ?? a, default: () => dto.style },
+      duration: { value: (a: any, b: any) => b ?? a, default: () => dto.duration },
+      materialAnalysis: { value: (a: any, b: any) => b ?? a, default: () => undefined },
+      scriptGeneration: { value: (a: any, b: any) => b ?? a, default: () => undefined },
+      videoComposition: { value: (a: any, b: any) => b ?? a, default: () => undefined },
+      qualityControl: { value: (a: any, b: any) => b ?? a, default: () => undefined },
+      errors: { value: (a: any, b: any) => [...(a ?? []), ...(b ?? [])], default: () => [] },
+      retryCount: { value: (a: any, b: any) => b ?? a, default: () => 0 },
+    };
+
+    const workflow = new StateGraph({ channels } as any)
+      .addNode('orchestrator', async (_state: AgentState): Promise<NodeReturn> => {
         this.logger.log(`[${taskId}] Orchestrator starting...`);
-        return { status: 'running' as const, currentNode: 'material_analysis', progress: 5 };
+        return { status: 'running', currentNode: 'material_analysis', progress: 5 };
       })
-      .addNode('material_analysis', async (state: AgentState) => {
+      .addNode('material_analysis', async (state: AgentState): Promise<NodeReturn> => {
         const result = await this.materialAgent.analyze(state);
         return { ...result, currentNode: 'script_generation', progress: 25 };
       })
-      .addNode('script_generation', async (state: AgentState) => {
+      .addNode('script_generation', async (state: AgentState): Promise<NodeReturn> => {
         const result = await this.scriptAgent.generate(state);
         return { ...result, currentNode: 'video_composition', progress: 50 };
       })
-      .addNode('video_composition', async (state: AgentState) => {
+      .addNode('video_composition', async (state: AgentState): Promise<NodeReturn> => {
         const result = await this.compositionAgent.compose(state);
         return { ...result, currentNode: 'quality_control', progress: 75 };
       })
-      .addNode('quality_control', async (state: AgentState) => {
+      .addNode('quality_control', async (state: AgentState): Promise<NodeReturn> => {
         const result = await this.qualityAgent.evaluate(state);
-        return { ...result, currentNode: '__end__', progress: 100, status: 'completed' as const };
+        return { ...result, currentNode: '__end__', progress: 100, status: 'completed' };
       })
       .addEdge('__start__', 'orchestrator')
       .addEdge('orchestrator', 'material_analysis')
@@ -93,7 +95,7 @@ export class OrchestratorService {
         duration: dto.duration,
         errors: [],
         retryCount: 0,
-      } as AgentState);
+      } as any);
 
       return {
         taskId,
