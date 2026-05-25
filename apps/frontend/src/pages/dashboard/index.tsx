@@ -20,6 +20,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { StudioHeader } from '../../components/studio/StudioHeader';
 import { QueueStatus } from '../../components/dashboard/QueueStatus';
+import { ChartPanel } from '../../components/dashboard/ChartPanel';
 import { useShell } from '../../components/layout/shell-context';
 import { analyticsApi } from '../../services/analytics';
 
@@ -243,32 +244,17 @@ function DashboardPage() {
           </GlassPanel>
         </Col>
         <Col xs={24} lg={8}>
-          <GlassPanel variant="card" style={{ height: '100%' }}>
-            <StudioHeader title="Agent 任务分布" icon={<SyncOutlined />} />
-            <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={roseOption} style={{ height: smallChartHeight }} notMerge />
-            </div>
-          </GlassPanel>
+          <ChartPanel title="Agent 任务分布" icon={<SyncOutlined />} option={roseOption} height={smallChartHeight} />
         </Col>
       </Row>
 
       {/* Radar + Stacked Bar */}
       <Row gutter={[12, 12]} style={{ marginBottom: 'var(--spacing-lg)' }}>
         <Col xs={24} lg={8}>
-          <GlassPanel variant="card">
-            <StudioHeader title="模型性能对比" icon={<RocketOutlined />} />
-            <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={radarOption} style={{ height: smallChartHeight }} notMerge />
-            </div>
-          </GlassPanel>
+          <ChartPanel title="模型性能对比" icon={<RocketOutlined />} option={radarOption} height={smallChartHeight} />
         </Col>
         <Col xs={24} lg={16}>
-          <GlassPanel variant="card">
-            <StudioHeader title="品类 × 模型 × 成功率" icon={<VideoCameraOutlined />} />
-            <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={stackedBarOption} style={{ height: smallChartHeight }} notMerge />
-            </div>
-          </GlassPanel>
+          <ChartPanel title="品类 × 模型 × 成功率" icon={<VideoCameraOutlined />} option={stackedBarOption} height={smallChartHeight} />
         </Col>
       </Row>
 
@@ -281,26 +267,14 @@ function DashboardPage() {
           </GlassPanel>
         </Col>
         <Col xs={24} lg={16}>
-          <GlassPanel variant="card">
-            <StudioHeader title="因子归因矩阵" icon={<RocketOutlined />} />
-            <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={heatmapOption} style={{ height: isMobile ? 160 : 220 }} notMerge />
-            </div>
-          </GlassPanel>
+          <ChartPanel title="因子归因矩阵" icon={<RocketOutlined />} option={heatmapOption} height={isMobile ? 160 : 220} />
         </Col>
       </Row>
 
       {/* Trace Waterfall */}
-      <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
-        <StudioHeader
-          title="任务追踪瀑布图 (Trace View)"
-          icon={<SyncOutlined />}
-          extra={<Button type="link" size="small" icon={<RightOutlined />} style={{ color: 'var(--brand-primary)' }}>查看全部</Button>}
-        />
-        <div style={{ padding: 'var(--spacing-lg)' }}>
-          <ReactEChartsCore echarts={echarts} option={traceOption} style={{ height: isMobile ? 120 : 160 }} notMerge />
-        </div>
-      </GlassPanel>
+      <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+        <ChartPanel title="任务追踪瀑布图 (Trace View)" icon={<SyncOutlined />} option={traceOption} height={isMobile ? 120 : 160} extra={<Button type="link" size="small" icon={<RightOutlined />} style={{ color: 'var(--brand-primary)' }}>查看全部</Button>} />
+      </div>
 
       {/* Recent Tasks */}
       <GlassPanel variant="card">

@@ -3,9 +3,11 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Spin } from 'antd';
 import BasicLayout from './layouts/BasicLayout';
 import routes from './routes';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 function App() {
   return (
+    <ErrorBoundary>
     <Routes>
       <Route
         path="/"
@@ -38,6 +40,7 @@ function App() {
         ))}
       </Route>
     </Routes>
+    </ErrorBoundary>
   );
 }
 
