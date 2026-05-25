@@ -10,7 +10,18 @@ import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    // 与 main.ts 中 HTTP CORS 对齐：放开所有 *.vercel.app 子域 + 配置的 WEB_BASE_URL + 同源
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin) return callback(null, true);
+      const allowed = (process.env.WEB_BASE_URL ?? '')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean);
+      if (allowed.includes(origin)) return callback(null, true);
+      if (/^https?:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return callback(null, true);
+      if (/^http:\/\/(localhost|127\.0\.0\.1):\d+$/i.test(origin)) return callback(null, true);
+      return callback(new Error(`WS CORS blocked: ${origin}`), false);
+    },
     credentials: true,
   },
   namespace: '/creation',
