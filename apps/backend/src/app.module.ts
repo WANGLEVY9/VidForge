@@ -21,17 +21,26 @@ import { HealthController } from './modules/common/health.controller';
     // 数据库配置
     TypeOrmModule.forRootAsync({
       useFactory: (configService: ConfigService) => {
-        const databaseUrl = configService.get('DATABASE_URL');
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+        const nodeEnv = configService.get<string>('NODE_ENV');
+        // 是否同步表结构：dev 默认开；生产由 DB_SYNCHRONIZE=true 显式开启（用于初次建表）
+        const syncEnv = configService.get<string>('DB_SYNCHRONIZE');
+        const synchronize = syncEnv !== undefined
+          ? syncEnv === 'true'
+          : nodeEnv === 'development';
+        const logging = nodeEnv === 'development';
+        const ssl = nodeEnv === 'production' ? { rejectUnauthorized: false } : false;
+
         if (databaseUrl) {
           return {
             type: 'postgres',
             url: databaseUrl,
             entities: [__dirname + '/**/*.entity{.ts,.js}'],
-            synchronize: configService.get('NODE_ENV') === 'development',
-            logging: configService.get('NODE_ENV') === 'development',
-            ssl: configService.get('NODE_ENV') === 'production'
-              ? { rejectUnauthorized: false }
-              : false,
+            synchronize,
+            logging,
+            ssl,
+            // 启动时即建立连接池，便于早期发现配置问题
+            autoLoadEntities: true,
           };
         }
         return {
@@ -42,8 +51,10 @@ import { HealthController } from './modules/common/health.controller';
           password: configService.get('DB_PASSWORD'),
           database: configService.get('DB_NAME'),
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: configService.get('NODE_ENV') === 'development',
-          logging: configService.get('NODE_ENV') === 'development',
+          synchronize,
+          logging,
+          ssl,
+          autoLoadEntities: true,
         };
       },
       inject: [ConfigService],
