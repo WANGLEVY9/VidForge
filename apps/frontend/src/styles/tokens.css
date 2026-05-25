@@ -63,3 +63,17 @@
   --shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.12);
   --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15);
 }
+
+/* ======== Mobile-specific tokens ======== */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --top-bar-height: 48px;
+  --tab-bar-height: 56px;
+  --tab-bar-height-total: calc(56px + var(--safe-area-bottom));
+  --fab-size: 56px;
+  --fab-bottom: calc(var(--tab-bar-height) + 16px + var(--safe-area-bottom));
+  --touch-target-min: 44px;
+}

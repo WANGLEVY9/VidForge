@@ -1,0 +1,60 @@
+/* VidForge Responsive — Container Queries + Touch Adaptations */
+
+/* Shell container for container queries */
+.page-container {
+  container-type: inline-size;
+  container-name: page;
+}
+
+/* ======== Breakpoint: < 768px ======== */
+@container page (width < 768px) {
+  .desktop-sidebar { display: none; }
+  .mobile-tab-bar { display: flex; }
+  .page-content { padding-bottom: var(--tab-bar-height-total); }
+  .mobile-top-bar { display: flex; }
+  .desktop-top-bar { display: none; }
+}
+
+@container page (width >= 768px) {
+  .desktop-sidebar { display: flex; }
+  .mobile-tab-bar { display: none; }
+  .page-content { padding-bottom: 0; }
+  .mobile-top-bar { display: none; }
+  .desktop-top-bar { display: flex; }
+}
+
+/* ======== Touch device optimizations ======== */
+@media (hover: none) and (pointer: coarse) {
+  .touch-target {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+  }
+  .hover-lift {
+    transform: none !important;
+  }
+  .touch-feedback:active {
+    transform: scale(0.97);
+    transition: transform 0.1s;
+  }
+}
+
+@media (hover: none) {
+  .glass-card:hover {
+    transform: none !important;
+    box-shadow: var(--shadow-card) !important;
+  }
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-slide { transition: none !important; }
+  .fab-enter { animation: none !important; }
+}
