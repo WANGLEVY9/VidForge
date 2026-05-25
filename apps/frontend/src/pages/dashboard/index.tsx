@@ -184,12 +184,12 @@ function DashboardPage() {
       {/* Metric Cards */}
       <Row gutter={[12, 12]} style={{ marginBottom: 'var(--spacing-lg)' }}>
         {[
-          { title: '素材总量', value: overview?.totalMaterials ?? '—', change: overview?.momChanges.materials ?? '', icon: <UploadOutlined />, color: '#6366f1' },
-          { title: '剧本总数', value: overview?.totalScripts ?? '—', change: overview?.momChanges.scripts ?? '', icon: <FileTextOutlined />, color: '#a855f7' },
-          { title: '视频产出', value: overview?.totalCreations ?? '—', change: overview?.momChanges.creations ?? '', icon: <VideoCameraOutlined />, color: '#10b981' },
+          { title: '素材总量', value: overview?.totalMaterials ?? '—', change: overview?.momChanges?.materials ?? '', icon: <UploadOutlined />, color: '#6366f1' },
+          { title: '剧本总数', value: overview?.totalScripts ?? '—', change: overview?.momChanges?.scripts ?? '', icon: <FileTextOutlined />, color: '#a855f7' },
+          { title: '视频产出', value: overview?.totalCreations ?? '—', change: overview?.momChanges?.creations ?? '', icon: <VideoCameraOutlined />, color: '#10b981' },
           { title: '今日新增', value: overview?.todayCreations ?? '—', change: '', icon: <ThunderboltOutlined />, color: '#f59e0b' },
-          { title: '生成成功率', value: overview ? `${overview.successRate}%` : '—', change: overview?.momChanges.successRate ?? '', icon: <CheckCircleOutlined />, color: '#3b82f6' },
-          { title: '平均耗时', value: overview ? `${overview.avgDuration}s` : '—', change: overview?.momChanges.avgDuration ?? '', icon: <ClockCircleOutlined />, color: '#ef4444' },
+          { title: '生成成功率', value: overview ? `${overview.successRate}%` : '—', change: overview?.momChanges?.successRate ?? '', icon: <CheckCircleOutlined />, color: '#3b82f6' },
+          { title: '平均耗时', value: overview ? `${overview.avgDuration}s` : '—', change: overview?.momChanges?.avgDuration ?? '', icon: <ClockCircleOutlined />, color: '#ef4444' },
         ].slice(0, isMobile ? 4 : 6).map((stat, i) => (
           <Col xs={12} sm={8} md={4} key={i}>
             <GlassPanel variant="card" style={{ padding: 'var(--spacing-lg)' }}>
