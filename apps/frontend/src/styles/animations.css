@@ -1,15 +1,22 @@
 /* VidForge Animations */
 
-/* Page transition */
+/* Page transition — 自启动入场动画
+ * 之前的 .page-enter 只定义了 opacity:0 起点而无 active 触发，
+ * 配合 react-transition-group 才有效；项目并未引入该库，
+ * 因此改为 @keyframes 自动播放，避免页面永远停留在透明状态。
+ */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .page-enter {
-  opacity: 0;
-  transform: translateY(8px);
+  animation: pageEnter 0.35s ease both;
 }
 
 .page-enter-active {
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
 /* Fade in */

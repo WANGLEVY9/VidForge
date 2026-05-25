@@ -272,13 +272,13 @@ function BasicLayout() {
 
           {/* Page content */}
           <main
+            data-vidforge-main
             style={{
               flex: 1,
               padding: 'var(--spacing-xl)',
-              maxWidth: 1600,
               width: '100%',
-              margin: '0 auto',
               boxSizing: 'border-box',
+              minWidth: 0, // 防止 flex 子元素被内部内容撑爆
             }}
           >
             <Outlet />
