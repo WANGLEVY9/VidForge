@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useShell } from '../../components/layout/shell-context';
 import {
   Button, Input, Form, Select, Slider, Switch, Space, Typography,
@@ -11,6 +11,7 @@ import {
   VideoCameraOutlined, SoundOutlined, AimOutlined,
 } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
+import { useAutosave, getDraft, clearDraft } from '../../hooks/useAutosave';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -64,6 +65,30 @@ function ScriptPage() {
   const [generated, setGenerated] = useState(false);
   const [scriptStyle, setScriptStyle] = useState<ScriptStyle>('professional');
   const [form] = Form.useForm();
+  const DRAFT_KEY = 'script_config';
+  const draftRestored = useRef(false);
+  const formValues = Form.useWatch([], form);
+
+  useEffect(() => {
+    if (draftRestored.current) return;
+    const draft = getDraft<{ productName?: string; category?: string; sellingPoints?: string; targetAudience?: string[] }>(DRAFT_KEY);
+    if (draft && draft.productName) {
+      form.setFieldsValue(draft);
+      message.info('已恢复上次的剧本配置');
+    }
+    draftRestored.current = true;
+  }, [form]);
+
+  useAutosave({
+    key: DRAFT_KEY,
+    data: formValues,
+    enabled: !generated,
+  });
+
+  useEffect(() => {
+    if (generated) clearDraft(DRAFT_KEY);
+  }, [generated]);
+
   const { isMobile } = useShell();
   const [configExpanded, setConfigExpanded] = useState(!isMobile);
 

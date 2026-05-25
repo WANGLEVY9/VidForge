@@ -16,6 +16,7 @@ import { useStoryboardStore, Shot } from '../../store/useStoryboardStore';
 import { useShell } from '../../components/layout/shell-context';
 import { agentApi } from '../../services/agent';
 import { ExportPanel } from './components/ExportPanel';
+import { useAutosave, getDraft, clearDraft } from '../../hooks/useAutosave';
 import '../../components/storyboard/storyboard.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -66,6 +67,38 @@ function CreationPage() {
   const [, setAgentTaskId] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const DRAFT_KEY = 'creation_config';
+  const draftRestored = useRef(false);
+
+  // Check for draft on mount
+  useEffect(() => {
+    if (draftRestored.current) return;
+    const draft = getDraft<{ prompt?: string; model?: string; aspectRatio?: string; quality?: string }>(DRAFT_KEY);
+    if (draft && draft.prompt) {
+      form.setFieldsValue({ prompt: draft.prompt });
+      if (draft.model) setSelectedModel(draft.model);
+      if (draft.aspectRatio) setAspectRatio(draft.aspectRatio);
+      if (draft.quality) setQuality(draft.quality);
+      message.info('已恢复上次的创作配置');
+    }
+    draftRestored.current = true;
+  }, [form]);
+
+  // Autosave form values
+  const formValues = Form.useWatch([], form);
+  useAutosave({
+    key: DRAFT_KEY,
+    data: { prompt: formValues?.prompt, model: selectedModel, aspectRatio, quality },
+    enabled: currentStep === 'config',
+  });
+
+  // Clear draft on successful completion
+  useEffect(() => {
+    if (currentStep === 'complete') {
+      clearDraft(DRAFT_KEY);
+    }
+  }, [currentStep]);
+
   const { isMobile } = useShell();
 
   const setShots = useStoryboardStore((s) => s.setShots);
