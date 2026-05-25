@@ -84,3 +84,29 @@
 .spin {
   animation: spin 1s linear infinite;
 }
+
+/* ======== Mobile Animations ======== */
+
+@keyframes tabIndicator {
+  from { width: 0; opacity: 0; }
+  to { width: 20px; opacity: 1; }
+}
+
+.tab-indicator {
+  animation: tabIndicator 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fabEnter {
+  0% { transform: scale(0) translateY(10px); opacity: 0; }
+  60% { transform: scale(1.1) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.fab-enter {
+  animation: fabEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.page-slide {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}

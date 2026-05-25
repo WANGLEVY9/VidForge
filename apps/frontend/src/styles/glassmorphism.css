@@ -34,3 +34,12 @@
   transform: translateY(-2px);
   box-shadow: var(--shadow-elevated);
 }
+
+/* Mobile tab bar glass effect */
+.glass-tab-bar {
+  background: rgba(15, 15, 19, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: var(--safe-area-bottom);
+}
