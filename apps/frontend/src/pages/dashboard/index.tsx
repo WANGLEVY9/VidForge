@@ -48,9 +48,9 @@ const periodOptions = ['日', '周', '月', '自定义'];
 const chartModes = ['折线', '柱状', '面积'];
 
 function DashboardPage() {
-  const { isMobile } = useShell();
-  const chartHeight = isMobile ? 180 : 260;
-  const smallChartHeight = isMobile ? 160 : 220;
+  const { isMobile } = useShell(); // 当前 isMobile 恒为 false（已禁用移动端布局）
+  const chartHeight = 280;
+  const smallChartHeight = 240;
 
   const [period, setPeriod] = useState('月');
   const [chartMode, setChartMode] = useState('折线');
@@ -170,19 +170,44 @@ function DashboardPage() {
   return (
     <div className="page-enter" style={{ padding: 0 }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          marginBottom: 'var(--spacing-xl)',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}
+      >
         <div>
-          <Text strong style={{ fontSize: 20, color: 'var(--text-primary)', display: 'block' }}>数据工作室</Text>
-          <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>最近更新: 2 分钟前</Text>
+          <div
+            style={{
+              fontSize: 26,
+              fontWeight: 700,
+              letterSpacing: '-0.5px',
+              color: 'var(--text-primary)',
+              lineHeight: 1.2,
+            }}
+          >
+            数据工作室
+          </div>
+          <Text style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
+            实时监控创作流水线 · 最近更新 2 分钟前
+          </Text>
         </div>
-        <Space>
-          <Segmented options={periodOptions} value={period} onChange={(v) => setPeriod(v as string)} size={isMobile ? 'small' : undefined} />
-          <Button size="small">导出</Button>
+        <Space size={8}>
+          <Segmented
+            options={periodOptions}
+            value={period}
+            onChange={(v) => setPeriod(v as string)}
+          />
+          <Button>导出报告</Button>
         </Space>
       </div>
 
       {/* Metric Cards */}
-      <Row gutter={[12, 12]} style={{ marginBottom: 'var(--spacing-lg)' }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--spacing-xl)' }}>
         {[
           { title: '素材总量', value: overview?.totalMaterials ?? '—', change: overview?.momChanges?.materials ?? '', icon: <UploadOutlined />, color: '#6366f1' },
           { title: '剧本总数', value: overview?.totalScripts ?? '—', change: overview?.momChanges?.scripts ?? '', icon: <FileTextOutlined />, color: '#a855f7' },
@@ -190,26 +215,64 @@ function DashboardPage() {
           { title: '今日新增', value: overview?.todayCreations ?? '—', change: '', icon: <ThunderboltOutlined />, color: '#f59e0b' },
           { title: '生成成功率', value: overview ? `${overview.successRate}%` : '—', change: overview?.momChanges?.successRate ?? '', icon: <CheckCircleOutlined />, color: '#3b82f6' },
           { title: '平均耗时', value: overview ? `${overview.avgDuration}s` : '—', change: overview?.momChanges?.avgDuration ?? '', icon: <ClockCircleOutlined />, color: '#ef4444' },
-        ].slice(0, isMobile ? 4 : 6).map((stat, i) => (
-          <Col xs={12} sm={8} md={4} key={i}>
-            <GlassPanel variant="card" style={{ padding: 'var(--spacing-lg)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{stat.title}</Text>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>
+        ].map((stat, i) => (
+          <Col xs={12} sm={8} md={8} lg={4} key={i}>
+            <GlassPanel
+              variant="card"
+              className="hover-lift"
+              style={{
+                padding: 'var(--spacing-lg)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* 微弱的色相光晕 */}
+              <div
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: `radial-gradient(120% 80% at 100% 0%, ${stat.color}22 0%, transparent 60%)`,
+                  pointerEvents: 'none',
+                }}
+              />
+              <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ minWidth: 0 }}>
+                  <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{stat.title}</Text>
+                  <div
+                    style={{
+                      fontSize: 26,
+                      fontWeight: 700,
+                      color: 'var(--text-primary)',
+                      marginTop: 4,
+                      letterSpacing: '-0.5px',
+                      lineHeight: 1.2,
+                    }}
+                  >
                     {stat.value}
                   </div>
-                  {stat.change && (
-                    <Text style={{ fontSize: 11, color: stat.change.startsWith('+') ? '#10b981' : '#ef4444' }}>
+                  {stat.change ? (
+                    <Text style={{ fontSize: 12, color: stat.change.startsWith('+') ? '#10b981' : '#ef4444' }}>
                       {stat.change} 较上月
                     </Text>
+                  ) : (
+                    <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>—</Text>
                   )}
                 </div>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 'var(--radius-md)',
-                  background: `${stat.color}15`, display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', color: stat.color, fontSize: 16,
-                }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 'var(--radius-md)',
+                    background: `${stat.color}1a`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: stat.color,
+                    fontSize: 18,
+                    flexShrink: 0,
+                  }}
+                >
                   {stat.icon}
                 </div>
               </div>

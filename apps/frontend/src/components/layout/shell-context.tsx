@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 
 type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
@@ -20,40 +20,21 @@ const ShellContext = createContext<ShellContextValue>({
   setTabBarVisible: () => {},
 });
 
+/**
+ * 当前阶段（PC 端开发为重点）：禁用所有移动端布局判定，强制走桌面分支。
+ * 相关移动端组件（MobileShell / BottomTabBar / FabButton / TopBar）保留，
+ * 待后续移动端阶段恢复时把下面的 useState/matchMedia 还原即可。
+ */
 export function ShellProvider({ children }: { children: ReactNode }) {
-  const [breakpoint, setBreakpoint] = useState<Breakpoint>(() => {
-    const w = window.innerWidth;
-    if (w < 768) return 'mobile';
-    if (w < 1024) return 'tablet';
-    return 'desktop';
-  });
   const [tabBarVisible, setTabBarVisible] = useState(true);
-
-  useEffect(() => {
-    const mobileMq = window.matchMedia('(max-width: 767px)');
-    const tabletMq = window.matchMedia('(min-width: 768px) and (max-width: 1023px)');
-
-    const handleChange = () => {
-      if (mobileMq.matches) setBreakpoint('mobile');
-      else if (tabletMq.matches) setBreakpoint('tablet');
-      else setBreakpoint('desktop');
-    };
-
-    mobileMq.addEventListener('change', handleChange);
-    tabletMq.addEventListener('change', handleChange);
-    return () => {
-      mobileMq.removeEventListener('change', handleChange);
-      tabletMq.removeEventListener('change', handleChange);
-    };
-  }, []);
 
   return (
     <ShellContext.Provider
       value={{
-        breakpoint,
-        isMobile: breakpoint === 'mobile',
-        isTablet: breakpoint === 'tablet',
-        isDesktop: breakpoint === 'desktop',
+        breakpoint: 'desktop',
+        isMobile: false,
+        isTablet: false,
+        isDesktop: true,
         tabBarVisible,
         setTabBarVisible,
       }}
