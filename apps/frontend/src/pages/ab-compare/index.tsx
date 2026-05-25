@@ -3,6 +3,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { ComparePlayer } from './components/ComparePlayer';
 import { CompareMetrics } from './components/CompareMetrics';
+import { useShell } from '../../components/layout/shell-context';
 import './ab-compare.css';
 
 const { Title } = Typography;
@@ -38,6 +39,7 @@ const defaultMetrics = [
 ];
 
 function AbComparePage() {
+  const { isMobile } = useShell();
   return (
     <div className="page-enter" style={{ padding: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
@@ -54,11 +56,11 @@ function AbComparePage() {
 
       <CompareMetrics metrics={defaultMetrics} />
 
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 'var(--spacing-lg)' }}>
-        <Button type="primary">应用版本 A</Button>
-        <Button>应用版本 B</Button>
-        <Button>另存为模板</Button>
-        <Button>导出报告</Button>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 'var(--spacing-lg)', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+        <Button type="primary" block={isMobile}>应用版本 A</Button>
+        <Button block={isMobile}>应用版本 B</Button>
+        <Button block={isMobile}>另存为模板</Button>
+        <Button block={isMobile}>导出报告</Button>
       </div>
     </div>
   );

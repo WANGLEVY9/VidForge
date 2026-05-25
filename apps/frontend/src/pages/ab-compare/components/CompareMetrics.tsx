@@ -1,5 +1,6 @@
 import React from 'react';
 import { Typography, Table, Tag } from 'antd';
+import { useShell } from '../../../components/layout/shell-context';
 
 const { Text } = Typography;
 
@@ -16,6 +17,7 @@ interface CompareMetricsProps {
 }
 
 export const CompareMetrics: React.FC<CompareMetricsProps> = ({ metrics }) => {
+  const { isMobile } = useShell();
   const columns = [
     {
       title: '指标', dataIndex: 'metric', key: 'metric',
@@ -45,13 +47,15 @@ export const CompareMetrics: React.FC<CompareMetricsProps> = ({ metrics }) => {
   return (
     <div style={{ padding: 'var(--spacing-lg)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
       <Text strong style={{ color: 'var(--text-primary)', marginBottom: 12, display: 'block' }}>对比指标</Text>
-      <Table
-        dataSource={metrics}
-        columns={columns}
-        pagination={false}
-        size="small"
-        rowKey="metric"
-      />
+      <div style={isMobile ? { overflowX: 'auto' } : undefined}>
+        <Table
+          dataSource={metrics}
+          columns={columns}
+          pagination={false}
+          size="small"
+          rowKey="metric"
+        />
+      </div>
     </div>
   );
 };
