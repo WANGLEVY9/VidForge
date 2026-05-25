@@ -7,10 +7,25 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   // 启用CORS
+  // 生产环境：从 WEB_BASE_URL 读取允许的来源（支持逗号分隔多个域名，未配置则放开 vercel.app/localhost）
+  // 开发环境：放开本地 3000 端口
+  const isProd = process.env.NODE_ENV === 'production';
+  const allowedOrigins = isProd
+    ? (process.env.WEB_BASE_URL
+        ? process.env.WEB_BASE_URL.split(',').map((o) => o.trim()).filter(Boolean)
+        : [])
+    : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
   app.enableCors({
-    origin: process.env.NODE_ENV === 'production' 
-      ? [process.env.WEB_BASE_URL]
-      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: (origin, callback) => {
+      // 同源请求 / curl / Postman 等没有 Origin 头的请求直接放行
+      if (!origin) return callback(null, true);
+      // 显式白名单
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      // 兜底：允许所有 *.vercel.app 子域，方便 Preview 环境
+      if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return callback(null, true);
+      return callback(new Error(`CORS blocked: ${origin}`), false);
+    },
     credentials: true,
   });
 
