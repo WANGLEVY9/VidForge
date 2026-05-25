@@ -12,37 +12,27 @@ import {
 } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { useAutosave, getDraft, clearDraft } from '../../hooks/useAutosave';
+import { scriptApi } from '../../services/script';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
-type ScriptStyle = 'professional' | 'humorous' | 'emotional' | 'tutorial' | 'comparison';
+type ScriptStyle =
+  | 'professional'
+  | 'realistic'
+  | 'fresh'
+  | 'dynamic'
+  | 'luxury';
 
 const styleOptions: { value: ScriptStyle; label: string; icon: React.ReactNode; desc: string }[] = [
   { value: 'professional', label: '专业评测', icon: <ExperimentOutlined />, desc: '客观分析产品优缺点' },
-  { value: 'humorous', label: '幽默种草', icon: <BulbOutlined />, desc: '轻松搞笑的推荐风格' },
-  { value: 'emotional', label: '情感共鸣', icon: <CustomerServiceOutlined />, desc: '讲故事引发情感认同' },
-  { value: 'tutorial', label: '使用教程', icon: <VideoCameraOutlined />, desc: '手把手教学演示' },
-  { value: 'comparison', label: '对比测评', icon: <ShoppingCartOutlined />, desc: '多产品横向对比' },
+  { value: 'realistic',    label: '真实纪录', icon: <BulbOutlined />,        desc: '生活化场景的自然演绎' },
+  { value: 'fresh',        label: '清新简约', icon: <CustomerServiceOutlined />, desc: '清爽柔和的视觉风格' },
+  { value: 'dynamic',      label: '动感活力', icon: <VideoCameraOutlined />, desc: '快剪奏感强的种草' },
+  { value: 'luxury',       label: '奢华高级', icon: <ShoppingCartOutlined />, desc: '高质感商品大片' },
 ];
 
-const mockScriptResult = {
-  title: '夏日清爽防晒霜 · 3秒成膜不假白',
-  duration: '45秒',
-  hooks: [
-    { time: '0-3s', content: '"姐妹们！这个防晒我回购了5次，今天必须给你们安利！"', type: 'hook' },
-    { time: '3-10s', content: '（展示产品外观）"看这个质地，像乳液一样轻薄，上脸完全不油腻"', type: 'intro' },
-    { time: '10-25s', content: '（真人上脸对比）"左边涂了，右边没涂，你们看这个对比效果！3秒成膜，完全不假白"', type: 'demo' },
-    { time: '25-35s', content: '（户外实测）"带你们去楼下实测，紫外线超强，涂了它完全不怕！"', type: 'proof' },
-    { time: '35-42s', content: '"SPF50+ PA++++，防水防汗，通勤户外都够用"', type: 'feature' },
-    { time: '42-45s', content: '"链接在下方，现在下单还有买2送1活动，冲！"', type: 'cta' },
-  ],
-  voiceover: '整体语速偏快，语气活泼有感染力。开头用反问句抓注意力，中间穿插"姐妹们""冲"等口语化表达拉近距离。',
-  bgmSuggestion: '推荐轻快电子风BGM，节奏感强但不喧宾夺主。参考风格：Lo-fi Beat / 轻快Vlog配乐',
-  tags: ['防晒', '夏日护肤', '好物推荐', '上脸实测'],
-};
-
-const hookTypeColors: Record<string, string> = {
+const shotTypeColors: Record<string, string> = {
   hook: '#ef4444',
   intro: '#3b82f6',
   demo: '#10b981',
@@ -50,8 +40,7 @@ const hookTypeColors: Record<string, string> = {
   feature: '#8b5cf6',
   cta: '#ec4899',
 };
-
-const hookTypeLabels: Record<string, string> = {
+const shotTypeLabels: Record<string, string> = {
   hook: '黄金开头',
   intro: '产品引入',
   demo: '效果展示',
@@ -60,10 +49,33 @@ const hookTypeLabels: Record<string, string> = {
   cta: '行动号召',
 };
 
+interface ShotItem {
+  index: number;
+  duration: number;
+  description: string;
+  voiceover: string;
+  caption: string;
+  cameraMovement?: string;
+  type?: string;
+}
+
+interface ScriptResult {
+  title: string;
+  duration: number;
+  totalDuration: string;
+  shots: ShotItem[];
+  voiceover: string;
+  bgmSuggestion: string;
+  tags: string[];
+  source?: 'ark' | 'fallback';
+}
+
 function ScriptPage() {
   const [loading, setLoading] = useState(false);
-  const [generated, setGenerated] = useState(false);
+  const [result, setResult] = useState<ScriptResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [scriptStyle, setScriptStyle] = useState<ScriptStyle>('professional');
+  const [duration, setDuration] = useState<number>(15);
   const [form] = Form.useForm();
   const DRAFT_KEY = 'script_config';
   const draftRestored = useRef(false);
@@ -82,33 +94,78 @@ function ScriptPage() {
   useAutosave({
     key: DRAFT_KEY,
     data: formValues,
-    enabled: !generated,
+    enabled: !result,
   });
 
   useEffect(() => {
-    if (generated) clearDraft(DRAFT_KEY);
-  }, [generated]);
+    if (result) clearDraft(DRAFT_KEY);
+  }, [result]);
 
   const { isMobile } = useShell();
   const [configExpanded, setConfigExpanded] = useState(!isMobile);
 
   const handleGenerate = async () => {
+    let values: any;
     try {
-      await form.validateFields();
+      values = await form.validateFields();
     } catch {
       return;
     }
     setLoading(true);
-    setGenerated(false);
-    setTimeout(() => {
+    setError(null);
+    setResult(null);
+    try {
+      const audience = Array.isArray(values.targetAudience)
+        ? values.targetAudience.join('、')
+        : values.targetAudience;
+      const data = await scriptApi.generate({
+        productName: values.productName,
+        category: values.category,
+        sellingPoints: values.sellingPoints,
+        targetAudience: audience,
+        style: scriptStyle,
+        duration,
+      }) as ScriptResult;
+      setResult(data);
+      if (data?.source === 'fallback') {
+        message.warning('AI 模型暂不可用，已为你生成示例剧本');
+      } else {
+        message.success('剧本生成成功');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || '剧本生成失败';
+      setError(msg);
+      message.error(msg);
+    } finally {
       setLoading(false);
-      setGenerated(true);
-      message.success('剧本生成成功！');
-    }, 2500);
+    }
   };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => message.success('已复制到剪贴板'));
+  };
+
+  const handleSave = async () => {
+    if (!result) return;
+    const values = form.getFieldsValue();
+    try {
+      await scriptApi.save({
+        title: result.title,
+        productName: values.productName,
+        category: values.category,
+        sellingPoints: values.sellingPoints,
+        targetAudience: Array.isArray(values.targetAudience) ? values.targetAudience.join('、') : values.targetAudience,
+        style: scriptStyle,
+        storyboard: result.shots as any,
+        voiceover: result.voiceover,
+        bgmSuggestion: result.bgmSuggestion,
+        tags: result.tags,
+        duration: result.duration,
+      });
+      message.success('剧本已保存');
+    } catch (err: any) {
+      message.error(err?.message || '保存失败');
+    }
   };
 
   return (
@@ -152,7 +209,7 @@ function ScriptPage() {
                     options={[
                       { value: 'clothing', label: '服饰鞋包' },
                       { value: 'beauty', label: '美妆护肤' },
-                      { value: 'digital', label: '数码3C' },
+                      { value: 'digital', label: '数码 3C' },
                       { value: 'food', label: '食品饮料' },
                       { value: 'home', label: '家居生活' },
                       { value: 'mother', label: '母婴用品' },
@@ -212,20 +269,27 @@ function ScriptPage() {
                           <span style={{ color: scriptStyle === opt.value ? '#6366f1' : 'var(--text-secondary)' }}>{opt.icon}</span>
                           <Text style={{ fontSize: 13, color: scriptStyle === opt.value ? '#6366f1' : 'var(--text-primary)' }}>{opt.label}</Text>
                         </Space>
+                        <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-tertiary)' }}>
+                          {opt.desc}
+                        </div>
                       </div>
                     ))}
                   </div>
                 </Form.Item>
 
-                <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频时长</Text>}>
+                <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频时长（秒）</Text>}>
                   <Slider
-                    min={15}
-                    max={120}
+                    min={10}
+                    max={30}
                     step={5}
-                    marks={{ 15: '15s', 30: '30s', 45: '45s', 60: '1min', 90: '1.5min', 120: '2min' }}
-                    defaultValue={45}
+                    marks={{ 10: '10s', 15: '15s', 20: '20s', 25: '25s', 30: '30s' }}
+                    value={duration}
+                    onChange={(v) => setDuration(v as number)}
                     tooltip={{ formatter: (v) => `${v}秒` }}
                   />
+                  <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                    系统将生成 3 个分镜，平均分配时长。当前阶段单条视频建议 ≤ 30 秒。
+                  </Text>
                 </Form.Item>
 
                 <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>附加选项</Text>}>
@@ -240,7 +304,7 @@ function ScriptPage() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Text style={{ color: 'var(--text-primary)' }}>生成配音脚本</Text>
-                      <Switch />
+                      <Switch defaultChecked />
                     </div>
                   </Space>
                 </Form.Item>
@@ -265,6 +329,18 @@ function ScriptPage() {
 
         {/* 右侧：结果面板 */}
         <Col xs={24} lg={14}>
+          {error && !loading && (
+            <Alert
+              type="error"
+              showIcon
+              message="生成失败"
+              description={error}
+              closable
+              onClose={() => setError(null)}
+              style={{ marginBottom: 'var(--spacing-lg)', borderRadius: 'var(--radius-lg)' }}
+            />
+          )}
+
           {loading && (
             <GlassPanel variant="card" style={{ textAlign: 'center', padding: 60 }}>
               <Spin size="large" />
@@ -285,29 +361,31 @@ function ScriptPage() {
             </GlassPanel>
           )}
 
-          {!loading && !generated && (
+          {!loading && !result && !error && (
             <GlassPanel variant="card" style={{ textAlign: 'center', padding: '60px 40px' }}>
               <div style={{ fontSize: 64, color: 'var(--text-tertiary)', marginBottom: 16 }}>
                 <FileTextOutlined />
               </div>
               <Title level={4} style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>等待创作</Title>
               <Paragraph type="secondary" style={{ maxWidth: 360, margin: '0 auto' }}>
-                填写左侧商品信息，AI 将为你生成专业带货剧本，包含分镜脚本、配音文案和 BGM 推荐
+                填写左侧商品信息，AI 将基于火山方舟模型生成专业带货剧本，包含分镜脚本、配音文案和 BGM 推荐
               </Paragraph>
             </GlassPanel>
           )}
 
-          {!loading && generated && (
+          {!loading && result && (
             <>
               {/* 剧本标题 */}
               <Alert
-                type="success"
+                type={result.source === 'fallback' ? 'warning' : 'success'}
                 showIcon
                 icon={<BulbOutlined />}
                 message={
-                  <Space>
-                    <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>{mockScriptResult.title}</Text>
-                    <Tag color="blue">⏱ {mockScriptResult.duration}</Tag>
+                  <Space wrap>
+                    <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>{result.title}</Text>
+                    <Tag color="blue">⏱ {result.totalDuration}</Tag>
+                    {result.source === 'fallback' && <Tag color="orange">兜底剧本</Tag>}
+                    {result.source === 'ark' && <Tag color="cyan">AI 生成</Tag>}
                   </Space>
                 }
                 style={{ borderRadius: 'var(--radius-lg)', marginBottom: 'var(--spacing-lg)', padding: '12px 16px' }}
@@ -322,87 +400,149 @@ function ScriptPage() {
                 }}>
                   <Space>
                     <VideoCameraOutlined style={{ color: 'var(--brand-primary)' }} />
-                    <Text strong style={{ color: 'var(--text-primary)' }}>分镜脚本</Text>
+                    <Text strong style={{ color: 'var(--text-primary)' }}>分镜脚本（{result.shots.length}）</Text>
                   </Space>
                   <Space>
-                    <Button icon={<CopyOutlined />} onClick={() => handleCopy(mockScriptResult.hooks.map(h => h.content).join('\n'))}>复制全部</Button>
-                    <Button icon={<SaveOutlined />}>保存</Button>
+                    <Button
+                      icon={<CopyOutlined />}
+                      onClick={() =>
+                        handleCopy(
+                          result.shots
+                            .map(
+                              (s) =>
+                                `[${s.index}] ${s.description}\n口播：${s.voiceover}\n字幕：${s.caption}`,
+                            )
+                            .join('\n\n'),
+                        )
+                      }
+                    >
+                      复制全部
+                    </Button>
+                    <Button icon={<SaveOutlined />} type="primary" onClick={handleSave}>保存剧本</Button>
                   </Space>
                 </div>
-                {mockScriptResult.hooks.map((hook, idx) => (
+                {result.shots.map((shot) => (
                   <div
-                    key={idx}
+                    key={shot.index}
                     style={{
                       display: 'flex',
+                      gap: 12,
                       padding: 'var(--spacing-md) var(--spacing-xl)',
-                      borderBottom: `1px solid var(--border-color)`,
-                      borderLeft: `3px solid ${hookTypeColors[hook.type]}`,
+                      borderBottom: '1px solid var(--border-color)',
+                      borderLeft: `3px solid ${shotTypeColors[shot.type ?? 'demo']}`,
                       transition: 'background 0.2s',
-                      cursor: 'pointer',
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <div style={{ width: 72, flexShrink: 0 }}>
-                      <Tag color={hookTypeColors[hook.type]} style={{ borderRadius: 20, fontSize: 11 }}>{hookTypeLabels[hook.type]}</Tag>
-                      <div style={{ marginTop: 4 }}><Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{hook.time}</Text></div>
+                    <div style={{ width: 84, flexShrink: 0 }}>
+                      <Tag color={shotTypeColors[shot.type ?? 'demo']} style={{ borderRadius: 20, fontSize: 11 }}>
+                        {shotTypeLabels[shot.type ?? 'demo'] ?? shot.type ?? '分镜'}
+                      </Tag>
+                      <div style={{ marginTop: 4 }}>
+                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                          #{shot.index} · {shot.duration}s
+                        </Text>
+                      </div>
+                      {shot.cameraMovement && (
+                        <div style={{ marginTop: 2 }}>
+                          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                            {shot.cameraMovement}
+                          </Text>
+                        </div>
+                      )}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <Text style={{ color: 'var(--text-primary)', lineHeight: 1.6 }}>{hook.content}</Text>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div>
+                        <Text style={{ color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1.6 }}>
+                          {shot.description}
+                        </Text>
+                      </div>
+                      {shot.voiceover && (
+                        <div style={{ marginTop: 6 }}>
+                          <Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                            🎙 {shot.voiceover}
+                          </Text>
+                        </div>
+                      )}
+                      {shot.caption && (
+                        <div style={{ marginTop: 4 }}>
+                          <Text style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
+                            💬 {shot.caption}
+                          </Text>
+                        </div>
+                      )}
                     </div>
-                    <Tooltip title="复制"><Button type="text" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(hook.content)} /></Tooltip>
+                    <Tooltip title="复制本分镜">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<CopyOutlined />}
+                        onClick={() =>
+                          handleCopy(
+                            `[${shot.index}] ${shot.description}\n口播：${shot.voiceover}\n字幕：${shot.caption}`,
+                          )
+                        }
+                      />
+                    </Tooltip>
                   </div>
                 ))}
               </GlassPanel>
 
               {/* 配音建议 */}
-              <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: 'var(--spacing-lg) var(--spacing-xl)',
-                  borderBottom: '1px solid var(--border-color)',
-                }}>
-                  <SoundOutlined style={{ color: '#ec4899' }} />
-                  <Text strong style={{ color: 'var(--text-primary)' }}>配音建议</Text>
-                </div>
-                <div style={{ padding: 'var(--spacing-xl)' }}>
-                  <Paragraph style={{ color: 'var(--text-primary)', margin: 0 }}>{mockScriptResult.voiceover}</Paragraph>
-                </div>
-              </GlassPanel>
+              {result.voiceover && (
+                <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: 'var(--spacing-lg) var(--spacing-xl)',
+                    borderBottom: '1px solid var(--border-color)',
+                  }}>
+                    <SoundOutlined style={{ color: '#ec4899' }} />
+                    <Text strong style={{ color: 'var(--text-primary)' }}>配音建议</Text>
+                  </div>
+                  <div style={{ padding: 'var(--spacing-xl)' }}>
+                    <Paragraph style={{ color: 'var(--text-primary)', margin: 0 }}>{result.voiceover}</Paragraph>
+                  </div>
+                </GlassPanel>
+              )}
 
               {/* BGM 推荐 */}
-              <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: 'var(--spacing-lg) var(--spacing-xl)',
-                  borderBottom: '1px solid var(--border-color)',
-                }}>
-                  <CustomerServiceOutlined style={{ color: '#10b981' }} />
-                  <Text strong style={{ color: 'var(--text-primary)' }}>BGM 推荐</Text>
-                </div>
-                <div style={{ padding: 'var(--spacing-xl)' }}>
-                  <Paragraph style={{ color: 'var(--text-primary)', margin: 0 }}>{mockScriptResult.bgmSuggestion}</Paragraph>
-                </div>
-              </GlassPanel>
+              {result.bgmSuggestion && (
+                <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: 'var(--spacing-lg) var(--spacing-xl)',
+                    borderBottom: '1px solid var(--border-color)',
+                  }}>
+                    <CustomerServiceOutlined style={{ color: '#10b981' }} />
+                    <Text strong style={{ color: 'var(--text-primary)' }}>BGM 推荐</Text>
+                  </div>
+                  <div style={{ padding: 'var(--spacing-xl)' }}>
+                    <Paragraph style={{ color: 'var(--text-primary)', margin: 0 }}>{result.bgmSuggestion}</Paragraph>
+                  </div>
+                </GlassPanel>
+              )}
 
               {/* 标签 */}
-              <GlassPanel variant="card">
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: 'var(--spacing-lg) var(--spacing-xl)',
-                  borderBottom: '1px solid var(--border-color)',
-                }}>
-                  <AimOutlined style={{ color: '#f59e0b' }} />
-                  <Text strong style={{ color: 'var(--text-primary)' }}>推荐标签</Text>
-                </div>
-                <div style={{ padding: 'var(--spacing-xl)' }}>
-                  <Space size={8} wrap>
-                    {mockScriptResult.tags.map((tag, i) => (
-                      <Tag key={i} color="blue" style={{ borderRadius: 20, padding: '4px 12px', fontSize: 13 }}>#{tag}</Tag>
-                    ))}
-                  </Space>
-                </div>
-              </GlassPanel>
+              {result.tags && result.tags.length > 0 && (
+                <GlassPanel variant="card">
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: 'var(--spacing-lg) var(--spacing-xl)',
+                    borderBottom: '1px solid var(--border-color)',
+                  }}>
+                    <AimOutlined style={{ color: '#f59e0b' }} />
+                    <Text strong style={{ color: 'var(--text-primary)' }}>推荐标签</Text>
+                  </div>
+                  <div style={{ padding: 'var(--spacing-xl)' }}>
+                    <Space size={8} wrap>
+                      {result.tags.map((tag, i) => (
+                        <Tag key={i} color="blue" style={{ borderRadius: 20, padding: '4px 12px', fontSize: 13 }}>#{tag}</Tag>
+                      ))}
+                    </Space>
+                  </div>
+                </GlassPanel>
+              )}
             </>
           )}
         </Col>
