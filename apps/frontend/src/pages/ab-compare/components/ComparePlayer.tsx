@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Typography, Space, Slider, Tag } from 'antd';
 import { PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
+import { useShell } from '../../../components/layout/shell-context';
 
 const { Text } = Typography;
 
@@ -22,6 +23,7 @@ interface ComparePlayerProps {
 }
 
 export const ComparePlayer: React.FC<ComparePlayerProps> = ({ versionA, versionB }) => {
+  const { isMobile } = useShell();
   const [syncMode, setSyncMode] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -30,7 +32,7 @@ export const ComparePlayer: React.FC<ComparePlayerProps> = ({ versionA, versionB
   const handleProgressChange = (v: number) => setProgress(v);
 
   const renderPlayer = (version: VersionConfig, side: 'A' | 'B') => (
-    <div style={{ flex: 1, borderRight: side === 'A' ? '1px solid var(--border-color)' : 'none' }}>
+    <div style={{ flex: 1, borderRight: side === 'A' ? (isMobile ? 'none' : '1px solid var(--border-color)') : 'none' }}>
       <div style={{
         padding: '8px 12px', borderBottom: '1px solid var(--border-color)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -75,7 +77,13 @@ export const ComparePlayer: React.FC<ComparePlayerProps> = ({ versionA, versionB
 
   return (
     <div>
-      <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
+        overflow: 'hidden',
+      }}>
         {renderPlayer(versionA, 'A')}
         {renderPlayer(versionB, 'B')}
       </div>
