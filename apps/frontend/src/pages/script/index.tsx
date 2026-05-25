@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useShell } from '../../components/layout/shell-context';
 import {
   Button, Input, Form, Select, Slider, Switch, Space, Typography,
   Tag, Divider, message, Row, Col, Steps, Tooltip, Spin, Alert,
@@ -63,6 +64,8 @@ function ScriptPage() {
   const [generated, setGenerated] = useState(false);
   const [scriptStyle, setScriptStyle] = useState<ScriptStyle>('professional');
   const [form] = Form.useForm();
+  const { isMobile } = useShell();
+  const [configExpanded, setConfigExpanded] = useState(!isMobile);
 
   const handleGenerate = async () => {
     try {
@@ -89,6 +92,16 @@ function ScriptPage() {
         {/* 左侧：输入面板 */}
         <Col xs={24} lg={10}>
           <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+            {isMobile && (
+              <div
+                onClick={() => setConfigExpanded(!configExpanded)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--spacing-md) var(--spacing-xl)', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}
+              >
+                <Text strong style={{ color: 'var(--text-primary)' }}>剧本配置</Text>
+                <Text style={{ color: 'var(--brand-primary)', fontSize: 13 }}>{configExpanded ? '收起' : '展开'}</Text>
+              </div>
+            )}
+            {configExpanded && (
             <div style={{ padding: 'var(--spacing-xl)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 'var(--spacing-xl)' }}>
                 <ThunderboltOutlined style={{ color: 'var(--brand-primary)', fontSize: 18 }} />
@@ -156,7 +169,7 @@ function ScriptPage() {
                 <Divider style={{ margin: 'var(--spacing-lg) 0', borderColor: 'var(--border-color)' }} />
 
                 <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频风格</Text>}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(5, 120px)' : '1fr 1fr', gap: 8, overflowX: isMobile ? 'auto' : 'visible' }}>
                     {styleOptions.map((opt) => (
                       <div
                         key={opt.value}
@@ -221,6 +234,7 @@ function ScriptPage() {
                 </Button>
               </Form>
             </div>
+            )}
           </GlassPanel>
         </Col>
 
