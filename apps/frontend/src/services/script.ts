@@ -6,6 +6,7 @@ export interface ScriptItem {
   productName: string;
   category: string;
   sellingPoints: string;
+  targetAudience?: string;
   style: string;
   storyboard: Record<string, any>[];
   voiceover?: string;
