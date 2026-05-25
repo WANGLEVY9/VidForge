@@ -27,6 +27,8 @@ export interface ScriptResult {
   tags: string[];
   /** 模型来源标识：'ark' / 'fallback' */
   source: 'ark' | 'fallback';
+  /** 当 source=fallback 时, 说明原因, 便于排查 */
+  fallbackReason?: string;
 }
 
 const STYLE_LABEL: Record<string, string> = {
@@ -57,16 +59,19 @@ export class ScriptService {
     void userId;
     // 没配置文本模型，直接降级
     if (!this.arkConfigService.getActiveApiKey('text')) {
-      this.logger.warn('未检测到 ARK 文本模型配置，使用 fallback 剧本');
-      return this.generateFallback(dto);
+      const reason =
+        '后端未配置 ARK 文本模型环境变量 (ARK_TEXT_PRIMARY_ENDPOINT_ID / ARK_TEXT_PRIMARY_API_KEY)';
+      this.logger.warn(`未检测到 ARK 文本模型配置，使用 fallback 剧本: ${reason}`);
+      return { ...this.generateFallback(dto), fallbackReason: reason };
     }
 
     try {
       const result = await this.callArk(dto);
       return result;
     } catch (error: any) {
-      this.logger.error(`调用 ARK 失败，降级到 fallback: ${error?.message ?? error}`);
-      return this.generateFallback(dto);
+      const reason = error?.message ?? String(error);
+      this.logger.error(`调用 ARK 失败，降级到 fallback: ${reason}`);
+      return { ...this.generateFallback(dto), fallbackReason: reason };
     }
   }
 
