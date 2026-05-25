@@ -6,7 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter=@vidforge/frontend dev & pnpm --filter=@vidforge/backend start:dev",
-    "build": "cd apps/frontend && npm install --include=dev && npm run build && cd ../backend && npm install --include=dev && npm run build",
+    "build": "npm run build:backend",
+    "build:backend": "cd apps/backend && npm install --include=dev --no-audit --no-fund && npm run build",
+    "build:frontend": "cd apps/frontend && npm install --include=dev --no-audit --no-fund && npm run build",
+    "build:all": "npm run build:frontend && npm run build:backend",
+    "start": "cd apps/backend && npm run start:prod",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "prettier": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",

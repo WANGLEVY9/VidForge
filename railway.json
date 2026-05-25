@@ -1,7 +1,8 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "NIXPACKS",
+    "nixpacksConfigPath": "nixpacks.toml"
   },
   "deploy": {
     "startCommand": "cd apps/backend && npm run start:prod",
@@ -12,7 +13,7 @@
   },
   "watch": {
     "patterns": [
-      "apps/**",
+      "apps/backend/**",
       "packages/**",
       "package.json",
       "nixpacks.toml",
