@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useShell } from '../../components/layout/shell-context';
 import {
   Row, Col, Button, Upload, Input, Space, Tag, Typography,
   Dropdown, Modal, message, Empty, Tooltip, Segmented,
@@ -49,6 +50,7 @@ const typeConfig: Record<string, { icon: React.ReactNode; color: string; label: 
 const tagColors = ['#6366f1', '#a855f7', '#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
 
 function MaterialPage() {
+  const { isMobile } = useShell();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [activeType, setActiveType] = useState<MaterialType>('all');
   const [searchText, setSearchText] = useState('');
@@ -103,10 +105,11 @@ function MaterialPage() {
                 prefix={<SearchOutlined style={{ color: 'var(--text-tertiary)' }} />}
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                style={{ width: 280, borderRadius: 'var(--radius-md)', background: 'var(--bg-surface-2)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                style={{ width: isMobile ? '100%' : 280, borderRadius: 'var(--radius-md)', background: 'var(--bg-surface-2)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
                 allowClear
               />
               <Segmented
+                size={isMobile ? 'small' : undefined}
                 options={[
                   { label: '全部', value: 'all' },
                   { label: <Space><PictureOutlined />图片</Space>, value: 'image' },
@@ -121,6 +124,7 @@ function MaterialPage() {
           <Col>
             <Space>
               <Segmented
+                size={isMobile ? 'small' : undefined}
                 options={[
                   { value: 'grid', icon: <AppstoreOutlined /> },
                   { value: 'list', icon: <UnorderedListOutlined /> },
@@ -140,27 +144,29 @@ function MaterialPage() {
       </GlassPanel>
 
       {/* 上传区 */}
-      <Dragger
-        {...uploadProps}
-        showUploadList={false}
-        style={{
-          borderRadius: 'var(--radius-lg)',
-          border: '2px dashed var(--border-color)',
-          background: 'var(--bg-surface)',
-          marginBottom: 'var(--spacing-lg)',
-          padding: '20px 0',
-        }}
-      >
-        <p className="ant-upload-drag-icon">
-          <CloudUploadOutlined style={{ fontSize: 40, color: 'var(--brand-primary)' }} />
-        </p>
-        <p className="ant-upload-text" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-          拖拽文件到此处，或 <span style={{ color: 'var(--brand-primary)' }}>点击上传</span>
-        </p>
-        <p className="ant-upload-hint" style={{ color: 'var(--text-tertiary)' }}>
-          支持 JPG、PNG、MP4、MP3 格式，单文件最大 200MB
-        </p>
-      </Dragger>
+      {!isMobile && (
+        <Dragger
+          {...uploadProps}
+          showUploadList={false}
+          style={{
+            borderRadius: 'var(--radius-lg)',
+            border: '2px dashed var(--border-color)',
+            background: 'var(--bg-surface)',
+            marginBottom: 'var(--spacing-lg)',
+            padding: '20px 0',
+          }}
+        >
+          <p className="ant-upload-drag-icon">
+            <CloudUploadOutlined style={{ fontSize: 40, color: 'var(--brand-primary)' }} />
+          </p>
+          <p className="ant-upload-text" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+            拖拽文件到此处，或 <span style={{ color: 'var(--brand-primary)' }}>点击上传</span>
+          </p>
+          <p className="ant-upload-hint" style={{ color: 'var(--text-tertiary)' }}>
+            支持 JPG、PNG、MP4、MP3 格式，单文件最大 200MB
+          </p>
+        </Dragger>
+      )}
 
       {/* 统计 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
@@ -192,7 +198,7 @@ function MaterialPage() {
                 >
                   {/* Preview area */}
                   <div style={{
-                    height: 140,
+                    height: isMobile ? 100 : 140,
                     background: 'var(--bg-surface-2)',
                     display: 'flex',
                     alignItems: 'center',
