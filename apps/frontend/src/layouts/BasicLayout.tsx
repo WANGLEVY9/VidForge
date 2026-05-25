@@ -14,9 +14,11 @@ import {
   QuestionCircleOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
+import { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import ThemeToggle from '../components/common/ThemeToggle';
+import PrivacySettings from '../components/common/PrivacySettings';
 import { ShellProvider } from '../components/layout/shell-context';
 import { MobileShell } from '../components/layout/MobileShell';
 
@@ -66,6 +68,7 @@ function BasicLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { sidebarCollapsed: collapsed, toggleSidebar } = useAppStore();
+  const [privacySettingsVisible, setPrivacySettingsVisible] = useState(false);
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
     if (key === 'logout') {
@@ -240,7 +243,10 @@ function BasicLayout() {
 
             {/* 设置 */}
             <Tooltip title="设置">
-              <SettingOutlined style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }} />
+              <SettingOutlined
+                style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }}
+                onClick={() => setPrivacySettingsVisible(true)}
+              />
             </Tooltip>
 
             {/* 用户头像下拉 */}
@@ -272,6 +278,10 @@ function BasicLayout() {
           <Outlet />
         </div>
       </MobileShell>
+      <PrivacySettings
+        visible={privacySettingsVisible}
+        onClose={() => setPrivacySettingsVisible(false)}
+      />
     </ShellProvider>
   );
 }
