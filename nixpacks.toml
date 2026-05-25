@@ -1,8 +1,20 @@
+# Railway / Nixpacks 仅用于构建并运行 backend。
+# 前端在 Vercel 单独部署，无需在此构建。
+# 注意：Railway 服务面板中的 Custom Build/Install/Start Command
+# 必须保持为空，否则会覆盖此文件。
+
 [phases.setup]
 nixPkgs = ['nodejs_20', 'npm-10_x']
 
 [phases.install]
-cmd = "npm install --legacy-peer-deps && cd apps/frontend && npm install --legacy-peer-deps && cd ../backend && npm install --legacy-peer-deps"
+cmds = [
+  "cd apps/backend && npm install --include=dev --no-audit --no-fund"
+]
 
 [phases.build]
-cmd = "cd apps/frontend && npm run build && cd ../backend && npm run build"
+cmds = [
+  "cd apps/backend && npm run build"
+]
+
+[start]
+cmd = "cd apps/backend && npm run start:prod"
