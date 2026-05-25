@@ -1,0 +1,82 @@
+<h2>Mobile Layout Architecture</h2>
+<p class="subtitle">A+C hybrid pattern — Bottom Tab Bar + FAB, with responsive shell structure.</p>
+
+<div class="section">
+  <h3>1. 响应式断点</h3>
+  <table style="width:100%;border-collapse:collapse;margin:12px 0">
+    <tr style="background:#1a1a23">
+      <th style="padding:8px;border:1px solid #333;text-align:left">断点</th>
+      <th style="padding:8px;border:1px solid #333;text-align:left">布局</th>
+      <th style="padding:8px;border:1px solid #333;text-align:left">导航</th>
+    </tr>
+    <tr>
+      <td style="padding:8px;border:1px solid #333">&lt; 768px</td>
+      <td style="padding:8px;border:1px solid #333">单列全屏</td>
+      <td style="padding:8px;border:1px solid #333">底部标签栏 + FAB</td>
+    </tr>
+    <tr style="background:#1a1a23">
+      <td style="padding:8px;border:1px solid #333">768px - 1024px</td>
+      <td style="padding:8px;border:1px solid #333">可折叠侧边栏</td>
+      <td style="padding:8px;border:1px solid #333">侧边栏 + 顶部栏</td>
+    </tr>
+    <tr>
+      <td style="padding:8px;border:1px solid #333">&gt; 1024px</td>
+      <td style="padding:8px;border:1px solid #333">侧边栏+内容区</td>
+      <td style="padding:8px;border:1px solid #333">完整侧边栏</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>2. Shell 结构</h3>
+  <pre style="background:#1a1a23;padding:16px;border-radius:8px;color:#94a3b8;font-family:monospace;font-size:12px;line-height:1.5">
+&lt;MobileShell&gt;                    // 响应式外壳
+  ├── &lt;TopBar&gt;                    // 顶部栏（搜索+通知+用户）
+  │     ├── SearchInput
+  │     ├── NotificationBadge
+  │     └── UserAvatar
+  │
+  ├── &lt;SwipeableView&gt;             // 左右滑动切换页面
+  │     ├── DashboardPage
+  │     ├── MaterialPage
+  │     ├── ScriptPage
+  │     ├── CreationPage
+  │     └── AbComparePage
+  │
+  ├── &lt;BottomTabBar&gt;              // 玻璃拟态底部标签
+  │     ├── TabItem (工作台)       // 带活跃态指示器
+  │     ├── TabItem (素材库)
+  │     ├── TabItem (剧本)
+  │     ├── TabItem (创作)
+  │     └── TabItem (AB对比)
+  │
+  └── &lt;FabButton&gt;                 // 浮动快速创作按钮
+        └── QuickActionMenu       // 展开：快速创作 / 上传素材
+</pre>
+</div>
+
+<div class="section">
+  <h3>3. 底部标签栏交互</h3>
+  <ul>
+    <li><strong>玻璃拟态风格</strong>：backdrop-filter: blur(20px)，半透明背景，与现有暗色主题统一</li>
+    <li><strong>自动隐藏</strong>：向下滚动时收起（+transform: translateY(100%)），向上滚动或到达顶部时显示</li>
+    <li><strong>活跃态指示器</strong>：底部发光的渐变线条 + 图标微动效（选中态放大 1.1x）</li>
+    <li><strong>Badge 通知</strong>：素材审核、导出完成等系统通知以红点显示</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>4. FAB 快速创作</h3>
+  <ul>
+    <li><strong>位置</strong>：悬浮在底部标签栏上方 16px，偏右</li>
+    <li><strong>交互</strong>：点击展开扇形菜单（快速创作 / 上传素材），点击空白处关闭</li>
+    <li><strong>动效</strong>：展开/收起带弹簧弹性动画（spring 动画）</li>
+    <li><strong>上下文感知</strong>：在视频播放/全屏模式下自动隐藏</li>
+  </ul>
+</div>
+
+<div class="section" style="background:#0f0f1a;border-radius:8px;padding:16px;margin-top:16px">
+  <p style="color:#94a3b8;margin:0">
+    <strong>下一步：</strong>页面级适配设计 — 每个页面在移动端的布局方案、触控交互、组件优化。
+  </p>
+</div>

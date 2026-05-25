@@ -1,0 +1,193 @@
+<h2>Mobile Page Adaptation</h2>
+<p class="subtitle">Each page's layout, interactions, and component adaptations for &lt;768px screens.</p>
+
+<!-- ==================== DASHBOARD ==================== -->
+<div class="section">
+  <h3>1. Dashboard 工作台</h3>
+  <div style="background:#1a1a23;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;line-height:1.4;color:#94a3b8;margin-bottom:12px">
+┌──────────────────────┐
+│  ☰ 工作台      🔔 👤 │  ← TopBar
+├──────────────────────┤
+│ [今日概览 卡片]       │  ← 横向滑动卡片
+│ [素材统计] [任务] [导出]│
+├──────────────────────┤
+│ [趋势图]              │  ← 单列全宽图表
+│  ┌────────────┐      │
+│  │  折线/柱状图 │      │
+│  └────────────┘      │
+│ [归因矩阵]            │  ← 紧凑热力图
+│ [模型对比] [队列]     │  ← 可折叠面板
+├──────────────────────┤
+│ 🏠  📁  📝  ▶  ⚙   │  ← Bottom Tab Bar
+└──────────────────────┘
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin:12px 0">
+    <tr style="background:#1a1a23">
+      <th style="padding:8px;border:1px solid #333;text-align:left">桌面版</th>
+      <th style="padding:8px;border:1px solid #333;text-align:left">移动版</th>
+    </tr>
+    <tr>
+      <td style="padding:8px;border:1px solid #333">Grid 图表布局 (2列)</td>
+      <td style="padding:8px;border:1px solid #333">单列堆叠，可折叠面板</td>
+    </tr>
+    <tr style="background:#1a1a23">
+      <td style="padding:8px;border:1px solid #333">侧边栏统计</td>
+      <td style="padding:8px;border:1px solid #333">横向滑动统计卡片</td>
+    </tr>
+    <tr>
+      <td style="padding:8px;border:1px solid #333">Segmented 时段选择</td>
+      <td style="padding:8px;border:1px solid #333">底部弹出式 Picker (半屏)</td>
+    </tr>
+    <tr style="background:#1a1a23">
+      <td style="padding:8px;border:1px solid #333">悬停 Tooltip</td>
+      <td style="padding:8px;border:1px solid #333">触摸点按 Tooltip (长按)</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ==================== MATERIAL ==================== -->
+<div class="section">
+  <h3>2. Material 素材库</h3>
+  <div style="background:#1a1a23;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;line-height:1.4;color:#94a3b8;margin-bottom:12px">
+┌──────────────────────┐
+│ 🔍 搜索素材...    📷  │  ← 折叠式搜索栏
+├──────────────────────┤
+│ [全部|图片|视频|音频]  │  ← 横向滚动分类
+├──────────────────────┤
+│ ┌───┐ ┌───┐ ┌───┐   │  ← 2列网格
+│ │   │ │   │ │   │   │
+│ │ 图 │ │ 图 │ │ 图 │  │
+│ └───┘ └───┘ └───┘   │
+│ 名称  │ 名称  │ 名称  │
+│ ┌───┐ ┌───┐ ┌───┐   │
+│ │   │ │   │ │   │   │
+│ │ 图 │ │ 图 │ │ 图 │  │
+│ └───┘ └───┘ └───┘   │
+├──────────────────────┤
+│ 🏠  📁  📝  ▶  ⚙   │
+└──────────────────────┘
+  </div>
+  <ul>
+    <li><strong>网格自适应</strong>：xs={12} (2列)，sm={8} (3列)</li>
+    <li><strong>触控操作</strong>：长按进入多选模式，左右滑动出现操作菜单</li>
+    <li><strong>搜索栏</strong>：默认收缩为图标，点击展开全宽输入框</li>
+    <li><strong>类型选择</strong>：顶部横向滚动 Segmented，可左右滑动切换</li>
+    <li><strong>上传入口</strong>：FAB 上传按钮替换拖拽区（拖拽区收起在"上传"标签下方）</li>
+    <li><strong>预览</strong>：全屏图片/视频预览，支持双指缩放</li>
+  </ul>
+</div>
+
+<!-- ==================== SCRIPT ==================== -->
+<div class="section">
+  <h3>3. Script 剧本创作</h3>
+  <div style="background:#1a1a23;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;line-height:1.4;color:#94a3b8;margin-bottom:12px">
+┌──────────────────────┐
+│ ☰ 剧本创作           │
+├──────────────────────┤
+│ [配置面板 - 折叠]     │  ← 默认折叠，可展开
+│ 商品名称：[________]  │
+│ 品类：[选择▾]        │
+│ 卖点：[________]     │
+│ 风格：[网格选择]      │
+│ [生成剧本 ▸]         │
+├──────────────────────┤
+│ [结果面板]            │  ← 全宽显示
+│ ⏱ 夏日清爽防晒霜...  │
+│ ┌────────────────┐  │
+│ │ 分镜脚本        │  │
+│ │ 🔴 0-3s "姐妹.."│  │
+│ │ 🔵 3-10s "展.." │  │
+│ └────────────────┘  │
+│ 配音建议 + BGM 推荐    │
+│ (可折叠手风琴)        │
+├──────────────────────┤
+│ 🏠  📁  📝  ▶  ⚙   │
+└──────────────────────┘
+  </div>
+  <ul>
+    <li><strong>配置/结果切换</strong>：配置面板默认收起为"设置"按钮，结果区域占满全屏</li>
+    <li><strong>风格选择</strong>：2列网格 → 横向滚动图标（触碰更大面积）</li>
+    <li><strong>结果展示</strong>：分镜条目可点击展开详情，配音/BGM 使用手风琴折叠</li>
+    <li><strong>语音输入</strong>：卖点输入支持语音转文字（使用 Web Speech API）</li>
+  </ul>
+</div>
+
+<!-- ==================== CREATION ==================== -->
+<div class="section">
+  <h3>4. Creation 视频创作</h3>
+  <div style="background:#1a1a23;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;line-height:1.4;color:#94a3b8;margin-bottom:12px">
+┌──────────────────────┐
+│ ☰ 视频创作           │
+├──────────────────────┤
+│ [步骤指示器]          │  ← 精简步骤条(仅图标)
+│ ○ → ○ → ○ → ○       │
+├──────────────────────┤
+│ [配置区]              │  ← 全宽堆叠
+│ 主题：[________]      │
+│ 模型：[选择]          │
+│ 比例/画质/时长        │
+│ ┌──────────────┐     │
+│ │ ▶ 生成分镜    │     │
+│ │ ⚡ 一键生成   │     │
+│ └──────────────┘     │
+├──────────────────────┤
+│ [分镜 - 横向轮播]     │  ← 手指左右滑动
+│   ◀  □  □  □  ▶    │  ← 指示器小圆点
+│  ┌──────────────┐    │
+│  │  分镜3/5     │    │
+│  │  正在生成...  │    │
+│  └──────────────┘    │
+├──────────────────────┤
+│ 🏠  📁  📝  ▶  ⚙   │
+└──────────────────────┘
+  </div>
+  <ul>
+    <li><strong>步骤条</strong>：桌面版横向 Steps → 顶部图标式指示器 (○→○→○→○)</li>
+    <li><strong>分镜预览</strong>：横向 Carousel 轮播，底部小圆点指示位置</li>
+    <li><strong>生成进度</strong>：全屏进度视图，可切到后台（标签栏切换不中断）</li>
+    <li><strong>完成页</strong>：预览占满宽度，操作按钮垂直堆叠</li>
+    <li><strong>导出面板</strong>：全屏 Modal（Drawer 从底部滑入）</li>
+  </ul>
+</div>
+
+<!-- ==================== AB COMPARE ==================== -->
+<div class="section">
+  <h3>5. AB Compare 对比评测</h3>
+  <div style="background:#1a1a23;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;line-height:1.4;color:#94a3b8;margin-bottom:12px">
+┌──────────────────────┐
+│ ☰ A/B 对比     Beta  │
+├──────────────────────┤
+│ [播放器 - 上下堆叠]   │  ← 并排 → 上下
+│ ┌──────────────────┐ │
+│ │  A: Seedance Pro │ │
+│ │  [视频画面]       │ │
+│ └──────────────────┘ │
+│ ┌──────────────────┐ │
+│ │  B: Seedance Lite│ │
+│ │  [视频画面]       │ │
+│ └──────────────────┘ │
+│ [同步] [播放/暂停]    │  ← 操作栏
+├──────────────────────┤
+│ [指标对比]            │  ← 横向滚动表格
+│ 画质│速度│完整│匹配   │
+├──────────────────────┤
+│ [操作按钮 - 垂直]     │
+│ [应用A] [应用B]       │
+│ [保存模板] [导出报告]  │
+├──────────────────────┤
+│ 🏠  📁  📝  ▶  ⚙   │
+└──────────────────────┘
+  </div>
+  <ul>
+    <li><strong>播放器</strong>：并排→上下堆叠，每个宽度100%，高度自适应</li>
+    <li><strong>同步控制</strong>：同步模式下，一个播放另一个跟随</li>
+    <li><strong>指标表格</strong>：桌面版 Table → 横向滚动卡片（指标名固定左列）</li>
+    <li><strong>操作按钮</strong>：水平排列 → 垂直堆叠网格（2列）</li>
+  </ul>
+</div>
+
+<div class="section" style="background:#0f0f1a;border-radius:8px;padding:16px;margin-top:16px">
+  <p style="color:#94a3b8;margin:0">
+    <strong>下一步：</strong>移动端组件开发清单 — MobileShell、BottomTabBar、FAB、SwipeableView 的具体 props/state 设计和技术实现方案。
+  </p>
+</div>

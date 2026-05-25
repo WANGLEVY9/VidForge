@@ -35,7 +35,11 @@
       "Bash(npm view *)",
       "Bash(npm pack *)",
       "Bash(node -e \"const lg = require\\('@langchain/langgraph'\\); console.log\\(Object.keys\\(lg\\).filter\\(k => k.includes\\('State'\\) || k.includes\\('Graph'\\) || k.includes\\('END'\\) || k.includes\\('START'\\) || k.includes\\('Annotation'\\)\\).join\\(', '\\)\\)\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(ls \"E:\\\\\\\\Codes\\\\\\\\2026\\\\\\\\2026-VidForge\\\\\\\\.superpowers\\\\\\\\brainstorm\\\\\\\\\")",
+      "Bash(ls \"E:\\\\\\\\Codes\\\\\\\\2026\\\\\\\\2026-VidForge\\\\\\\\.superpowers\\\\\\\\brainstorm\\\\\\\\\" -t)",
+      "Bash(npx -y http-server . -p 49760 --cors -s)",
+      "Bash(ls *)"
     ]
   }
 }
