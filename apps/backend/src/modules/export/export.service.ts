@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ExportTask } from './entities/export-task.entity';
@@ -13,8 +13,9 @@ export class ExportService {
     private exportRepo: Repository<ExportTask>,
   ) {}
 
-  async create(dto: CreateExportDto): Promise<ExportTask> {
+  async create(userId: string, dto: CreateExportDto): Promise<ExportTask> {
     const task = this.exportRepo.create({
+      userId,
       creationTaskId: dto.creationTaskId,
       format: dto.format as any,
       resolution: dto.resolution as any,
@@ -57,15 +58,23 @@ export class ExportService {
     await this.exportRepo.save(task);
   }
 
-  async findAll(): Promise<ExportTask[]> {
-    return this.exportRepo.find({ order: { createdAt: 'DESC' as any }, take: 20 });
+  async findAll(userId: string): Promise<ExportTask[]> {
+    return this.exportRepo.find({
+      where: { userId },
+      order: { createdAt: 'DESC' as any },
+      take: 20,
+    });
   }
 
-  async findOne(id: string): Promise<ExportTask> {
-    return this.exportRepo.findOneOrFail({ where: { id } });
+  async findOne(userId: string, id: string): Promise<ExportTask> {
+    const task = await this.exportRepo.findOne({ where: { id } });
+    if (!task) throw new NotFoundException('导出任务不存在');
+    if (task.userId && task.userId !== userId) throw new ForbiddenException('无权访问该导出任务');
+    return task;
   }
 
-  async cancel(id: string): Promise<void> {
+  async cancel(userId: string, id: string): Promise<void> {
+    await this.findOne(userId, id);
     await this.exportRepo.update(id, { status: 'failed', errorMessage: '用户取消' });
   }
 

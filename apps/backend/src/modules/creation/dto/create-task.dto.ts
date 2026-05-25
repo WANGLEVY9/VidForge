@@ -9,6 +9,10 @@ export class CreateTaskDto {
   scriptId?: string;
 
   @IsOptional()
+  @IsString()
+  productSpaceId?: string;
+
+  @IsOptional()
   @IsArray()
   storyboard?: Record<string, any>[];
 

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
@@ -19,15 +19,19 @@ export class MaterialService {
     private readonly httpService: HttpService,
   ) {}
 
-  async create(dto: CreateMaterialDto): Promise<Material> {
-    const material = this.materialRepository.create(dto);
+  async create(userId: string, dto: CreateMaterialDto): Promise<Material> {
+    const material = this.materialRepository.create({
+      ...dto,
+      userId,
+    });
     return this.materialRepository.save(material);
   }
 
-  async findAll(query: QueryMaterialDto) {
-    const { search, type, tag, page = 1, pageSize = 20 } = query;
-    const where: any = {};
+  async findAll(userId: string, query: QueryMaterialDto) {
+    const { search, type, tag, spaceId, page = 1, pageSize = 20 } = query;
+    const where: any = { userId };
 
+    if (spaceId) where.productSpaceId = spaceId;
     if (type) where.type = type;
     if (search) where.name = Like(`%${search}%`);
     if (tag) where.tags = Like(`%${tag}%`);
@@ -42,18 +46,23 @@ export class MaterialService {
     return { list, total, page, pageSize };
   }
 
-  async findOne(id: string): Promise<Material> {
-    return this.materialRepository.findOneOrFail({ where: { id } });
+  async findOne(userId: string, id: string): Promise<Material> {
+    const material = await this.materialRepository.findOne({ where: { id } });
+    if (!material) throw new NotFoundException('素材不存在');
+    if (material.userId && material.userId !== userId) {
+      throw new ForbiddenException('无权访问该素材');
+    }
+    return material;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(userId: string, id: string): Promise<void> {
+    await this.findOne(userId, id);
     await this.materialRepository.delete(id);
   }
 
-  async analyzeTags(id: string, dto: AnalyzeMaterialDto): Promise<Material> {
-    const material = await this.materialRepository.findOneOrFail({ where: { id } });
+  async analyzeTags(userId: string, id: string, dto: AnalyzeMaterialDto): Promise<Material> {
+    const material = await this.findOne(userId, id);
 
-    // Simulate LLM analysis — in production, call Volcengine ARK multimodal API
     const productTags: Record<string, any> = {
       category: dto.category || material.category || '通用',
       brand: null,
@@ -86,17 +95,15 @@ export class MaterialService {
     return this.materialRepository.save(material);
   }
 
-  async searchByTags(filters: {
-    productCategory?: string;
-    videoMood?: string;
-    clipObjects?: string;
-  }): Promise<Material[]> {
+  async searchByTags(
+    userId: string,
+    filters: { productCategory?: string; videoMood?: string; clipObjects?: string },
+  ): Promise<Material[]> {
     const materials = await this.materialRepository.find({
-      where: { type: 'image' },
+      where: { userId, type: 'image' },
       order: { createdAt: 'DESC' },
     });
 
-    // Simple client-side filter (PG JSON query in production)
     return materials.filter((m) => {
       const pt = m.productTags as Record<string, any> | null;
       const vt = m.videoTags as Record<string, any> | null;
@@ -109,10 +116,9 @@ export class MaterialService {
     });
   }
 
-  async semanticSearch(dto: SemanticSearchDto): Promise<any> {
+  async semanticSearch(userId: string, dto: SemanticSearchDto): Promise<any> {
     const { query, limit = 20 } = dto;
 
-    // Step 1: Get embedding from embedding API
     let embedding: number[];
     try {
       const response = await lastValueFrom(
@@ -123,30 +129,27 @@ export class MaterialService {
       );
       embedding = response.data.embedding;
     } catch {
-      // Fallback: return keyword-based results
       return this.materialRepository.find({
-        where: { name: Like(`%${query}%`) },
+        where: { userId, name: Like(`%${query}%`) },
         take: limit,
         order: { createdAt: 'DESC' },
       });
     }
 
-    // Step 2: PGVector similarity search
-    // Note: Requires PGVector extension enabled on PostgreSQL
     try {
       const result = await this.materialRepository.query(
         `SELECT id, name, type, url, thumbnail_url, tags, category,
                 1 - (embedding <=> $1::vector) AS similarity
          FROM materials
-         WHERE embedding IS NOT NULL
+         WHERE embedding IS NOT NULL AND user_id = $3
          ORDER BY embedding <=> $1::vector
          LIMIT $2`,
-        [`[${embedding.join(',')}]`, limit]
+        [`[${embedding.join(',')}]`, limit, userId],
       );
       return result;
     } catch {
-      // PGVector not available — fallback
       return this.materialRepository.find({
+        where: { userId },
         take: limit,
         order: { createdAt: 'DESC' },
       });

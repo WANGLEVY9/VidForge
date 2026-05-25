@@ -5,9 +5,10 @@ import { AnalyticsService } from './analytics.service';
 import { Material } from '../material/entities/material.entity';
 import { Script } from '../script/entities/script.entity';
 import { CreationTask } from '../creation/entities/creation-task.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Material, Script, CreationTask])],
+  imports: [TypeOrmModule.forFeature([Material, Script, CreationTask]), AuthModule],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],
 })

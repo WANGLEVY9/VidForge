@@ -1,35 +1,40 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, UseGuards, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ScriptService } from './script.service';
 import { CreateScriptDto } from './dto/create-script.dto';
 import { GenerateScriptDto } from './dto/generate-script.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('剧本管理')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('script')
 export class ScriptController {
   constructor(private readonly scriptService: ScriptService) {}
 
   @Post('generate')
   @ApiOperation({ summary: 'AI生成剧本' })
-  generate(@Body() dto: GenerateScriptDto) {
-    return this.scriptService.generate(dto);
+  generate(@CurrentUser() user: JwtPayload, @Body() dto: GenerateScriptDto) {
+    return this.scriptService.generate(user.sub, dto);
   }
 
   @Post()
   @ApiOperation({ summary: '保存剧本' })
-  create(@Body() dto: CreateScriptDto) {
-    return this.scriptService.create(dto);
+  create(@CurrentUser() user: JwtPayload, @Body() dto: CreateScriptDto) {
+    return this.scriptService.create(user.sub, dto);
   }
 
   @Get()
-  @ApiOperation({ summary: '获取剧本列表' })
-  findAll() {
-    return this.scriptService.findAll();
+  @ApiOperation({ summary: '获取剧本列表（按用户隔离，可按 spaceId 过滤）' })
+  findAll(@CurrentUser() user: JwtPayload, @Query('spaceId') spaceId?: string) {
+    return this.scriptService.findAll(user.sub, spaceId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: '获取剧本详情' })
-  findOne(@Param('id') id: string) {
-    return this.scriptService.findOne(id);
+  findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.scriptService.findOne(user.sub, id);
   }
 }

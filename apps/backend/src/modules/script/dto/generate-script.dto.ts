@@ -25,4 +25,8 @@ export class GenerateScriptDto {
 
   @IsOptional()
   duration?: number;
+
+  @IsOptional()
+  @IsString()
+  productSpaceId?: string;
 }

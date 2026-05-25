@@ -4,9 +4,10 @@ import { ScriptController } from './script.controller';
 import { ScriptService } from './script.service';
 import { Script } from './entities/script.entity';
 import { AiModule } from '../ai/ai.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Script]), AiModule],
+  imports: [TypeOrmModule.forFeature([Script]), AiModule, AuthModule],
   controllers: [ScriptController],
   providers: [ScriptService],
   exports: [ScriptService],

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Script } from './entities/script.entity';
@@ -52,7 +52,9 @@ export class ScriptService {
     private readonly arkConfigService: ArkConfigService,
   ) {}
 
-  async generate(dto: GenerateScriptDto): Promise<ScriptResult> {
+  async generate(userId: string, dto: GenerateScriptDto): Promise<ScriptResult> {
+    // userId 暂未参与生成（generate 不落库），但保留参数便于后续做"基于历史剧本扩写"
+    void userId;
     // 没配置文本模型，直接降级
     if (!this.arkConfigService.getActiveApiKey('text')) {
       this.logger.warn('未检测到 ARK 文本模型配置，使用 fallback 剧本');
@@ -242,16 +244,35 @@ ${schema}`;
     };
   }
 
-  async create(dto: CreateScriptDto): Promise<Script> {
-    const script = this.scriptRepository.create(dto);
+  async create(userId: string, dto: CreateScriptDto): Promise<Script> {
+    // 默认在同 productSpaceId 下递增版本号
+    let version = 1;
+    if (dto.productSpaceId) {
+      const cnt = await this.scriptRepository.count({
+        where: { userId, productSpaceId: dto.productSpaceId },
+      });
+      version = cnt + 1;
+    }
+    const script = this.scriptRepository.create({
+      ...dto,
+      userId,
+      version,
+    });
     return this.scriptRepository.save(script);
   }
 
-  async findAll(): Promise<Script[]> {
-    return this.scriptRepository.find({ order: { createdAt: 'DESC' } });
+  async findAll(userId: string, productSpaceId?: string): Promise<Script[]> {
+    const where: any = { userId };
+    if (productSpaceId) where.productSpaceId = productSpaceId;
+    return this.scriptRepository.find({ where, order: { createdAt: 'DESC' } });
   }
 
-  async findOne(id: string): Promise<Script> {
-    return this.scriptRepository.findOneOrFail({ where: { id } });
+  async findOne(userId: string, id: string): Promise<Script> {
+    const script = await this.scriptRepository.findOne({ where: { id } });
+    if (!script) throw new NotFoundException('剧本不存在');
+    if (script.userId && script.userId !== userId) {
+      throw new ForbiddenException('无权访问该剧本');
+    }
+    return script;
   }
 }

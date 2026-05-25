@@ -15,6 +15,10 @@ export class QueryMaterialDto {
   tag?: string;
 
   @IsOptional()
+  @IsString()
+  spaceId?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

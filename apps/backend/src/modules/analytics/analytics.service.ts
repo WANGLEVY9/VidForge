@@ -22,7 +22,7 @@ export class AnalyticsService {
     private creationRepo: Repository<CreationTask>,
   ) {}
 
-  async getOverview(): Promise<OverviewData> {
+  async getOverview(userId?: string, productSpaceId?: string): Promise<OverviewData> {
     // 数据库表可能尚未建立（首次部署），任何一步失败都不应让 dashboard 整页崩
     const safeCount = async (fn: () => Promise<number>): Promise<number> => {
       try {
@@ -33,20 +33,24 @@ export class AnalyticsService {
       }
     };
 
+    const baseWhere: any = {};
+    if (userId) baseWhere.userId = userId;
+    if (productSpaceId) baseWhere.productSpaceId = productSpaceId;
+
     const [totalMaterials, totalScripts, totalCreations] = await Promise.all([
-      safeCount(() => this.materialRepo.count()),
-      safeCount(() => this.scriptRepo.count()),
-      safeCount(() => this.creationRepo.count()),
+      safeCount(() => this.materialRepo.count({ where: baseWhere })),
+      safeCount(() => this.scriptRepo.count({ where: baseWhere })),
+      safeCount(() => this.creationRepo.count({ where: baseWhere })),
     ]);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayCreations = await safeCount(() =>
-      this.creationRepo.count({ where: { createdAt: MoreThanOrEqual(today) } }),
+      this.creationRepo.count({ where: { ...baseWhere, createdAt: MoreThanOrEqual(today) } }),
     );
 
     const completed = await safeCount(() =>
-      this.creationRepo.count({ where: { status: 'completed' } }),
+      this.creationRepo.count({ where: { ...baseWhere, status: 'completed' } }),
     );
     const total = totalCreations;
     const successRate = total > 0 ? Math.round((completed / total) * 1000) / 10 : 0;
