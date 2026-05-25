@@ -48,8 +48,8 @@ export interface TraceItem {
 }
 
 export const analyticsApi = {
-  getOverview() {
-    return apiClient.get<any, OverviewData>('/analytics/overview');
+  getOverview(spaceId?: string) {
+    return apiClient.get<any, OverviewData>('/analytics/overview', { params: { spaceId } });
   },
   getTrends(period?: string) {
     return apiClient.get<any, TrendPoint[]>('/analytics/trends', { params: { period } });
