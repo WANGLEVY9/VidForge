@@ -28,7 +28,10 @@ export interface GenerateScriptDto {
 
 export const scriptApi = {
   generate(data: GenerateScriptDto) {
-    return apiClient.post<any, any>('/script/generate', data);
+    // 剧本生成走真实 ARK 文本模型，单次可能 30-90s，单独放宽到 150s
+    return apiClient.post<any, any>('/script/generate', data, {
+      timeout: 150000,
+    });
   },
 
   save(data: Partial<ScriptItem> & { productSpaceId?: string }) {
