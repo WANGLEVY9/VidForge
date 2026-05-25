@@ -11,11 +11,32 @@ export interface ArkModelConfig {
 
 export type ModelConfigRegistry = Record<string, ArkModelConfig>;
 
+/**
+ * 清理环境变量黏贴时常见的脏字符:
+ * - 前后空白 / \r / \n
+ * - 误带的成对中英文引号
+ * 不修改中间内容
+ */
+function sanitizeEnv(raw: string | undefined): string | undefined {
+  if (!raw) return raw;
+  let v = raw.trim();
+  // 去掉成对的引号包裹
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'")) ||
+    (v.startsWith('“') && v.endsWith('”')) ||
+    (v.startsWith('‘') && v.endsWith('’'))
+  ) {
+    v = v.slice(1, -1).trim();
+  }
+  return v;
+}
+
 export function buildDefaultModelConfigs(env: Record<string, string | undefined>): ArkModelConfig[] {
   const configs: ArkModelConfig[] = [];
 
-  const textPrimaryEp = env['ARK_TEXT_PRIMARY_ENDPOINT_ID'];
-  const textPrimaryKey = env['ARK_TEXT_PRIMARY_API_KEY'];
+  const textPrimaryEp = sanitizeEnv(env['ARK_TEXT_PRIMARY_ENDPOINT_ID']);
+  const textPrimaryKey = sanitizeEnv(env['ARK_TEXT_PRIMARY_API_KEY']);
   if (textPrimaryEp && textPrimaryKey) {
     configs.push({
       key: 'text-primary',
@@ -29,8 +50,8 @@ export function buildDefaultModelConfigs(env: Record<string, string | undefined>
     });
   }
 
-  const videoPrimaryEp = env['ARK_VIDEO_PRIMARY_ENDPOINT_ID'];
-  const videoPrimaryKey = env['ARK_VIDEO_PRIMARY_API_KEY'];
+  const videoPrimaryEp = sanitizeEnv(env['ARK_VIDEO_PRIMARY_ENDPOINT_ID']);
+  const videoPrimaryKey = sanitizeEnv(env['ARK_VIDEO_PRIMARY_API_KEY']);
   if (videoPrimaryEp && videoPrimaryKey) {
     configs.push({
       key: 'video-primary',

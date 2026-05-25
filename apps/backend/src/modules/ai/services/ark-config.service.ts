@@ -12,7 +12,13 @@ export class ArkConfigService implements OnModuleInit {
 
     for (const config of defaultConfigs) {
       this.configs[config.key] = { ...config };
-      this.logger.log(`已加载模型配置: [${config.key}] ${config.name}`);
+      const keyMasked =
+        config.apiKey.length <= 8
+          ? '*'.repeat(config.apiKey.length)
+          : `${config.apiKey.slice(0, 4)}...${config.apiKey.slice(-4)}`;
+      this.logger.log(
+        `已加载模型配置: [${config.key}] ${config.name} endpointId=${config.endpointId} apiKey=${keyMasked} (len=${config.apiKey.length})`,
+      );
     }
 
     const count = Object.keys(this.configs).length;

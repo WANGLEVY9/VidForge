@@ -5,6 +5,31 @@ import { ArkTextService } from './services/ark-text.service';
 import { ArkVideoService } from './services/ark-video.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+/**
+ * 给一个字符串生成 "指纹" 信息, 用于排查环境变量是否被黏贴时污染
+ * 不暴露原文, 只暴露长度 / 前后 4 位 / 是否含异常字符
+ */
+function fingerprint(raw: string | undefined | null) {
+  if (!raw) {
+    return { length: 0, masked: '', issues: ['empty'] };
+  }
+  const issues: string[] = [];
+  if (raw !== raw.trim()) issues.push('has-leading-or-trailing-whitespace');
+  if (/\s/.test(raw)) issues.push('contains-whitespace');
+  if (/[\r\n]/.test(raw)) issues.push('contains-newline');
+  if (/["'“”‘’`]/.test(raw)) issues.push('contains-quote');
+  if (/[\u3000-\u303F\uFF00-\uFFEF]/.test(raw))
+    issues.push('contains-fullwidth-or-cjk-punctuation');
+  return {
+    length: raw.length,
+    masked:
+      raw.length <= 8
+        ? '*'.repeat(raw.length)
+        : `${raw.slice(0, 4)}...${raw.slice(-4)}`,
+    issues,
+  };
+}
+
 @ApiTags('AI能力')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -31,6 +56,8 @@ export class AiController {
       apiKey: c.apiKey
         ? `${c.apiKey.slice(0, 4)}...${c.apiKey.slice(-4)}`
         : '',
+      apiKeyFingerprint: fingerprint(c.apiKey),
+      endpointFingerprint: fingerprint(c.endpointId),
     }));
   }
 
@@ -52,6 +79,8 @@ export class AiController {
     }
 
     const startedAt = Date.now();
+    const apiKeyFingerprint = fingerprint(active.apiKey);
+    const endpointFingerprint = fingerprint(active.endpointId);
     try {
       const resp = await this.arkTextService.chatCompletion({
         messages: [
@@ -69,6 +98,8 @@ export class AiController {
         endpointId: active.endpointId,
         durationMs: Date.now() - startedAt,
         sample: String(content).slice(0, 64),
+        apiKeyFingerprint,
+        endpointFingerprint,
       };
     } catch (error: any) {
       return {
@@ -77,6 +108,8 @@ export class AiController {
         endpointId: active.endpointId,
         durationMs: Date.now() - startedAt,
         reason: error?.message ?? String(error),
+        apiKeyFingerprint,
+        endpointFingerprint,
       };
     }
   }

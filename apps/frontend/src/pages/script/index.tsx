@@ -209,7 +209,7 @@ function ScriptPage() {
       } else {
         Modal.error({
           title: 'ARK 文本模型不可用',
-          width: 520,
+          width: 560,
           content: (
             <div>
               <Paragraph style={{ marginBottom: 8 }}>
@@ -225,6 +225,32 @@ function ScriptPage() {
                   <Text code>{result.endpointId}</Text>
                 </Paragraph>
               )}
+              {result.endpointFingerprint && (
+                <Paragraph style={{ marginBottom: 4 }}>
+                  <Text type="secondary">Endpoint 指纹：</Text>
+                  <Text code>
+                    len={result.endpointFingerprint.length} {result.endpointFingerprint.masked}
+                  </Text>
+                  {result.endpointFingerprint.issues.length > 0 && (
+                    <Text type="danger" style={{ marginLeft: 8 }}>
+                      ⚠ {result.endpointFingerprint.issues.join(', ')}
+                    </Text>
+                  )}
+                </Paragraph>
+              )}
+              {result.apiKeyFingerprint && (
+                <Paragraph style={{ marginBottom: 8 }}>
+                  <Text type="secondary">API Key 指纹：</Text>
+                  <Text code>
+                    len={result.apiKeyFingerprint.length} {result.apiKeyFingerprint.masked}
+                  </Text>
+                  {result.apiKeyFingerprint.issues.length > 0 && (
+                    <Text type="danger" style={{ marginLeft: 8 }}>
+                      ⚠ {result.apiKeyFingerprint.issues.join(', ')}
+                    </Text>
+                  )}
+                </Paragraph>
+              )}
               <Paragraph style={{ marginBottom: 8 }}>
                 <Text type="secondary">原因：</Text>
                 <Text code copyable style={{ wordBreak: 'break-all' }}>
@@ -232,11 +258,13 @@ function ScriptPage() {
                 </Text>
               </Paragraph>
               <Paragraph style={{ marginBottom: 0 }}>
-                请在 Railway 后端确认环境变量
-                <Text code>ARK_TEXT_PRIMARY_ENDPOINT_ID</Text>
-                /
-                <Text code>ARK_TEXT_PRIMARY_API_KEY</Text>
-                是否正确，且 API Key 未过期/未被吊销。
+                若错误是「API key doesn't exist」，多为以下情况：
+                <br />
+                1. API Key 已被吊销/重置 → 去火山方舟控制台重新生成
+                <br />
+                2. 黏贴时混入空格/换行/引号 → 看上方指纹是否有 ⚠
+                <br />
+                3. Key 与 Endpoint 不在同一火山账号下
               </Paragraph>
             </div>
           ),
