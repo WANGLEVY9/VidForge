@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import { GlassPanel } from '../../components/studio/GlassPanel';
+import { usePageTiming } from '../../hooks/usePerformance';
 
 const { Text } = Typography;
 const { Dragger } = Upload;
@@ -58,6 +59,7 @@ function MaterialPage() {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewItem, setPreviewItem] = useState<MaterialItem | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  usePageTiming('Material');
 
   const filteredMaterials = mockMaterials.filter((m) => {
     const matchType = activeType === 'all' || m.type === activeType;

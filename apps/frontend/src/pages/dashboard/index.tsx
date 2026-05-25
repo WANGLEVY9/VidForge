@@ -23,6 +23,7 @@ import { QueueStatus } from '../../components/dashboard/QueueStatus';
 import { ChartPanel } from '../../components/dashboard/ChartPanel';
 import { useShell } from '../../components/layout/shell-context';
 import { analyticsApi } from '../../services/analytics';
+import { usePageTiming } from '../../hooks/usePerformance';
 
 echarts.use([BarChart, LineChart, PieChart, RadarChart, HeatmapChart, GridComponent, TooltipComponent, LegendComponent, VisualMapComponent, RadarComponent, CanvasRenderer]);
 
@@ -57,6 +58,7 @@ function DashboardPage() {
   const [trends, setTrends] = useState<any[]>([]);
   const [distribution, setDistribution] = useState<any[]>([]);
   const [attribution, setAttribution] = useState<any>(null);
+  usePageTiming('Dashboard');
 
   useEffect(() => {
     analyticsApi.getOverview().then(setOverview).catch(() => {});
