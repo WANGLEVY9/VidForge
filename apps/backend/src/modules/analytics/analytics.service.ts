@@ -23,20 +23,32 @@ export class AnalyticsService {
   ) {}
 
   async getOverview(): Promise<OverviewData> {
+    // 数据库表可能尚未建立（首次部署），任何一步失败都不应让 dashboard 整页崩
+    const safeCount = async (fn: () => Promise<number>): Promise<number> => {
+      try {
+        return await fn();
+      } catch (err: any) {
+        this.logger.warn(`overview count failed: ${err?.message ?? err}`);
+        return 0;
+      }
+    };
+
     const [totalMaterials, totalScripts, totalCreations] = await Promise.all([
-      this.materialRepo.count(),
-      this.scriptRepo.count(),
-      this.creationRepo.count(),
+      safeCount(() => this.materialRepo.count()),
+      safeCount(() => this.scriptRepo.count()),
+      safeCount(() => this.creationRepo.count()),
     ]);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayCreations = await this.creationRepo.count({
-      where: { createdAt: MoreThanOrEqual(today) },
-    });
+    const todayCreations = await safeCount(() =>
+      this.creationRepo.count({ where: { createdAt: MoreThanOrEqual(today) } }),
+    );
 
-    const completed = await this.creationRepo.count({ where: { status: 'completed' } });
-    const total = await this.creationRepo.count();
+    const completed = await safeCount(() =>
+      this.creationRepo.count({ where: { status: 'completed' } }),
+    );
+    const total = totalCreations;
     const successRate = total > 0 ? Math.round((completed / total) * 1000) / 10 : 0;
 
     return {
