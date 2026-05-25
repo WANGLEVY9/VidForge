@@ -77,15 +77,16 @@ function ScriptPage() {
   const [scriptStyle, setScriptStyle] = useState<ScriptStyle>('professional');
   const [duration, setDuration] = useState<number>(15);
   const [form] = Form.useForm();
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
   const DRAFT_KEY = 'script_config';
   const draftRestored = useRef(false);
-  const formValues = Form.useWatch([], form);
 
   useEffect(() => {
     if (draftRestored.current) return;
     const draft = getDraft<{ productName?: string; category?: string; sellingPoints?: string; targetAudience?: string[] }>(DRAFT_KEY);
     if (draft && draft.productName) {
       form.setFieldsValue(draft);
+      setFormValues(draft);
       message.info('已恢复上次的剧本配置');
     }
     draftRestored.current = true;
@@ -189,7 +190,12 @@ function ScriptPage() {
                 <ThunderboltOutlined style={{ color: 'var(--brand-primary)', fontSize: 18 }} />
                 <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>剧本配置</Text>
               </div>
-              <Form form={form} layout="vertical" size="large">
+              <Form
+                form={form}
+                layout="vertical"
+                size="large"
+                onValuesChange={(_, all) => setFormValues(all)}
+              >
                 <Form.Item
                   name="productName"
                   label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>商品名称</Text>}

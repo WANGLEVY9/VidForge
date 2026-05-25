@@ -76,6 +76,7 @@ function CreationPage() {
   const [generating, setGenerating] = useState(false);
 
   const [form] = Form.useForm();
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [, setAgentTaskId] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
@@ -99,10 +100,10 @@ function CreationPage() {
   }, [form]);
 
   // Autosave
-  const formValues = Form.useWatch([], form);
+  const formValuesForSave = { prompt: formValues?.prompt, model: selectedModel, aspectRatio, quality };
   useAutosave({
     key: DRAFT_KEY,
-    data: { prompt: formValues?.prompt, model: selectedModel, aspectRatio, quality },
+    data: formValuesForSave,
     enabled: currentStep === 'config',
   });
 
@@ -393,7 +394,12 @@ function CreationPage() {
                 <Text strong style={{ color: 'var(--text-primary)' }}>创作配置</Text>
               </div>
               <div style={{ padding: 'var(--spacing-xl)' }}>
-                <Form form={form} layout="vertical" size="large">
+                <Form
+                  form={form}
+                  layout="vertical"
+                  size="large"
+                  onValuesChange={(_, all) => setFormValues(all)}
+                >
                   <Form.Item
                     name="prompt"
                     label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频主题 / 商品</Text>}

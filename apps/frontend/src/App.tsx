@@ -59,22 +59,24 @@ function App() {
               key={route.path}
               path={route.path}
               element={
-                <Suspense
-                  fallback={
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        minHeight: 400,
-                      }}
-                    >
-                      <Spin size="large" />
-                    </div>
-                  }
-                >
-                  <route.element />
-                </Suspense>
+                <ErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          minHeight: 400,
+                        }}
+                      >
+                        <Spin size="large" />
+                      </div>
+                    }
+                  >
+                    <route.element />
+                  </Suspense>
+                </ErrorBoundary>
               }
             />
           ))}
