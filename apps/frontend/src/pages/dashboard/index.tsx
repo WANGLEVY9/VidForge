@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Row, Col, Tag, Typography, List, Button, Space, Badge, Tooltip, Progress, Segmented } from 'antd';
 import {
   VideoCameraOutlined,
@@ -61,6 +62,7 @@ function formatDuration(seconds?: number): string {
 }
 
 function DashboardPage() {
+  const { spaceId } = useParams<{ spaceId?: string }>();
   const { isMobile } = useShell(); // 当前 isMobile 恒为 false（已禁用移动端布局）
   const chartHeight = 280;
   const smallChartHeight = 240;
@@ -75,12 +77,12 @@ function DashboardPage() {
   usePageTiming('Dashboard');
 
   useEffect(() => {
-    analyticsApi.getOverview().then(setOverview).catch(() => {});
+    analyticsApi.getOverview(spaceId).then(setOverview).catch(() => {});
     analyticsApi.getTrends().then(setTrends).catch(() => {});
     analyticsApi.getDistribution().then(setDistribution).catch(() => {});
     analyticsApi.getAttribution().then(setAttribution).catch(() => {});
-    creationApi.getList().then((list) => setRecentTasks(list ?? [])).catch(() => {});
-  }, []);
+    creationApi.getList(spaceId).then((list) => setRecentTasks(list ?? [])).catch(() => {});
+  }, [spaceId]);
 
   const trendSeries = chartMode === '柱状' ? 'bar' : chartMode === '面积' ? 'line' : 'line';
 

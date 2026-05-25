@@ -20,6 +20,7 @@ export interface CreateTaskDto {
   /** 720p / 1080p / 480p */
   quality?: string;
   modelKey?: string;
+  productSpaceId?: string;
 }
 
 export interface ProgressEvent {
@@ -68,8 +69,8 @@ export const creationApi = {
     return apiClient.post<any, CreationTask>('/creation/task', data);
   },
 
-  getList() {
-    return apiClient.get<any, CreationTask[]>('/creation/task');
+  getList(spaceId?: string) {
+    return apiClient.get<any, CreationTask[]>('/creation/task', { params: { spaceId } });
   },
 
   getById(id: string) {

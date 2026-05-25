@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   Button, Input, Form, Space, Typography, Steps, Progress,
   Tag, Row, Col, Slider, Switch, message,
@@ -60,6 +61,7 @@ interface LogEntry {
 }
 
 function CreationPage() {
+  const { spaceId } = useParams<{ spaceId?: string }>();
   const [currentStep, setCurrentStep] = useState<CreationStep>('config');
   const [overallProgress, setOverallProgress] = useState(0);
   const [storyboard, setStoryboard] = useState<StoryboardItem[]>([]);
@@ -159,6 +161,7 @@ function CreationPage() {
         sellingPoints: values.prompt,
         style: 'professional',
         duration,
+        productSpaceId: spaceId,
       });
       const shots: StoryboardItem[] = (result?.shots ?? []).map((s: any, i: number) => ({
         id: `shot_${Date.now()}_${i + 1}`,
@@ -199,6 +202,7 @@ function CreationPage() {
     try {
       const created = await creationApi.createTask({
         title: form.getFieldValue('prompt') || '带货短视频',
+        productSpaceId: spaceId,
         storyboard: storyboard.map((s) => ({
           id: s.id,
           index: s.order,

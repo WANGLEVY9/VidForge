@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useShell } from '../../components/layout/shell-context';
 import {
   Button, Input, Form, Select, Slider, Switch, Space, Typography,
@@ -71,6 +72,7 @@ interface ScriptResult {
 }
 
 function ScriptPage() {
+  const { spaceId } = useParams<{ spaceId?: string }>();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScriptResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +128,7 @@ function ScriptPage() {
         targetAudience: audience,
         style: scriptStyle,
         duration,
+        productSpaceId: spaceId,
       }) as ScriptResult;
       setResult(data);
       if (data?.source === 'fallback') {
@@ -162,6 +165,7 @@ function ScriptPage() {
         bgmSuggestion: result.bgmSuggestion,
         tags: result.tags,
         duration: result.duration,
+        productSpaceId: spaceId,
       });
       message.success('剧本已保存');
     } catch (err: any) {

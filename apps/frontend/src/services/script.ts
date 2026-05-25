@@ -23,6 +23,7 @@ export interface GenerateScriptDto {
   targetAudience?: string;
   style?: string;
   duration?: number;
+  productSpaceId?: string;
 }
 
 export const scriptApi = {
@@ -30,12 +31,12 @@ export const scriptApi = {
     return apiClient.post<any, any>('/script/generate', data);
   },
 
-  save(data: Partial<ScriptItem>) {
+  save(data: Partial<ScriptItem> & { productSpaceId?: string }) {
     return apiClient.post<any, ScriptItem>('/script', data);
   },
 
-  getList() {
-    return apiClient.get<any, ScriptItem[]>('/script');
+  getList(spaceId?: string) {
+    return apiClient.get<any, ScriptItem[]>('/script', { params: { spaceId } });
   },
 
   getById(id: string) {
