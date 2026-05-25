@@ -13,6 +13,7 @@ import {
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { StoryboardEditor } from '../../components/storyboard/StoryboardEditor';
 import { useStoryboardStore, Shot } from '../../store/useStoryboardStore';
+import { useShell } from '../../components/layout/shell-context';
 import { agentApi } from '../../services/agent';
 import { ExportPanel } from './components/ExportPanel';
 import '../../components/storyboard/storyboard.css';
@@ -65,6 +66,7 @@ function CreationPage() {
   const [, setAgentTaskId] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const { isMobile } = useShell();
 
   const setShots = useStoryboardStore((s) => s.setShots);
   const setActiveShot = useStoryboardStore((s) => s.setActiveShot);
@@ -188,7 +190,10 @@ function CreationPage() {
     <div className="page-enter" style={{ padding: 0 }}>
       {/* 步骤条 */}
       <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)', padding: 'var(--spacing-lg) var(--spacing-xxxl)' }}>
-        <Steps current={['config', 'storyboard', 'generating', 'complete'].indexOf(currentStep)} items={stepItems} />
+        <Steps current={['config', 'storyboard', 'generating', 'complete'].indexOf(currentStep)} items={stepItems.map((item) => ({
+          ...item,
+          title: isMobile ? '' : item.title,
+        }))} size={isMobile ? 'small' : 'default'} />
       </GlassPanel>
 
       {/* 配置阶段 */}
@@ -205,7 +210,7 @@ function CreationPage() {
                 <SettingOutlined style={{ color: 'var(--brand-primary)' }} />
                 <Text strong style={{ color: 'var(--text-primary)' }}>创作配置</Text>
               </div>
-              <div style={{ padding: 'var(--spacing-xl)' }}>
+              <div style={{ padding: isMobile ? 'var(--spacing-md)' : 'var(--spacing-xl)' }}>
                 <Form form={form} layout="vertical" size="large">
                   <Form.Item
                     name="prompt"
@@ -356,7 +361,7 @@ function CreationPage() {
                 </div>
 
                 {/* 分镜进度 */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
                   {storyboard.map((item) => (
                     <div
                       key={item.id}
@@ -439,14 +444,14 @@ function CreationPage() {
             </div>
           </GlassPanel>
 
-          <Space size="middle">
-            <Button type="primary" icon={<DownloadOutlined />} size="large" onClick={() => setExportOpen(true)} style={{ borderRadius: 'var(--radius-md)', height: 44 }}>
+          <Space size="middle" direction={isMobile ? 'vertical' : 'horizontal'} style={isMobile ? { width: '100%' } : undefined}>
+            <Button block={isMobile} type="primary" icon={<DownloadOutlined />} size="large" onClick={() => setExportOpen(true)} style={{ borderRadius: 'var(--radius-md)', height: 44 }}>
               导出视频
             </Button>
-            <Button icon={<ReloadOutlined />} size="large" style={{ borderRadius: 'var(--radius-md)', height: 44 }}>
+            <Button block={isMobile} icon={<ReloadOutlined />} size="large" style={{ borderRadius: 'var(--radius-md)', height: 44 }}>
               重新生成
             </Button>
-            <Button icon={<EditOutlined />} size="large" style={{ borderRadius: 'var(--radius-md)', height: 44 }}>
+            <Button block={isMobile} icon={<EditOutlined />} size="large" style={{ borderRadius: 'var(--radius-md)', height: 44 }}>
               编辑分镜
             </Button>
           </Space>
