@@ -17,6 +17,7 @@ import { useShell } from '../../components/layout/shell-context';
 import { agentApi } from '../../services/agent';
 import { ExportPanel } from './components/ExportPanel';
 import { useAutosave, getDraft, clearDraft } from '../../hooks/useAutosave';
+import { usePageTiming } from '../../hooks/usePerformance';
 import '../../components/storyboard/storyboard.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -69,6 +70,7 @@ function CreationPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const DRAFT_KEY = 'creation_config';
   const draftRestored = useRef(false);
+  usePageTiming('Creation');
 
   // Check for draft on mount
   useEffect(() => {
