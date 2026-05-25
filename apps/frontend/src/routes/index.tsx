@@ -1,13 +1,15 @@
-const DashboardPage = () => import('@/pages/dashboard');
-const MaterialPage = () => import('@/pages/material');
-const ScriptPage = () => import('@/pages/script');
-const CreationPage = () => import('@/pages/creation');
-const AbComparePage = () => import('@/pages/ab-compare');
+import { lazy, type ComponentType } from 'react';
+
+const DashboardPage = lazy(() => import('@/pages/dashboard'));
+const MaterialPage = lazy(() => import('@/pages/material'));
+const ScriptPage = lazy(() => import('@/pages/script'));
+const CreationPage = lazy(() => import('@/pages/creation'));
+const AbComparePage = lazy(() => import('@/pages/ab-compare'));
 
 export interface RouteConfig {
   path: string;
   name: string;
-  element: () => Promise<typeof import('*.tsx')>;
+  element: React.LazyExoticComponent<ComponentType<any>>;
 }
 
 const routes: RouteConfig[] = [
