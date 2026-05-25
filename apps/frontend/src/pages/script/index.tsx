@@ -3,17 +3,19 @@ import { useParams } from 'react-router-dom';
 import { useShell } from '../../components/layout/shell-context';
 import {
   Button, Input, Form, Select, Slider, Switch, Space, Typography,
-  Tag, Divider, message, Row, Col, Steps, Tooltip, Spin, Alert,
+  Tag, Divider, message, Row, Col, Steps, Tooltip, Spin, Alert, Modal,
 } from 'antd';
 import {
   RocketOutlined, BulbOutlined, CopyOutlined, SaveOutlined,
   FileTextOutlined, ThunderboltOutlined,
   ExperimentOutlined, CustomerServiceOutlined, ShoppingCartOutlined,
   VideoCameraOutlined, SoundOutlined, AimOutlined,
+  ApiOutlined,
 } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { useAutosave, getDraft, clearDraft } from '../../hooks/useAutosave';
 import { scriptApi } from '../../services/script';
+import { aiApi } from '../../services/ai';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -69,6 +71,7 @@ interface ScriptResult {
   bgmSuggestion: string;
   tags: string[];
   source?: 'ark' | 'fallback';
+  fallbackReason?: string;
 }
 
 function ScriptPage() {
@@ -76,6 +79,7 @@ function ScriptPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScriptResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [diagnosing, setDiagnosing] = useState(false);
   const [scriptStyle, setScriptStyle] = useState<ScriptStyle>('professional');
   const [duration, setDuration] = useState<number>(15);
   const [form] = Form.useForm();
@@ -132,7 +136,31 @@ function ScriptPage() {
       }) as ScriptResult;
       setResult(data);
       if (data?.source === 'fallback') {
-        message.warning('AI 模型暂不可用，已为你生成示例剧本');
+        const reason = (data as any)?.fallbackReason || '原因未知';
+        Modal.warning({
+          title: 'AI 模型未生效，已为你生成示例剧本',
+          width: 520,
+          content: (
+            <div>
+              <Paragraph style={{ marginBottom: 8 }}>
+                后端没有真正调到火山方舟模型，本次用的是示例兜底数据。
+              </Paragraph>
+              <Paragraph style={{ marginBottom: 8 }}>
+                <Text type="secondary">原因：</Text>
+                <Text code copyable style={{ wordBreak: 'break-all' }}>
+                  {String(reason)}
+                </Text>
+              </Paragraph>
+              <Paragraph style={{ marginBottom: 0 }}>
+                可点击页面右上角「诊断 AI 模型」按钮查看详细自检结果，
+                或检查 Railway 后端是否正确配置了
+                <Text code>ARK_TEXT_PRIMARY_ENDPOINT_ID</Text>
+                /
+                <Text code>ARK_TEXT_PRIMARY_API_KEY</Text>。
+              </Paragraph>
+            </div>
+          ),
+        });
       } else {
         message.success('剧本生成成功');
       }
@@ -147,6 +175,77 @@ function ScriptPage() {
       message.error(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDiagnose = async () => {
+    setDiagnosing(true);
+    try {
+      const result = await aiApi.diagnose();
+      if (result.ok) {
+        Modal.success({
+          title: 'ARK 文本模型可用',
+          width: 480,
+          content: (
+            <div>
+              <Paragraph style={{ marginBottom: 8 }}>
+                后端已成功调通火山方舟，剧本生成会真实驱动大模型。
+              </Paragraph>
+              <Paragraph style={{ marginBottom: 4 }}>
+                <Text type="secondary">Endpoint：</Text>
+                <Text code>{result.endpointId}</Text>
+              </Paragraph>
+              <Paragraph style={{ marginBottom: 4 }}>
+                <Text type="secondary">耗时：</Text>
+                <Text>{result.durationMs} ms</Text>
+              </Paragraph>
+              <Paragraph style={{ marginBottom: 0 }}>
+                <Text type="secondary">样例返回：</Text>
+                <Text code copyable>{result.sample}</Text>
+              </Paragraph>
+            </div>
+          ),
+        });
+      } else {
+        Modal.error({
+          title: 'ARK 文本模型不可用',
+          width: 520,
+          content: (
+            <div>
+              <Paragraph style={{ marginBottom: 8 }}>
+                <Text type="secondary">阶段：</Text>
+                <Text code>{result.stage}</Text>
+                {result.stage === 'config'
+                  ? '（后端未配置环境变量）'
+                  : '（环境变量已配置，但调用真实失败）'}
+              </Paragraph>
+              {result.endpointId && (
+                <Paragraph style={{ marginBottom: 4 }}>
+                  <Text type="secondary">Endpoint：</Text>
+                  <Text code>{result.endpointId}</Text>
+                </Paragraph>
+              )}
+              <Paragraph style={{ marginBottom: 8 }}>
+                <Text type="secondary">原因：</Text>
+                <Text code copyable style={{ wordBreak: 'break-all' }}>
+                  {result.reason}
+                </Text>
+              </Paragraph>
+              <Paragraph style={{ marginBottom: 0 }}>
+                请在 Railway 后端确认环境变量
+                <Text code>ARK_TEXT_PRIMARY_ENDPOINT_ID</Text>
+                /
+                <Text code>ARK_TEXT_PRIMARY_API_KEY</Text>
+                是否正确，且 API Key 未过期/未被吊销。
+              </Paragraph>
+            </div>
+          ),
+        });
+      }
+    } catch (err: any) {
+      message.error(err?.message ?? '诊断接口请求失败');
+    } finally {
+      setDiagnosing(false);
     }
   };
 
@@ -195,9 +294,21 @@ function ScriptPage() {
             )}
             {configExpanded && (
             <div style={{ padding: 'var(--spacing-xl)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 'var(--spacing-xl)' }}>
-                <ThunderboltOutlined style={{ color: 'var(--brand-primary)', fontSize: 18 }} />
-                <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>剧本配置</Text>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 'var(--spacing-xl)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ThunderboltOutlined style={{ color: 'var(--brand-primary)', fontSize: 18 }} />
+                  <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>剧本配置</Text>
+                </div>
+                <Tooltip title="一键自检后端 ARK 文本模型是否可用">
+                  <Button
+                    size="small"
+                    icon={<ApiOutlined />}
+                    loading={diagnosing}
+                    onClick={handleDiagnose}
+                  >
+                    诊断 AI 模型
+                  </Button>
+                </Tooltip>
               </div>
               <Form
                 form={form}
