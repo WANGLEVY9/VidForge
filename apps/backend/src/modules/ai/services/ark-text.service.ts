@@ -64,14 +64,21 @@ export class ArkTextService {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${apiKey}`,
           },
-          timeout: 60000,
+          // ARK Doubao-Seed 在长上下文/复杂任务时偶发 30-90s
+          // 这里给到 120s，前端会用 150s 包住，保证不会前端先超时
+          timeout: 120000,
         },
       );
 
       return response.data;
     } catch (error: any) {
-      const errorMsg = error?.response?.data?.error?.message || error?.message || '未知错误';
-      this.logger.error(`文本模型调用失败: ${errorMsg}`);
+      const errorMsg =
+        error?.response?.data?.error?.message || error?.message || '未知错误';
+      const status = error?.response?.status;
+      const code = error?.code;
+      this.logger.error(
+        `文本模型调用失败 status=${status ?? '-'} code=${code ?? '-'}: ${errorMsg}`,
+      );
       throw new Error(`文本模型调用失败: ${errorMsg}`);
     }
   }

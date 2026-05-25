@@ -137,7 +137,12 @@ function ScriptPage() {
         message.success('剧本生成成功');
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || '剧本生成失败';
+      const isTimeout =
+        err?.code === 'ECONNABORTED' ||
+        /timeout/i.test(err?.message ?? '');
+      const msg = isTimeout
+        ? 'AI 创作耗时较长（已超过 150 秒），请稍后重试或简化卖点描述'
+        : err?.response?.data?.message || err?.message || '剧本生成失败';
       setError(msg);
       message.error(msg);
     } finally {
@@ -356,6 +361,11 @@ function ScriptPage() {
               <Spin size="large" />
               <div style={{ marginTop: 16 }}>
                 <Text style={{ color: 'var(--text-tertiary)' }}>AI 正在创作剧本，请稍候...</Text>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <Text style={{ color: 'var(--text-quaternary, #888)', fontSize: 12 }}>
+                  通常耗时 30-90 秒，复杂卖点最长可达 2 分钟
+                </Text>
               </div>
               <Steps
                 current={1}
