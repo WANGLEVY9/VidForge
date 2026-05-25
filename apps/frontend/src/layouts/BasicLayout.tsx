@@ -166,8 +166,6 @@ function BasicLayout() {
             marginLeft: sidebarWidth,
             transition: `margin-left ${'var(--duration-normal)'} var(--ease-out)`,
             minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
           }}
         >
           {/* Top bar */}
@@ -274,11 +272,8 @@ function BasicLayout() {
           <main
             data-vidforge-main
             style={{
-              flex: 1,
               padding: 'var(--spacing-xl)',
-              width: '100%',
               boxSizing: 'border-box',
-              minWidth: 0, // 防止 flex 子元素被内部内容撑爆
             }}
           >
             <Outlet />
