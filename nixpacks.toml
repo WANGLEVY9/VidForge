@@ -8,7 +8,7 @@ nixPkgs = ['nodejs_20', 'npm-10_x']
 
 [phases.install]
 cmds = [
-  "cd apps/backend && npm install --include=dev --no-audit --no-fund"
+  "cd apps/backend && npm install --include=dev --legacy-peer-deps --no-audit --no-fund"
 ]
 
 [phases.build]
