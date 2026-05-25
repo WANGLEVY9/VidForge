@@ -20,6 +20,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { StudioHeader } from '../../components/studio/StudioHeader';
 import { QueueStatus } from '../../components/dashboard/QueueStatus';
+import { useShell } from '../../components/layout/shell-context';
 import { analyticsApi } from '../../services/analytics';
 
 echarts.use([BarChart, LineChart, PieChart, RadarChart, HeatmapChart, GridComponent, TooltipComponent, LegendComponent, VisualMapComponent, RadarComponent, CanvasRenderer]);
@@ -45,6 +46,10 @@ const periodOptions = ['日', '周', '月', '自定义'];
 const chartModes = ['折线', '柱状', '面积'];
 
 function DashboardPage() {
+  const { isMobile } = useShell();
+  const chartHeight = isMobile ? 180 : 260;
+  const smallChartHeight = isMobile ? 160 : 220;
+
   const [period, setPeriod] = useState('月');
   const [chartMode, setChartMode] = useState('折线');
   const [overview, setOverview] = useState<any>(null);
@@ -168,7 +173,7 @@ function DashboardPage() {
           <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>最近更新: 2 分钟前</Text>
         </div>
         <Space>
-          <Segmented options={periodOptions} value={period} onChange={(v) => setPeriod(v as string)} />
+          <Segmented options={periodOptions} value={period} onChange={(v) => setPeriod(v as string)} size={isMobile ? 'small' : undefined} />
           <Button size="small">导出</Button>
         </Space>
       </div>
@@ -182,7 +187,7 @@ function DashboardPage() {
           { title: '今日新增', value: overview?.todayCreations ?? '—', change: '', icon: <ThunderboltOutlined />, color: '#f59e0b' },
           { title: '生成成功率', value: overview ? `${overview.successRate}%` : '—', change: overview?.momChanges.successRate ?? '', icon: <CheckCircleOutlined />, color: '#3b82f6' },
           { title: '平均耗时', value: overview ? `${overview.avgDuration}s` : '—', change: overview?.momChanges.avgDuration ?? '', icon: <ClockCircleOutlined />, color: '#ef4444' },
-        ].map((stat, i) => (
+        ].slice(0, isMobile ? 4 : 6).map((stat, i) => (
           <Col xs={12} sm={8} md={4} key={i}>
             <GlassPanel variant="card" style={{ padding: 'var(--spacing-lg)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -226,20 +231,22 @@ function DashboardPage() {
               }
             />
             <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={trendOption} style={{ height: 260 }} notMerge />
+              <ReactEChartsCore echarts={echarts} option={trendOption} style={{ height: chartHeight }} notMerge />
             </div>
-            <div style={{ padding: '0 var(--spacing-lg) var(--spacing-lg)', display: 'flex', gap: 24 }}>
-              <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>同比上期: +18%</Text>
-              <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>环比上周: +5%</Text>
-              <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>预测月末: 1,050</Text>
-            </div>
+            {!isMobile && (
+              <div style={{ padding: '0 var(--spacing-lg) var(--spacing-lg)', display: 'flex', gap: 24 }}>
+                <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>同比上期: +18%</Text>
+                <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>环比上周: +5%</Text>
+                <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>预测月末: 1,050</Text>
+              </div>
+            )}
           </GlassPanel>
         </Col>
         <Col xs={24} lg={8}>
           <GlassPanel variant="card" style={{ height: '100%' }}>
             <StudioHeader title="Agent 任务分布" icon={<SyncOutlined />} />
             <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={roseOption} style={{ height: 250 }} notMerge />
+              <ReactEChartsCore echarts={echarts} option={roseOption} style={{ height: smallChartHeight }} notMerge />
             </div>
           </GlassPanel>
         </Col>
@@ -251,7 +258,7 @@ function DashboardPage() {
           <GlassPanel variant="card">
             <StudioHeader title="模型性能对比" icon={<RocketOutlined />} />
             <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={radarOption} style={{ height: 250 }} notMerge />
+              <ReactEChartsCore echarts={echarts} option={radarOption} style={{ height: smallChartHeight }} notMerge />
             </div>
           </GlassPanel>
         </Col>
@@ -259,7 +266,7 @@ function DashboardPage() {
           <GlassPanel variant="card">
             <StudioHeader title="品类 × 模型 × 成功率" icon={<VideoCameraOutlined />} />
             <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={stackedBarOption} style={{ height: 250 }} notMerge />
+              <ReactEChartsCore echarts={echarts} option={stackedBarOption} style={{ height: smallChartHeight }} notMerge />
             </div>
           </GlassPanel>
         </Col>
@@ -277,7 +284,7 @@ function DashboardPage() {
           <GlassPanel variant="card">
             <StudioHeader title="因子归因矩阵" icon={<RocketOutlined />} />
             <div style={{ padding: 'var(--spacing-lg)' }}>
-              <ReactEChartsCore echarts={echarts} option={heatmapOption} style={{ height: 220 }} notMerge />
+              <ReactEChartsCore echarts={echarts} option={heatmapOption} style={{ height: isMobile ? 160 : 220 }} notMerge />
             </div>
           </GlassPanel>
         </Col>
@@ -291,7 +298,7 @@ function DashboardPage() {
           extra={<Button type="link" size="small" icon={<RightOutlined />} style={{ color: 'var(--brand-primary)' }}>查看全部</Button>}
         />
         <div style={{ padding: 'var(--spacing-lg)' }}>
-          <ReactEChartsCore echarts={echarts} option={traceOption} style={{ height: 160 }} notMerge />
+          <ReactEChartsCore echarts={echarts} option={traceOption} style={{ height: isMobile ? 120 : 160 }} notMerge />
         </div>
       </GlassPanel>
 
