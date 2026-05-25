@@ -4,9 +4,10 @@ import { CreationController } from './creation.controller';
 import { CreationService } from './creation.service';
 import { CreationTask } from './entities/creation-task.entity';
 import { CreationGateway } from './gateway/creation.gateway';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CreationTask])],
+  imports: [TypeOrmModule.forFeature([CreationTask]), AiModule],
   controllers: [CreationController],
   providers: [CreationService, CreationGateway],
   exports: [CreationService],
