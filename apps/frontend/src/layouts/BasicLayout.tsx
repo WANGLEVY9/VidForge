@@ -1,22 +1,21 @@
-import { Avatar, Badge, Tooltip, Tag, Dropdown, Menu } from 'antd';
+import { Avatar, Badge, Tooltip, Tag, Dropdown, Menu, Modal } from 'antd';
 import {
   RocketOutlined,
-  UploadOutlined,
-  FileTextOutlined,
-  VideoCameraOutlined,
-  DashboardOutlined,
+  AppstoreOutlined,
+  UserOutlined,
   ExperimentOutlined,
   BellOutlined,
   SettingOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  UserOutlined,
   QuestionCircleOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
 import { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { useSpaceStore } from '../store/useSpaceStore';
 import ThemeToggle from '../components/common/ThemeToggle';
 import PrivacySettings from '../components/common/PrivacySettings';
 import { ShellProvider } from '../components/layout/shell-context';
@@ -26,31 +25,37 @@ const SIDEBAR_COLLAPSED_WIDTH = 72;
 const TOP_BAR_HEIGHT = 64;
 
 const menuItems = [
-  { key: '/dashboard',  icon: <DashboardOutlined />,    label: '工作台' },
-  { key: '/material',   icon: <UploadOutlined />,       label: '素材库' },
-  { key: '/script',     icon: <FileTextOutlined />,     label: '剧本创作' },
-  { key: '/creation',   icon: <VideoCameraOutlined />,  label: '视频创作' },
-  { key: '/ab-compare', icon: <ExperimentOutlined />,   label: 'A/B 对比' },
-];
-
-const userMenuItems = [
-  { key: 'profile', icon: <UserOutlined />, label: '个人中心' },
-  { key: 'help',    icon: <QuestionCircleOutlined />, label: '帮助中心' },
-  { type: 'divider' as const },
-  { key: 'logout',  icon: <LogoutOutlined />, label: '退出登录' },
+  { key: '/workspace', icon: <AppstoreOutlined />, label: '商品空间' },
+  { key: '/profile', icon: <UserOutlined />, label: '个人中心' },
 ];
 
 function BasicLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { sidebarCollapsed: collapsed, toggleSidebar } = useAppStore();
+  const user = useAuthStore((s) => s.user);
+  const clearSession = useAuthStore((s) => s.clearSession);
+  const clearSpaces = useSpaceStore((s) => s.clear);
   const [privacySettingsVisible, setPrivacySettingsVisible] = useState(false);
 
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
 
+  const handleLogout = () => {
+    Modal.confirm({
+      title: '确认退出登录？',
+      okText: '退出',
+      cancelText: '取消',
+      onOk: () => {
+        clearSession();
+        clearSpaces();
+        navigate('/auth/login', { replace: true });
+      },
+    });
+  };
+
   const handleUserMenuClick = ({ key }: { key: string }) => {
     if (key === 'logout') {
-      console.log('Logout');
+      handleLogout();
     } else if (key === 'profile') {
       navigate('/profile');
     } else if (key === 'help') {
@@ -58,7 +63,35 @@ function BasicLayout() {
     }
   };
 
-  const currentMenu = menuItems.find((m) => m.key === location.pathname);
+  const userMenuItems = [
+    {
+      key: 'header',
+      label: (
+        <div style={{ padding: '4px 0' }}>
+          <div style={{ fontWeight: 600 }}>{user?.username ?? '未登录'}</div>
+          {user?.email && (
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{user.email}</div>
+          )}
+        </div>
+      ),
+      disabled: true,
+    },
+    { type: 'divider' as const },
+    { key: 'profile', icon: <UserOutlined />, label: '个人中心' },
+    { key: 'help', icon: <QuestionCircleOutlined />, label: '帮助中心' },
+    { type: 'divider' as const },
+    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', danger: true },
+  ];
+
+  // 当前页面显示在面包屑里的标题
+  const breadcrumbLabel = (() => {
+    if (location.pathname.startsWith('/profile')) return '个人中心';
+    if (location.pathname.startsWith('/workspace')) return '商品空间';
+    return 'Studio';
+  })();
+
+  // 侧栏菜单的高亮 key（按前缀匹配）
+  const selectedKey = menuItems.find((m) => location.pathname.startsWith(m.key))?.key ?? '/workspace';
 
   return (
     <ShellProvider>
@@ -75,14 +108,14 @@ function BasicLayout() {
             display: 'flex',
             flexDirection: 'column',
             zIndex: 100,
-            transition: `width ${'var(--duration-normal)'} var(--ease-out)`,
+            transition: `width var(--duration-normal) var(--ease-out)`,
             borderRight: '1px solid var(--border-color)',
             overflow: 'hidden',
           }}
         >
           {/* Logo */}
           <div
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/workspace')}
             style={{
               height: TOP_BAR_HEIGHT,
               display: 'flex',
@@ -98,7 +131,8 @@ function BasicLayout() {
             <RocketOutlined
               style={{
                 fontSize: 28,
-                background: 'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
+                background:
+                  'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -125,7 +159,7 @@ function BasicLayout() {
             mode="inline"
             theme="dark"
             inlineCollapsed={collapsed}
-            selectedKeys={[location.pathname]}
+            selectedKeys={[selectedKey]}
             items={menuItems}
             onClick={({ key }) => navigate(key)}
             style={{
@@ -164,7 +198,7 @@ function BasicLayout() {
         <div
           style={{
             marginLeft: sidebarWidth,
-            transition: `margin-left ${'var(--duration-normal)'} var(--ease-out)`,
+            transition: `margin-left var(--duration-normal) var(--ease-out)`,
             minHeight: '100vh',
           }}
         >
@@ -202,7 +236,8 @@ function BasicLayout() {
                   color: 'var(--text-secondary)',
                   fontSize: 18,
                   borderRadius: 'var(--radius-md)',
-                  transition: 'background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out)',
+                  transition:
+                    'background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out)',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'var(--bg-surface-2)';
@@ -218,7 +253,7 @@ function BasicLayout() {
 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                 <span style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600 }}>
-                  {currentMenu?.label ?? '工作台'}
+                  {breadcrumbLabel}
                 </span>
                 <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
                   / VidForge Studio
@@ -240,7 +275,9 @@ function BasicLayout() {
               </Tag>
               <Tooltip title="通知">
                 <Badge count={3} size="small">
-                  <BellOutlined style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }} />
+                  <BellOutlined
+                    style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }}
+                  />
                 </Badge>
               </Tooltip>
               <Tooltip title="设置">
@@ -258,11 +295,12 @@ function BasicLayout() {
                   size={36}
                   style={{
                     cursor: 'pointer',
-                    background: 'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
+                    background:
+                      'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
                     fontWeight: 600,
                   }}
                 >
-                  U
+                  {(user?.username ?? 'U').charAt(0).toUpperCase()}
                 </Avatar>
               </Dropdown>
             </div>
