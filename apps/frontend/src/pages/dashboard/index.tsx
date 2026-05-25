@@ -23,19 +23,12 @@ import { QueueStatus } from '../../components/dashboard/QueueStatus';
 import { ChartPanel } from '../../components/dashboard/ChartPanel';
 import { useShell } from '../../components/layout/shell-context';
 import { analyticsApi } from '../../services/analytics';
+import { creationApi, type CreationTask } from '../../services/creation';
 import { usePageTiming } from '../../hooks/usePerformance';
 
 echarts.use([BarChart, LineChart, PieChart, RadarChart, HeatmapChart, GridComponent, TooltipComponent, LegendComponent, VisualMapComponent, RadarComponent, CanvasRenderer]);
 
 const { Text } = Typography;
-
-const mockRecentTasks = [
-  { id: 1, name: '夏季连衣裙推广视频', status: 'completed', duration: '00:45', createdAt: '10分钟前' },
-  { id: 2, name: '蓝牙耳机开箱测评', status: 'processing', progress: 65, createdAt: '25分钟前' },
-  { id: 3, name: '防晒霜使用教程', status: 'processing', progress: 30, createdAt: '1小时前' },
-  { id: 4, name: '运动鞋上脚展示', status: 'completed', duration: '00:30', createdAt: '2小时前' },
-  { id: 5, name: '护肤套装对比评测', status: 'failed', createdAt: '3小时前' },
-];
 
 const statusMap: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
   completed: { color: 'success', text: '已完成', icon: <CheckCircleOutlined /> },
@@ -46,6 +39,26 @@ const statusMap: Record<string, { color: string; text: string; icon: React.React
 
 const periodOptions = ['日', '周', '月', '自定义'];
 const chartModes = ['折线', '柱状', '面积'];
+
+function relativeTime(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '';
+  const diff = Date.now() - t;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return '刚刚';
+  if (min < 60) return `${min} 分钟前`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} 小时前`;
+  const day = Math.floor(hr / 24);
+  return `${day} 天前`;
+}
+
+function formatDuration(seconds?: number): string {
+  if (!seconds || seconds <= 0) return '';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
 
 function DashboardPage() {
   const { isMobile } = useShell(); // 当前 isMobile 恒为 false（已禁用移动端布局）
@@ -58,6 +71,7 @@ function DashboardPage() {
   const [trends, setTrends] = useState<any[]>([]);
   const [distribution, setDistribution] = useState<any[]>([]);
   const [attribution, setAttribution] = useState<any>(null);
+  const [recentTasks, setRecentTasks] = useState<CreationTask[]>([]);
   usePageTiming('Dashboard');
 
   useEffect(() => {
@@ -65,6 +79,7 @@ function DashboardPage() {
     analyticsApi.getTrends().then(setTrends).catch(() => {});
     analyticsApi.getDistribution().then(setDistribution).catch(() => {});
     analyticsApi.getAttribution().then(setAttribution).catch(() => {});
+    creationApi.getList().then((list) => setRecentTasks(list ?? [])).catch(() => {});
   }, []);
 
   const trendSeries = chartMode === '柱状' ? 'bar' : chartMode === '面积' ? 'line' : 'line';
@@ -348,50 +363,84 @@ function DashboardPage() {
           icon={<ClockCircleOutlined />}
           extra={<Button type="link" icon={<RightOutlined />} style={{ color: 'var(--brand-primary)' }}>查看全部</Button>}
         />
-        <List
-          dataSource={mockRecentTasks}
-          renderItem={(task: any) => {
-            const st = statusMap[task.status];
-            return (
-              <List.Item
-                style={{
-                  padding: 'var(--spacing-lg) var(--spacing-xl)',
-                  borderBottom: '1px solid var(--border-color)',
-                  transition: 'background 0.2s',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                actions={[
-                  task.status === 'completed' && (
-                    <Tooltip title="预览视频" key="preview">
-                      <Button type="text" icon={<PlayCircleOutlined />} style={{ color: 'var(--brand-primary)' }} />
-                    </Tooltip>
-                  ),
-                  <Tooltip title="重新生成" key="retry">
-                    <Button type="text" icon={<SyncOutlined />} style={{ color: 'var(--text-secondary)' }} />
-                  </Tooltip>,
-                ].filter(Boolean)}
-              >
-                <List.Item.Meta
-                  avatar={<Badge status={st.color as any} />}
-                  title={
-                    <Space>
-                      <Text strong style={{ color: 'var(--text-primary)' }}>{task.name}</Text>
-                      <Tag color={st.color} icon={st.icon} style={{ borderRadius: 20, fontSize: 12 }}>{st.text}</Tag>
-                    </Space>
-                  }
-                  description={
-                    <Space size={16}>
-                      <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{task.createdAt}</Text>
-                      {task.status === 'completed' && <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>时长 {task.duration}</Text>}
-                      {task.status === 'processing' && <Progress percent={task.progress} size="small" style={{ width: 120 }} strokeColor="#6366f1" />}
-                    </Space>
-                  }
+        {recentTasks.length === 0 ? (
+          <div style={{ padding: 'var(--spacing-xxxl)', textAlign: 'center' }}>
+            <Text style={{ color: 'var(--text-tertiary)' }}>
+              暂无任务记录，去「视频创作」页面发起一次生成吧
+            </Text>
+          </div>
+        ) : (
+          <List
+            dataSource={recentTasks.slice(0, 8)}
+            renderItem={(task) => {
+              const st = statusMap[task.status] ?? statusMap.pending;
+              const totalDuration = task.result?.duration as number | undefined;
+              return (
+                <List.Item
+                  style={{
+                    padding: 'var(--spacing-lg) var(--spacing-xl)',
+                    borderBottom: '1px solid var(--border-color)',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  actions={[
+                    task.status === 'completed' && task.result?.url ? (
+                      <Tooltip title="预览视频" key="preview">
+                        <Button
+                          type="text"
+                          icon={<PlayCircleOutlined />}
+                          style={{ color: 'var(--brand-primary)' }}
+                          onClick={() => window.open(task.result.url, '_blank')}
+                        />
+                      </Tooltip>
+                    ) : null,
+                    <Tooltip title="查看详情" key="detail">
+                      <Button type="text" icon={<SyncOutlined />} style={{ color: 'var(--text-secondary)' }} />
+                    </Tooltip>,
+                  ].filter(Boolean) as any[]}
+                >
+                  <List.Item.Meta
+                    avatar={<Badge status={st.color as any} />}
+                    title={
+                      <Space>
+                        <Text strong style={{ color: 'var(--text-primary)' }}>{task.title}</Text>
+                        <Tag color={st.color} icon={st.icon} style={{ borderRadius: 20, fontSize: 12 }}>
+                          {st.text}
+                        </Tag>
+                      </Space>
+                    }
+                    description={
+                      <Space size={16}>
+                        <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                          {relativeTime(task.createdAt)}
+                        </Text>
+                        {task.status === 'completed' && totalDuration && (
+                          <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                            时长 {formatDuration(totalDuration)}
+                          </Text>
+                        )}
+                        {task.status === 'processing' && (
+                          <Progress
+                            percent={task.progress ?? 0}
+                            size="small"
+                            style={{ width: 120 }}
+                            strokeColor="#6366f1"
+                          />
+                        )}
+                        {task.status === 'failed' && task.errorMessage && (
+                          <Text style={{ fontSize: 12, color: '#ef4444' }}>
+                            {task.errorMessage}
+                          </Text>
+                        )}
+                      </Space>
+                    }
                 />
               </List.Item>
             );
           }}
         />
+        )}
       </GlassPanel>
     </div>
   );
