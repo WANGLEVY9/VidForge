@@ -9,6 +9,12 @@ export interface ArkConfigPublic {
   isPrimary: boolean;
 }
 
+export interface ArkFingerprint {
+  length: number;
+  masked: string;
+  issues: string[];
+}
+
 export interface ArkDiagnoseResult {
   ok: boolean;
   stage: 'config' | 'call';
@@ -16,6 +22,8 @@ export interface ArkDiagnoseResult {
   durationMs?: number;
   reason?: string;
   sample?: string;
+  apiKeyFingerprint?: ArkFingerprint;
+  endpointFingerprint?: ArkFingerprint;
 }
 
 export const aiApi = {
