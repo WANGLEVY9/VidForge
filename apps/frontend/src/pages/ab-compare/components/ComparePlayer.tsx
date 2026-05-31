@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Typography, Space, Slider, Tag } from 'antd';
 import { PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
 import { useShell } from '../../../components/layout/shell-context';
@@ -28,10 +28,43 @@ export const ComparePlayer: React.FC<ComparePlayerProps> = ({ versionA, versionB
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const handleTogglePlay = () => setPlaying((p) => !p);
-  const handleProgressChange = (v: number) => setProgress(v);
+  const refA = useRef<HTMLVideoElement | null>(null);
+  const refB = useRef<HTMLVideoElement | null>(null);
 
-  const renderPlayer = (version: VersionConfig, side: 'A' | 'B') => (
+  // 同步播放控制
+  useEffect(() => {
+    const a = refA.current;
+    const b = refB.current;
+    if (playing) {
+      a?.play().catch(() => {});
+      if (syncMode) b?.play().catch(() => {});
+    } else {
+      a?.pause();
+      b?.pause();
+    }
+  }, [playing, syncMode]);
+
+  const handleTogglePlay = () => setPlaying((p) => !p);
+  const handleProgressChange = (v: number) => {
+    setProgress(v);
+    const a = refA.current;
+    const b = refB.current;
+    if (a && a.duration) a.currentTime = (v / 100) * a.duration;
+    if (syncMode && b && b.duration) b.currentTime = (v / 100) * b.duration;
+  };
+
+  // 监听 A 视频的 timeupdate,同步进度条
+  useEffect(() => {
+    const a = refA.current;
+    if (!a) return;
+    const onTime = () => {
+      if (a.duration) setProgress(Math.round((a.currentTime / a.duration) * 100));
+    };
+    a.addEventListener('timeupdate', onTime);
+    return () => a.removeEventListener('timeupdate', onTime);
+  }, [versionA.videoUrl]);
+
+  const renderPlayer = (version: VersionConfig, side: 'A' | 'B', refVideo: React.RefObject<HTMLVideoElement>) => (
     <div style={{ flex: 1, borderRight: side === 'A' ? (isMobile ? 'none' : '1px solid var(--border-color)') : 'none' }}>
       <div style={{
         padding: '8px 12px', borderBottom: '1px solid var(--border-color)',
@@ -47,8 +80,17 @@ export const ComparePlayer: React.FC<ComparePlayerProps> = ({ versionA, versionB
         aspectRatio: '9/16', maxHeight: 300, margin: 12,
         background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
         borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
       }}>
-        {playing ? (
+        {version.videoUrl ? (
+          <video
+            ref={refVideo}
+            src={version.videoUrl}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            muted={side === 'B' && syncMode}
+            playsInline
+          />
+        ) : playing ? (
           <PauseCircleOutlined style={{ fontSize: 48, color: '#fff', opacity: 0.8 }} />
         ) : (
           <PlayCircleOutlined style={{ fontSize: 48, color: '#fff', opacity: 0.8 }} />
@@ -84,8 +126,8 @@ export const ComparePlayer: React.FC<ComparePlayerProps> = ({ versionA, versionB
         borderRadius: 'var(--radius-lg)',
         overflow: 'hidden',
       }}>
-        {renderPlayer(versionA, 'A')}
-        {renderPlayer(versionB, 'B')}
+        {renderPlayer(versionA, 'A', refA)}
+        {renderPlayer(versionB, 'B', refB)}
       </div>
       <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0', gap: 12 }}>
         <Button

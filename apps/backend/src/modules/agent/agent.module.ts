@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AgentController } from './agent.controller';
 import { AgentService } from './agent.service';
 import { OrchestratorService } from './orchestrator.service';
@@ -7,9 +8,17 @@ import { ScriptAgentService } from './agents/script-agent.service';
 import { CompositionAgentService } from './agents/composition-agent.service';
 import { QualityAgentService } from './agents/quality-agent.service';
 import { AuthModule } from '../auth/auth.module';
+import { AiModule } from '../ai/ai.module';
+import { ScriptModule } from '../script/script.module';
+import { Material } from '../material/entities/material.entity';
 
 @Module({
-  imports: [AuthModule],
+  imports: [
+    AuthModule,
+    AiModule,
+    ScriptModule,
+    TypeOrmModule.forFeature([Material]),
+  ],
   controllers: [AgentController],
   providers: [
     AgentService,

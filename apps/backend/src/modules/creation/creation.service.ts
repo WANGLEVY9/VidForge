@@ -7,6 +7,7 @@ import { CreationGateway } from './gateway/creation.gateway';
 import { RegenerateShotDto } from './dto/regenerate-shot.dto';
 import { ArkVideoService, VideoGenerationOptions } from '../ai/services/ark-video.service';
 import { ArkConfigService } from '../ai/services/ark-config.service';
+import { ComposerService, ComposeShotInput } from '../media/services/composer.service';
 
 interface ShotState {
   id: string;
@@ -35,6 +36,7 @@ export class CreationService {
     private creationGateway: CreationGateway,
     private readonly arkVideoService: ArkVideoService,
     private readonly arkConfigService: ArkConfigService,
+    private readonly composer: ComposerService,
   ) {}
 
   async createTask(userId: string, dto: CreateTaskDto): Promise<CreationTask> {
@@ -169,8 +171,78 @@ export class CreationService {
       return;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // 合片阶段:把所有成功分镜串起来,叠加 TTS / 字幕 / BGM
+    // ─────────────────────────────────────────────────────────────
+    this.creationGateway.emitProgress(taskId, {
+      progress: 95,
+      status: 'processing',
+      message: '所有分镜生成完成,开始合片...',
+    });
+
+    const successShots: ComposeShotInput[] = shots
+      .filter((s) => s.status === 'completed' && s.videoUrl)
+      .map((s) => ({
+        id: s.id,
+        index: s.index,
+        videoUrl: s.videoUrl!,
+        duration: s.duration,
+        caption: s.caption,
+        voiceover: s.voiceover,
+      }));
+
+    let composeUrl = completedUrls.find(Boolean) ?? '';
+    let composeDuration = shots.reduce((sum, s) => sum + (s.duration ?? 0), 0);
+    let composeMeta: any = { mode: 'shot-only' };
+
+    if (successShots.length > 0) {
+      try {
+        // ComposerService 仅支持 9:16/16:9/1:1,把不支持的画幅归一到 9:16
+        const composeRatio: '9:16' | '16:9' | '1:1' =
+          aspectRatio === '16:9' || aspectRatio === '9:16' || aspectRatio === '1:1'
+            ? aspectRatio
+            : '9:16';
+        const composeRes: '480p' | '720p' | '1080p' | '2160p' =
+          resolution === '480p' || resolution === '720p' || resolution === '1080p'
+            ? resolution
+            : '720p';
+
+        const composed = await this.composer.compose(successShots, {
+          taskId,
+          title: task.title,
+          ratio: composeRatio,
+          resolution: composeRes,
+          style: dto.style,
+          burnSubtitle: dto.burnSubtitle !== false,
+          onProgress: (p, msg) => {
+            // 合片进度映射到整体 95-99 区间
+            const mapped = 95 + Math.min(4, Math.floor(p / 25));
+            this.creationGateway.emitProgress(taskId, {
+              progress: mapped,
+              status: 'processing',
+              message: `合片: ${msg}`,
+            });
+          },
+        });
+        composeUrl = composed.finalUrl;
+        composeDuration = composed.durationSec;
+        composeMeta = {
+          mode: 'composed',
+          fileSize: composed.fileSize,
+          hasVoiceover: composed.hasVoiceover,
+          hasBgm: composed.hasBgm,
+          subtitleBurned: composed.subtitleBurned,
+        };
+        this.logger.log(`[${taskId}] 合片完成 ${composed.finalUrl} (${composed.fileSize}B)`);
+      } catch (err: any) {
+        // 合片失败不阻塞整体:回退到"首段视频作预览"
+        this.logger.error(`[${taskId}] 合片失败,使用首段预览: ${err?.message ?? err}`);
+        composeMeta = { mode: 'shot-only-fallback', error: err?.message ?? String(err) };
+      }
+    }
+
     const finalTask = await this.taskRepository.findOneOrFail({ where: { id: taskId } });
-    finalTask.status = successCount === shots.length ? 'completed' : 'completed';
+    finalTask.status = 'completed';
     finalTask.progress = 100;
     finalTask.result = {
       shots: shots.map((s) => ({
@@ -181,11 +253,11 @@ export class CreationService {
         status: s.status,
         errorMessage: s.errorMessage,
       })),
-      // V0 阶段未做 ffmpeg 拼接，直接给前端首个成功分镜的 URL 作为预览
-      url: completedUrls.find(Boolean) ?? '',
-      duration: shots.reduce((sum, s) => sum + (s.duration ?? 0), 0),
+      url: composeUrl,
+      duration: composeDuration,
       successCount,
       totalCount: shots.length,
+      compose: composeMeta,
     };
     await this.taskRepository.save(finalTask);
 
@@ -194,7 +266,7 @@ export class CreationService {
       status: 'completed',
       result: finalTask.result,
     });
-    this.logger.log(`[${taskId}] 任务完成：${successCount}/${shots.length} 分镜成功`);
+    this.logger.log(`[${taskId}] 任务完成:${successCount}/${shots.length} 分镜成功 (合片: ${composeMeta.mode})`);
   }
 
   /**

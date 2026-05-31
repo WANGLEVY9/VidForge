@@ -1,10 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import * as path from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
   // 启用CORS
   // 生产环境：从 WEB_BASE_URL 读取允许的来源（支持逗号分隔多个域名，未配置则放开 vercel.app/localhost）
@@ -40,6 +42,11 @@ async function bootstrap() {
 
   // 全局前缀
   app.setGlobalPrefix('api');
+
+  // 静态文件托管:暴露 storage/outputs 与 storage/bgm 等产物目录
+  // 前端通过 /static/outputs/creation/<taskId>.mp4 访问最终视频
+  const storageRoot = path.resolve(process.cwd(), 'storage');
+  app.useStaticAssets(storageRoot, { prefix: '/static/' });
 
   // Swagger文档配置
   const config = new DocumentBuilder()

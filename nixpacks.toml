@@ -4,7 +4,10 @@
 # 必须保持为空，否则会覆盖此文件。
 
 [phases.setup]
-nixPkgs = ['nodejs_20', 'npm-10_x']
+# nodejs_20  Node 运行时
+# npm-10_x   npm 包管理
+# ffmpeg     视频合片 / 导出转码 / 抽帧 / 字幕烧录(MediaModule 必需)
+nixPkgs = ['nodejs_20', 'npm-10_x', 'ffmpeg']
 
 [phases.install]
 cmds = [

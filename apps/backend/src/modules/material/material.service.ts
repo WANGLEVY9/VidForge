@@ -8,6 +8,7 @@ import { CreateMaterialDto } from './dto/create-material.dto';
 import { QueryMaterialDto } from './dto/query-material.dto';
 import { AnalyzeMaterialDto } from './dto/analyze-material.dto';
 import { SemanticSearchDto } from './dto/semantic-search.dto';
+import { ArkVisionService } from '../ai/services/ark-vision.service';
 
 @Injectable()
 export class MaterialService {
@@ -17,6 +18,7 @@ export class MaterialService {
     @InjectRepository(Material)
     private materialRepository: Repository<Material>,
     private readonly httpService: HttpService,
+    private readonly arkVision: ArkVisionService,
   ) {}
 
   async create(userId: string, dto: CreateMaterialDto): Promise<Material> {
@@ -63,26 +65,51 @@ export class MaterialService {
   async analyzeTags(userId: string, id: string, dto: AnalyzeMaterialDto): Promise<Material> {
     const material = await this.findOne(userId, id);
 
-    const productTags: Record<string, any> = {
-      category: dto.category || material.category || '通用',
-      brand: null,
-      priceRange: null,
-      style: 'modern',
-    };
+    // 真实多模态打标:对图片素材调 ARK 视觉理解
+    let productTags: Record<string, any>;
+    let videoTags: Record<string, any>;
+    let clipTags: Record<string, any>;
+    let caption: string | undefined;
 
-    const videoTags: Record<string, any> = {
-      summary: dto.description || material.name,
-      style: 'cinematic',
-      mood: 'professional',
-      sceneTags: ['studio', 'product'],
-    };
-
-    const clipTags: Record<string, any> = {
-      objects: ['product'],
-      colors: ['#ffffff', '#000000'],
-      composition: 'center',
-      text: '',
-    };
+    if (material.type === 'image' && material.url) {
+      try {
+        const vision = await this.arkVision.understandImage(material.url);
+        productTags = {
+          name: vision.product.name,
+          category: dto.category || vision.product.category,
+          brand: vision.product.brand,
+          colors: vision.product.colors,
+          material: vision.product.material,
+        };
+        videoTags = {
+          summary: vision.caption,
+          scene: vision.scene.scene,
+          shot: vision.scene.shot,
+          composition: vision.scene.composition,
+          lighting: vision.scene.lighting,
+          style: vision.scene.style,
+          mood: vision.clip.mood,
+        };
+        clipTags = {
+          objects: vision.clip.objects,
+          text: vision.clip.text,
+          mood: vision.clip.mood,
+          suitableFor: vision.clip.suitableFor,
+        };
+        caption = vision.caption;
+        this.logger.log(`[material ${id}] 视觉理解成功: ${caption}`);
+      } catch (err: any) {
+        this.logger.warn(`[material ${id}] 视觉理解失败,使用启发式标签: ${err?.message ?? err}`);
+        productTags = this.heuristicProductTags(material, dto);
+        videoTags = this.heuristicVideoTags(material, dto);
+        clipTags = this.heuristicClipTags();
+      }
+    } else {
+      // 视频/音频:V1 用启发式标签;后续可接抽帧→ understandImage 多次的方案
+      productTags = this.heuristicProductTags(material, dto);
+      videoTags = this.heuristicVideoTags(material, dto);
+      clipTags = this.heuristicClipTags();
+    }
 
     material.productTags = productTags;
     material.videoTags = videoTags;
@@ -90,9 +117,36 @@ export class MaterialService {
     material.metadata = {
       ...(material.metadata || {}),
       analyzedAt: new Date().toISOString(),
+      caption,
     };
 
     return this.materialRepository.save(material);
+  }
+
+  private heuristicProductTags(material: Material, dto: AnalyzeMaterialDto): Record<string, any> {
+    return {
+      category: dto.category || material.category || '其他',
+      brand: null,
+      colors: [],
+    };
+  }
+
+  private heuristicVideoTags(material: Material, dto: AnalyzeMaterialDto): Record<string, any> {
+    return {
+      summary: dto.description || material.name,
+      style: '写实',
+      mood: '温暖',
+      scene: '演播室',
+    };
+  }
+
+  private heuristicClipTags(): Record<string, any> {
+    return {
+      objects: [],
+      text: null,
+      mood: '温暖',
+      suitableFor: ['卖点演示'],
+    };
   }
 
   async searchByTags(

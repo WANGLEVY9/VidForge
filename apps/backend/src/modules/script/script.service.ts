@@ -6,6 +6,9 @@ import { CreateScriptDto } from './dto/create-script.dto';
 import { GenerateScriptDto } from './dto/generate-script.dto';
 import { ArkTextService } from '../ai/services/ark-text.service';
 import { ArkConfigService } from '../ai/services/ark-config.service';
+import { searchHitScripts, HitScriptSeed } from '../rag/hit-scripts.seed';
+import { ProductSpace } from '../product-space/entities/product-space.entity';
+import { ComplianceService, ComplianceReport } from '../compliance/compliance.service';
 
 interface ShotDraft {
   index: number;
@@ -29,6 +32,10 @@ export interface ScriptResult {
   source: 'ark' | 'fallback';
   /** 当 source=fallback 时, 说明原因, 便于排查 */
   fallbackReason?: string;
+  /** 本次生成参考的爆款脚本 ID 列表(RAG) */
+  ragReferences?: Array<{ id: string; hookType: string; performance: string }>;
+  /** 合规审核结果 */
+  compliance?: ComplianceReport;
 }
 
 const STYLE_LABEL: Record<string, string> = {
@@ -50,28 +57,104 @@ export class ScriptService {
   constructor(
     @InjectRepository(Script)
     private scriptRepository: Repository<Script>,
+    @InjectRepository(ProductSpace)
+    private productSpaceRepository: Repository<ProductSpace>,
     private readonly arkTextService: ArkTextService,
     private readonly arkConfigService: ArkConfigService,
+    private readonly compliance: ComplianceService,
   ) {}
 
   async generate(userId: string, dto: GenerateScriptDto): Promise<ScriptResult> {
-    // userId 暂未参与生成（generate 不落库），但保留参数便于后续做"基于历史剧本扩写"
-    void userId;
-    // 没配置文本模型，直接降级
+    // ── 1) 商品空间知识库飞轮:把空间内的"卖点 / 品牌 TOV / 自定义违禁词"
+    //       自动注入到本次生成,使商家用得越久,系统越懂他的品牌。
+    const enrichedDto = await this.enrichWithSpaceKnowledge(userId, dto);
+
+    // 没配置文本模型,直接降级
     if (!this.arkConfigService.getActiveApiKey('text')) {
       const reason =
         '后端未配置 ARK 文本模型环境变量 (ARK_TEXT_PRIMARY_ENDPOINT_ID / ARK_TEXT_PRIMARY_API_KEY)';
-      this.logger.warn(`未检测到 ARK 文本模型配置，使用 fallback 剧本: ${reason}`);
-      return { ...this.generateFallback(dto), fallbackReason: reason };
+      this.logger.warn(`未检测到 ARK 文本模型配置,使用 fallback 剧本: ${reason}`);
+      return { ...this.generateFallback(enrichedDto), fallbackReason: reason };
     }
 
     try {
-      const result = await this.callArk(dto);
+      const result = await this.callArk(enrichedDto);
+      // 生成完成后做合规扫描(快速,不调 LLM)
+      result.compliance = this.compliance.scanText(
+        result.shots.map((s) => `${s.voiceover} ${s.caption ?? ''}`).join(' '),
+        await this.collectCustomForbidden(userId, dto.productSpaceId),
+      );
       return result;
     } catch (error: any) {
       const reason = error?.message ?? String(error);
-      this.logger.error(`调用 ARK 失败，降级到 fallback: ${reason}`);
-      return { ...this.generateFallback(dto), fallbackReason: reason };
+      this.logger.error(`调用 ARK 失败,降级到 fallback: ${reason}`);
+      const fb = this.generateFallback(enrichedDto);
+      fb.fallbackReason = reason;
+      fb.compliance = this.compliance.scanText(
+        fb.shots.map((s) => `${s.voiceover} ${s.caption ?? ''}`).join(' '),
+      );
+      return fb;
+    }
+  }
+
+  /** 收集该用户/空间的自定义违禁词,用于合规扫描扩展词典 */
+  private async collectCustomForbidden(
+    userId: string,
+    productSpaceId?: string,
+  ): Promise<string[]> {
+    if (!productSpaceId) return [];
+    try {
+      const space = await this.productSpaceRepository.findOne({
+        where: { id: productSpaceId, userId },
+      });
+      return space?.knowledge?.forbiddenWords ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * 从 ProductSpace.knowledge 中读取商品级知识,合并到本次 dto:
+   * - sellingPoints[] 与 dto.sellingPoints 合并(去重)
+   * - targetAudience 缺省时从 space 读
+   * - brandVoice 拼接到 sellingPoints 末尾,作为风格补充
+   */
+  private async enrichWithSpaceKnowledge(
+    userId: string,
+    dto: GenerateScriptDto,
+  ): Promise<GenerateScriptDto> {
+    if (!dto.productSpaceId) return dto;
+    try {
+      const space = await this.productSpaceRepository.findOne({
+        where: { id: dto.productSpaceId, userId },
+      });
+      if (!space?.knowledge) return dto;
+      const k = space.knowledge;
+
+      const merged = { ...dto };
+      // sellingPoints 合并
+      if (k.sellingPoints && k.sellingPoints.length) {
+        const original = (dto.sellingPoints ?? '').trim();
+        const all = [original, ...k.sellingPoints]
+          .map((s) => s.trim())
+          .filter(Boolean);
+        merged.sellingPoints = Array.from(new Set(all)).join('; ');
+      }
+      // targetAudience 缺省时
+      if (!dto.targetAudience && k.targetAudience) {
+        merged.targetAudience = k.targetAudience;
+      }
+      // 把品牌 TOV 直接拼到卖点末尾,作为风格上下文
+      if (k.brandVoice) {
+        merged.sellingPoints = `${merged.sellingPoints ?? ''}\n\n[品牌语气] ${k.brandVoice}`;
+      }
+      this.logger.log(
+        `[script.generate] 注入商品空间知识库: ${space.name}(空间内卖点 ${k.sellingPoints?.length ?? 0} 条)`,
+      );
+      return merged;
+    } catch (err: any) {
+      this.logger.warn(`enrichWithSpaceKnowledge 失败: ${err?.message ?? err}`);
+      return dto;
     }
   }
 
@@ -84,44 +167,63 @@ export class ScriptService {
     const styleLabel = STYLE_LABEL[dto.style ?? 'professional'] ?? '专业';
     const audience = dto.targetAudience?.trim() || '通用消费者';
 
+    // ── RAG 检索:同品类同风格的爆款脚本 Top-3 作为 few-shot ──
+    const referenceHits = searchHitScripts({
+      category: dto.category,
+      style: styleLabel,
+      topK: 2,
+    });
+
     const systemPrompt = [
-      '你是顶级电商带货短视频编剧，擅长为 TikTok Shop / 抖音电商写高转化分镜剧本。',
-      '严格按用户提供的 JSON Schema 输出，不要输出任何额外说明文字、不要使用 markdown 代码块包裹。',
+      '你是顶级电商带货短视频编剧,擅长为 TikTok Shop / 抖音电商写高转化分镜剧本。',
+      '严格按用户提供的 JSON Schema 输出,不要输出任何额外说明文字、不要使用 markdown 代码块包裹。',
+      '请充分参考"爆款案例"段落里的钩子风格、镜头描述写法、CTA 措辞,但不要复制原句,要结合本商品再创作。',
     ].join(' ');
 
     const schema = `{
-  "title": "string，视频标题，吸睛、含情绪钩子",
-  "totalDuration": "string，例如 \\"15秒\\"",
+  "title": "string,视频标题,吸睛、含情绪钩子",
+  "totalDuration": "string,例如 \\"15秒\\"",
   "shots": [
     {
-      "index": "number，从 1 开始",
-      "duration": "number，单位秒，3 个分镜总和必须 ≈ 视频总时长",
-      "description": "string，画面描述，给视频生成模型看的，要具体到镜头、构图、动作、光线",
-      "voiceover": "string，本分镜对应的口播台词",
-      "caption": "string，屏幕字幕（≤16字）",
-      "cameraMovement": "string，例如：固定/推近/平移/环绕",
-      "type": "string，例如：hook/intro/demo/proof/cta"
+      "index": "number,从 1 开始",
+      "duration": "number,单位秒,3 个分镜总和必须 ≈ 视频总时长",
+      "description": "string,画面描述,给视频生成模型看的,要具体到镜头、构图、动作、光线",
+      "voiceover": "string,本分镜对应的口播台词",
+      "caption": "string,屏幕字幕(≤16字)",
+      "cameraMovement": "string,例如:固定/推近/平移/环绕",
+      "type": "string,例如:hook/intro/demo/proof/cta"
     }
   ],
-  "voiceover": "string，整体配音风格建议",
-  "bgmSuggestion": "string，整体 BGM 风格建议",
+  "voiceover": "string,整体配音风格建议",
+  "bgmSuggestion": "string,整体 BGM 风格建议",
   "tags": ["string", "..."]
 }`;
 
-    const userPrompt = `请基于以下商品信息，输出 3 个分镜的带货短视频剧本，总时长 ${targetDuration} 秒，风格：${styleLabel}。
+    const referenceBlock =
+      referenceHits.length > 0
+        ? this.buildFewShotBlock(referenceHits)
+        : '(暂无同类参考,完全自由发挥)';
 
+    const userPrompt = `【商品信息】
 商品名称: ${dto.productName}
 商品类目: ${dto.category}
 核心卖点: ${dto.sellingPoints}
 目标人群: ${audience}
+目标风格: ${styleLabel}
+目标时长: ${targetDuration} 秒
 
-要求：
-1. 必须严格输出 3 个分镜，分别承担 hook / demo / cta 三种角色
-2. 每个分镜的 description 字段要写得像导演分镜脚本，可直接交给 AI 视频生成模型
-3. 全部内容必须使用中文
-4. 不允许出现违规、夸大、绝对化用语
+【爆款参考案例】
+${referenceBlock}
 
-请按以下 JSON Schema 输出，不要包含任何额外文字：
+【任务要求】
+1. 必须严格输出 3 个分镜,分别承担 hook / demo / cta 三种角色
+2. hook 必须在 3 秒内抓住注意力,可参考"爆款参考"中的钩子类型(疑问/数字/对比/痛点/反差/揭秘)
+3. 每个分镜的 description 要写得像导演分镜脚本,包含镜头、构图、动作、光线、转场,可直接交给视频生成模型
+4. 全部内容必须使用中文
+5. 不允许出现广告法极限词(最、第一、永远、绝对、唯一、顶级、完美等)
+6. 不允许出现医疗保健禁用语(治疗、治愈、疗效、根治、神效等)
+7. 必须严格按以下 JSON Schema 输出,不要包含任何额外文字:
+
 ${schema}`;
 
     const response = await this.arkTextService.chatCompletion({
@@ -130,7 +232,10 @@ ${schema}`;
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.7,
-      maxTokens: 1500,
+      maxTokens: 1800,
+      traceTaskId: dto.productName ? `script_${Date.now()}` : undefined,
+      traceScope: 'script',
+      traceSpan: 'script.generate',
     });
 
     const content: string = response?.choices?.[0]?.message?.content ?? '';
@@ -144,7 +249,23 @@ ${schema}`;
       throw new Error('ARK 返回非 JSON 结构');
     }
 
-    return this.normalizeScript(parsed, dto, targetDuration);
+    return this.normalizeScript(parsed, dto, targetDuration, referenceHits);
+  }
+
+  /** 把检索到的爆款脚本拼成 few-shot 文本 */
+  private buildFewShotBlock(hits: HitScriptSeed[]): string {
+    return hits
+      .map((h, i) => {
+        return [
+          `# 案例 ${i + 1}: ${h.id}(${h.category} / ${h.style} / hook 类型: ${h.hookType})`,
+          `参考钩子写法:${h.shots.hook.voiceover}`,
+          `参考画面描述:${h.shots.hook.description}`,
+          `卖点措辞:${h.keyMessages.join(' / ')}`,
+          `BGM 风格:${h.bgmStyle}`,
+          `效果:${h.performance}`,
+        ].join('\n');
+      })
+      .join('\n\n');
   }
 
   /** 兼容模型返回里夹带 markdown 代码块的情况 */
@@ -168,7 +289,12 @@ ${schema}`;
   }
 
   /** 把模型输出标准化为前端/后续模块可消费的结构 */
-  private normalizeScript(raw: any, dto: GenerateScriptDto, targetDuration: number): ScriptResult {
+  private normalizeScript(
+    raw: any,
+    dto: GenerateScriptDto,
+    targetDuration: number,
+    referenceHits: HitScriptSeed[] = [],
+  ): ScriptResult {
     const rawShots: any[] = Array.isArray(raw?.shots) ? raw.shots : [];
     const shots: ShotDraft[] = rawShots.slice(0, 3).map((s, i) => ({
       index: i + 1,
@@ -197,10 +323,11 @@ ${schema}`;
       duration: targetDuration,
       totalDuration: String(raw?.totalDuration ?? `${targetDuration}秒`),
       shots,
-      voiceover: String(raw?.voiceover ?? '语速适中，语气热情').trim(),
+      voiceover: String(raw?.voiceover ?? '语速适中,语气热情').trim(),
       bgmSuggestion: String(raw?.bgmSuggestion ?? '推荐轻快节奏的 BGM').trim(),
       tags: Array.isArray(raw?.tags) ? raw.tags.map(String) : ['好物推荐', '带货视频', dto.category],
       source: 'ark',
+      ragReferences: referenceHits.map((h) => ({ id: h.id, hookType: h.hookType, performance: h.performance })),
     };
   }
 
