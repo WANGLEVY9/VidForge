@@ -26,12 +26,71 @@ export interface GenerateScriptDto {
   productSpaceId?: string;
 }
 
+export interface ComplianceHit {
+  word: string;
+  category: 'extreme' | 'medical' | 'hype' | 'platform' | 'custom';
+  severity: 'low' | 'medium' | 'high';
+  reason: string;
+  suggestion?: string;
+}
+
+export interface ComplianceReport {
+  passed: boolean;
+  score: number;
+  hits: ComplianceHit[];
+  llmReviewed: boolean;
+  llmFeedback?: string;
+}
+
+export interface RagReference {
+  id: string;
+  hookType: string;
+  performance: string;
+}
+
+export interface ScriptResult {
+  title: string;
+  duration: number;
+  totalDuration: string;
+  shots: Array<{
+    index: number;
+    duration: number;
+    description: string;
+    voiceover: string;
+    caption: string;
+    cameraMovement?: string;
+    type?: string;
+  }>;
+  voiceover: string;
+  bgmSuggestion: string;
+  tags: string[];
+  source: 'ark' | 'fallback';
+  fallbackReason?: string;
+  ragReferences?: RagReference[];
+  compliance?: ComplianceReport;
+}
+
+export interface InspireSeed {
+  id: string;
+  category: string;
+  style: string;
+  hookType: string;
+  shots: { hook: any; demo: any; cta: any };
+  keyMessages: string[];
+  bgmStyle: string;
+  performance: string;
+}
+
 export const scriptApi = {
   generate(data: GenerateScriptDto) {
-    // 剧本生成走真实 ARK 文本模型，单次可能 30-90s，单独放宽到 150s
-    return apiClient.post<any, any>('/script/generate', data, {
+    return apiClient.post<any, ScriptResult>('/script/generate', data, {
       timeout: 150000,
     });
+  },
+
+  /** 生成前预览同品类同风格的爆款参考 */
+  inspire(category?: string, style?: string) {
+    return apiClient.get<any, InspireSeed[]>('/script/inspire', { params: { category, style } });
   },
 
   save(data: Partial<ScriptItem> & { productSpaceId?: string }) {

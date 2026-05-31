@@ -1,6 +1,7 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import axios from 'axios';
 import { ArkConfigService } from './ark-config.service';
+import { ArkResponseCacheService } from './ark-response-cache.service';
 import { ARK_BASE_URL, ARK_API_PATHS } from '../config/ark.config';
 import { TraceService } from '../../trace/trace.service';
 
@@ -27,6 +28,7 @@ export class ArkTextService {
 
   constructor(
     private readonly arkConfigService: ArkConfigService,
+    private readonly cache: ArkResponseCacheService,
     @Optional() private readonly traceService?: TraceService,
   ) {}
 
@@ -52,6 +54,37 @@ export class ArkTextService {
       apiKey = active.apiKey;
       const cfg = this.arkConfigService.getConfig(active.key);
       modelName = cfg?.name ?? 'unknown';
+    }
+
+    const cacheInput = {
+      model: endpointId,
+      messages: options.messages,
+      temperature: options.temperature,
+      maxTokens: options.maxTokens,
+    };
+
+    // ── 应用级缓存命中:直接返回,不调 ARK ──
+    const cached = this.cache.get(cacheInput);
+    if (cached) {
+      this.logger.debug(`[cache HIT] ${endpointId} - skipped ARK call`);
+      if (this.traceService && options.traceTaskId) {
+        const cachedUsage = cached?.usage ?? {};
+        void this.traceService.recordSpan({
+          userId: options.traceUserId,
+          taskId: options.traceTaskId,
+          scope: options.traceScope ?? 'agent',
+          span: options.traceSpan ?? 'ark.text',
+          startedAt: new Date(),
+          endedAt: new Date(),
+          status: 'ok',
+          model: modelName,
+          promptTokens: 0, // 缓存命中,实际未消耗
+          completionTokens: 0,
+          cacheHit: true,
+          summary: `local-cache HIT (saved ~${(cachedUsage.prompt_tokens ?? 0) + (cachedUsage.completion_tokens ?? 0)} tokens)`,
+        });
+      }
+      return cached;
     }
 
     const body: Record<string, unknown> = {
@@ -85,6 +118,9 @@ export class ArkTextService {
       const cachedTokens = Number(usage?.prompt_tokens_details?.cached_tokens ?? 0);
       const cacheHit = cachedTokens > 0;
 
+      // 写入应用级缓存
+      this.cache.set(cacheInput, data, promptTokens + completionTokens);
+
       // 异步写 trace,不阻塞调用方
       if (this.traceService && options.traceTaskId) {
         void this.traceService.recordSpan({
@@ -99,7 +135,7 @@ export class ArkTextService {
           promptTokens,
           completionTokens,
           cacheHit,
-          summary: `chat tokens=${promptTokens}+${completionTokens}${cacheHit ? ' (cache hit)' : ''}`,
+          summary: `chat tokens=${promptTokens}+${completionTokens}${cacheHit ? ' (volc cache hit)' : ''}`,
         });
       }
 

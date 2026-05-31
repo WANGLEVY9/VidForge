@@ -47,15 +47,28 @@ export interface TraceItem {
   nodes: Array<{ name: string; duration: number; status: string }>;
 }
 
+export interface CostOverview {
+  /** 今日总调用数 */
+  totalCalls: number;
+  /** 今日总成本(美分) */
+  totalCostCents: number;
+  /** 今日总 token 数 */
+  totalTokens: number;
+  /** 缓存命中率 0-100 */
+  cacheHitRate: number;
+  /** 平均延迟 ms */
+  avgLatencyMs: number;
+}
+
 export const analyticsApi = {
   getOverview(spaceId?: string) {
     return apiClient.get<any, OverviewData>('/analytics/overview', { params: { spaceId } });
   },
-  getTrends(period?: string) {
-    return apiClient.get<any, TrendPoint[]>('/analytics/trends', { params: { period } });
+  getTrends(period?: string, spaceId?: string) {
+    return apiClient.get<any, TrendPoint[]>('/analytics/trends', { params: { period, spaceId } });
   },
-  getDistribution() {
-    return apiClient.get<any, DistributionItem[]>('/analytics/distribution');
+  getDistribution(spaceId?: string) {
+    return apiClient.get<any, DistributionItem[]>('/analytics/distribution', { params: { spaceId } });
   },
   getQueueStatus() {
     return apiClient.get<any, QueueStatus>('/analytics/queue');
@@ -65,5 +78,9 @@ export const analyticsApi = {
   },
   getTraces() {
     return apiClient.get<any, TraceItem[]>('/analytics/traces');
+  },
+  /** 今日 Token / 成本 / 缓存命中率(V2 新增) */
+  getCostOverview() {
+    return apiClient.get<any, CostOverview>('/analytics/cost');
   },
 };
