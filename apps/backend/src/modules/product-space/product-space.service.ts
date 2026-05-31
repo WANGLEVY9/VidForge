@@ -32,6 +32,7 @@ export class ProductSpaceService {
       productName: dto.productName?.trim(),
       category: dto.category?.trim(),
       coverUrl: dto.coverUrl,
+      knowledge: dto.knowledge,
       isDefault: exists === 0, // 第一个空间自动设为默认
     });
     return this.repo.save(space);
@@ -51,6 +52,9 @@ export class ProductSpaceService {
     if (dto.productName !== undefined) space.productName = dto.productName.trim();
     if (dto.category !== undefined) space.category = dto.category.trim();
     if (dto.coverUrl !== undefined) space.coverUrl = dto.coverUrl;
+    if (dto.knowledge !== undefined) {
+      space.knowledge = { ...(space.knowledge || {}), ...dto.knowledge };
+    }
     return this.repo.save(space);
   }
 
@@ -85,5 +89,57 @@ export class ProductSpaceService {
    */
   async assertOwnership(userId: string, spaceId: string): Promise<ProductSpace> {
     return this.findOne(userId, spaceId);
+  }
+
+  /**
+   * 自学习闭环 - 把高分剧本沉淀为商品空间的"最佳实践"
+   *
+   * 触发场景:每次 ScriptService.generate 完成后,如果合规通过 + 综合分高,
+   *           调用本方法把剧本核心信息追加到 knowledge.bestPractices。
+   *
+   * 这构成"商家用得越久越懂品牌"的飞轮:
+   *   生成 → 高分 → 沉淀 → 下次生成 prompt 自动注入更多本品牌的成功样本
+   *
+   * 内置容量上限 5(避免 prompt 无限膨胀,只保留最近的高分案例)。
+   */
+  async learnFromHighScore(
+    userId: string,
+    spaceId: string,
+    sample: {
+      scriptId: string;
+      hookType: string;
+      qualityScore: number;
+      summary: string;
+    },
+  ): Promise<void> {
+    if (sample.qualityScore < 85) return; // 低分不沉淀
+    try {
+      const space = await this.repo.findOne({ where: { id: spaceId, userId } });
+      if (!space) return;
+
+      const knowledge = space.knowledge || {};
+      const list = knowledge.bestPractices || [];
+      // 同一 scriptId 已存在则跳过
+      if (list.some((x) => x.scriptId === sample.scriptId)) return;
+
+      const next = [
+        {
+          scriptId: sample.scriptId,
+          hookType: sample.hookType,
+          qualityScore: sample.qualityScore,
+          summary: sample.summary,
+          learnedAt: new Date().toISOString(),
+        },
+        ...list,
+      ].slice(0, 5);
+
+      space.knowledge = { ...knowledge, bestPractices: next };
+      await this.repo.save(space);
+      this.logger.log(
+        `[learnFromHighScore] space=${spaceId} 新增高分案例(${sample.qualityScore}/100)`,
+      );
+    } catch (err: any) {
+      this.logger.warn(`learnFromHighScore 失败: ${err?.message ?? err}`);
+    }
   }
 }

@@ -7,6 +7,7 @@ import { MaterialAgentService } from './agents/material-agent.service';
 import { ScriptAgentService } from './agents/script-agent.service';
 import { CompositionAgentService } from './agents/composition-agent.service';
 import { QualityAgentService } from './agents/quality-agent.service';
+import { ProductSpaceService } from '../product-space/product-space.service';
 
 type NodeReturn = Partial<AgentState>;
 
@@ -20,6 +21,7 @@ export class OrchestratorService {
     private readonly scriptAgent: ScriptAgentService,
     private readonly compositionAgent: CompositionAgentService,
     private readonly qualityAgent: QualityAgentService,
+    private readonly productSpace: ProductSpaceService,
   ) {}
 
   async run(dto: RunAgentDto): Promise<AgentResult> {
@@ -104,6 +106,11 @@ export class OrchestratorService {
         retryCount: 0,
       } as any);
 
+      // ── 自学习闭环 ───────────────────────────────────────
+      // 当本轮综合分 ≥85 + 通过合规,把核心信息沉淀到商品空间知识库,
+      // 下次生成时自动作为高分案例 few-shot 注入。
+      void this.maybeLearn(dto, finalState as AgentState);
+
       return {
         taskId,
         status: finalState.status,
@@ -125,6 +132,35 @@ export class OrchestratorService {
         completedAt: new Date(),
         error: error.message,
       };
+    }
+  }
+
+  /**
+   * 自学习闭环:把高分剧本沉淀到商品空间知识库
+   *
+   * 触发条件:综合分 ≥85,且 ScriptGeneration 来源是 ARK(非 fallback),
+   *           且关联了 productSpaceId。
+   */
+  private async maybeLearn(dto: RunAgentDto, finalState: AgentState): Promise<void> {
+    if (!dto.userId || !dto.productSpaceId) return;
+    const qc = finalState.qualityControl;
+    const sg = finalState.scriptGeneration;
+    if (!qc || !sg) return;
+    if (sg.source === 'fallback') return;
+    if (qc.qualityScore < 85) return;
+    try {
+      const hookType =
+        sg.shots.find((s) => s.role === 'hook')?.role ?? 'hook';
+      const firstHook = (sg.shots[0]?.script ?? '').slice(0, 40);
+      const summary = `${dto.productName}(${dto.style ?? '通用'}风格)— hook: "${firstHook}"`;
+      await this.productSpace.learnFromHighScore(dto.userId, dto.productSpaceId, {
+        scriptId: finalState.taskId,
+        hookType,
+        qualityScore: qc.qualityScore,
+        summary,
+      });
+    } catch (err: any) {
+      this.logger.warn(`maybeLearn 失败: ${err?.message ?? err}`);
     }
   }
 

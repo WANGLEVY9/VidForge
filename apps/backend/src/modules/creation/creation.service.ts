@@ -29,6 +29,8 @@ const POLL_TIMEOUT_MS = 8 * 60 * 1000; // 单分镜最多 8 分钟
 @Injectable()
 export class CreationService {
   private readonly logger = new Logger(CreationService.name);
+  /** 标记某 taskId 是否被请求取消(进程内,任务跨进程时需 Redis pub/sub) */
+  private readonly cancelFlags = new Map<string, true>();
 
   constructor(
     @InjectRepository(CreationTask)
@@ -38,6 +40,31 @@ export class CreationService {
     private readonly arkConfigService: ArkConfigService,
     private readonly composer: ComposerService,
   ) {}
+
+  /**
+   * 取消任务 - 在轮询循环间隙生效。
+   * 注意:已经投递给 ARK 的请求不能撤回(ARK 计费仍会发生),
+   *       本接口只阻止 VidForge 这一侧继续发起新请求 + 跳过未完成分镜。
+   */
+  async cancel(userId: string, taskId: string): Promise<{ ok: true }> {
+    const task = await this.findOne(userId, taskId);
+    if (task.status === 'completed' || task.status === 'failed') {
+      return { ok: true };
+    }
+    this.cancelFlags.set(taskId, true);
+    await this.taskRepository.update(taskId, {
+      status: 'failed',
+      errorMessage: '用户取消',
+    });
+    this.creationGateway.emitError(taskId, '任务已取消');
+    this.logger.log(`[${taskId}] 用户取消任务`);
+    return { ok: true };
+  }
+
+  /** 内部检查是否被请求取消 */
+  private isCancelled(taskId: string): boolean {
+    return this.cancelFlags.has(taskId);
+  }
 
   async createTask(userId: string, dto: CreateTaskDto): Promise<CreationTask> {
     // 规范化 storyboard：补 id / 默认状态
@@ -108,6 +135,11 @@ export class CreationService {
     const completedUrls: string[] = [];
 
     for (let i = 0; i < shots.length; i++) {
+      // 取消检查 - 进入下一个分镜前确认
+      if (this.isCancelled(taskId)) {
+        this.logger.warn(`[${taskId}] 检测到取消标志,中止后续分镜生成`);
+        return;
+      }
       const shot = shots[i];
       const shotProgressBase = 5 + Math.floor((i / shots.length) * 90);
 
@@ -285,6 +317,9 @@ export class CreationService {
     const startedAt = Date.now();
     let polls = 0;
     while (true) {
+      if (this.isCancelled(taskId)) {
+        throw new Error('任务已被用户取消');
+      }
       if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
         throw new Error(`分镜 ${shot.index} 轮询超时`);
       }

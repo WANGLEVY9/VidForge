@@ -22,6 +22,7 @@ import { GlassPanel } from '../../components/studio/GlassPanel';
 import { StudioHeader } from '../../components/studio/StudioHeader';
 import { QueueStatus } from '../../components/dashboard/QueueStatus';
 import { ChartPanel } from '../../components/dashboard/ChartPanel';
+import { CostOverviewCard } from '../../components/dashboard/CostOverviewCard';
 import { useShell } from '../../components/layout/shell-context';
 import { analyticsApi } from '../../services/analytics';
 import { creationApi, type CreationTask } from '../../services/creation';
@@ -350,6 +351,13 @@ function DashboardPage() {
         </Col>
         <Col xs={24} lg={16}>
           <ChartPanel title="因子归因矩阵" icon={<RocketOutlined />} option={heatmapOption} height={isMobile ? 160 : 220} />
+        </Col>
+      </Row>
+
+      {/* AI 成本观测(V2 端到端 Trace 可视化) */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 'var(--spacing-lg)' }}>
+        <Col xs={24}>
+          <CostOverviewCard />
         </Col>
       </Row>
 

@@ -10,6 +10,7 @@ import { QualityAgentService } from './agents/quality-agent.service';
 import { AuthModule } from '../auth/auth.module';
 import { AiModule } from '../ai/ai.module';
 import { ScriptModule } from '../script/script.module';
+import { ProductSpaceModule } from '../product-space/product-space.module';
 import { Material } from '../material/entities/material.entity';
 
 @Module({
@@ -17,6 +18,7 @@ import { Material } from '../material/entities/material.entity';
     AuthModule,
     AiModule,
     ScriptModule,
+    ProductSpaceModule,
     TypeOrmModule.forFeature([Material]),
   ],
   controllers: [AgentController],

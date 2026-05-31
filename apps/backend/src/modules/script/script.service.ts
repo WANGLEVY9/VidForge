@@ -118,11 +118,12 @@ export class ScriptService {
    * - sellingPoints[] 与 dto.sellingPoints 合并(去重)
    * - targetAudience 缺省时从 space 读
    * - brandVoice 拼接到 sellingPoints 末尾,作为风格补充
+   * - bestPractices(自学习的高分案例)注入为额外 few-shot
    */
   private async enrichWithSpaceKnowledge(
     userId: string,
     dto: GenerateScriptDto,
-  ): Promise<GenerateScriptDto> {
+  ): Promise<GenerateScriptDto & { _bestPractices?: any[] }> {
     if (!dto.productSpaceId) return dto;
     try {
       const space = await this.productSpaceRepository.findOne({
@@ -131,7 +132,7 @@ export class ScriptService {
       if (!space?.knowledge) return dto;
       const k = space.knowledge;
 
-      const merged = { ...dto };
+      const merged: GenerateScriptDto & { _bestPractices?: any[] } = { ...dto };
       // sellingPoints 合并
       if (k.sellingPoints && k.sellingPoints.length) {
         const original = (dto.sellingPoints ?? '').trim();
@@ -148,8 +149,11 @@ export class ScriptService {
       if (k.brandVoice) {
         merged.sellingPoints = `${merged.sellingPoints ?? ''}\n\n[品牌语气] ${k.brandVoice}`;
       }
+      // 透传 bestPractices,callArk 会拼到 referenceBlock
+      merged._bestPractices = k.bestPractices ?? [];
+
       this.logger.log(
-        `[script.generate] 注入商品空间知识库: ${space.name}(空间内卖点 ${k.sellingPoints?.length ?? 0} 条)`,
+        `[script.generate] 注入商品空间知识库: ${space.name}(空间内卖点 ${k.sellingPoints?.length ?? 0} 条,历史高分 ${merged._bestPractices.length} 条)`,
       );
       return merged;
     } catch (err: any) {
@@ -200,8 +204,8 @@ export class ScriptService {
 }`;
 
     const referenceBlock =
-      referenceHits.length > 0
-        ? this.buildFewShotBlock(referenceHits)
+      referenceHits.length > 0 || ((dto as any)._bestPractices?.length ?? 0) > 0
+        ? this.buildFewShotBlock(referenceHits, (dto as any)._bestPractices ?? [])
         : '(暂无同类参考,完全自由发挥)';
 
     const userPrompt = `【商品信息】
@@ -252,20 +256,45 @@ ${schema}`;
     return this.normalizeScript(parsed, dto, targetDuration, referenceHits);
   }
 
-  /** 把检索到的爆款脚本拼成 few-shot 文本 */
-  private buildFewShotBlock(hits: HitScriptSeed[]): string {
-    return hits
-      .map((h, i) => {
-        return [
-          `# 案例 ${i + 1}: ${h.id}(${h.category} / ${h.style} / hook 类型: ${h.hookType})`,
-          `参考钩子写法:${h.shots.hook.voiceover}`,
-          `参考画面描述:${h.shots.hook.description}`,
-          `卖点措辞:${h.keyMessages.join(' / ')}`,
-          `BGM 风格:${h.bgmStyle}`,
-          `效果:${h.performance}`,
-        ].join('\n');
-      })
-      .join('\n\n');
+  /** 把检索到的爆款脚本 + 商家历史高分案例拼成 few-shot 文本 */
+  private buildFewShotBlock(
+    hits: HitScriptSeed[],
+    bestPractices: Array<{
+      scriptId: string;
+      hookType: string;
+      qualityScore: number;
+      summary: string;
+    }> = [],
+  ): string {
+    const blocks: string[] = [];
+
+    // 1) 内置爆款种子
+    if (hits.length > 0) {
+      blocks.push('## A. 同类爆款参考(VidForge 内置知识库):');
+      hits.forEach((h, i) => {
+        blocks.push(
+          [
+            `### 案例 ${i + 1}: ${h.id}(${h.category} / ${h.style} / hook 类型: ${h.hookType})`,
+            `参考钩子写法:${h.shots.hook.voiceover}`,
+            `参考画面描述:${h.shots.hook.description}`,
+            `卖点措辞:${h.keyMessages.join(' / ')}`,
+            `BGM 风格:${h.bgmStyle}`,
+            `效果:${h.performance}`,
+          ].join('\n'),
+        );
+      });
+    }
+
+    // 2) 该商品空间历史高分案例(自学习闭环)
+    if (bestPractices.length > 0) {
+      blocks.push('\n## B. 本品牌过往高分剧本(自学习沉淀,务必复用其调性):');
+      bestPractices.forEach((bp, i) => {
+        blocks.push(
+          `### 高分案例 ${i + 1}(质量分 ${bp.qualityScore}/100, hook ${bp.hookType}): ${bp.summary}`,
+        );
+      });
+    }
+    return blocks.join('\n\n');
   }
 
   /** 兼容模型返回里夹带 markdown 代码块的情况 */
