@@ -6,6 +6,7 @@ import { GenerateScriptDto } from './dto/generate-script.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { searchHitScripts } from '../rag/hit-scripts.seed';
 
 @ApiTags('剧本管理')
 @ApiBearerAuth()
@@ -15,9 +16,15 @@ export class ScriptController {
   constructor(private readonly scriptService: ScriptService) {}
 
   @Post('generate')
-  @ApiOperation({ summary: 'AI生成剧本' })
+  @ApiOperation({ summary: 'AI生成剧本(自动 RAG 注入爆款参考)' })
   generate(@CurrentUser() user: JwtPayload, @Body() dto: GenerateScriptDto) {
     return this.scriptService.generate(user.sub, dto);
+  }
+
+  @Get('inspire')
+  @ApiOperation({ summary: '生成前预览同品类同风格的爆款参考脚本' })
+  inspire(@Query('category') category?: string, @Query('style') style?: string) {
+    return searchHitScripts({ category, style, topK: 3 });
   }
 
   @Post()
@@ -27,7 +34,7 @@ export class ScriptController {
   }
 
   @Get()
-  @ApiOperation({ summary: '获取剧本列表（按用户隔离，可按 spaceId 过滤）' })
+  @ApiOperation({ summary: '获取剧本列表(按用户隔离,可按 spaceId 过滤)' })
   findAll(@CurrentUser() user: JwtPayload, @Query('spaceId') spaceId?: string) {
     return this.scriptService.findAll(user.sub, spaceId);
   }

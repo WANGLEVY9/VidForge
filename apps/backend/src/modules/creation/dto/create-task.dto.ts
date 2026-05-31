@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsBoolean } from 'class-validator';
 
 export class CreateTaskDto {
   @IsString()
@@ -24,4 +24,14 @@ export class CreateTaskDto {
 
   @IsOptional()
   quality?: string;
+
+  /** 用于 BGM 风格匹配,与 Script.style 对齐 */
+  @IsOptional()
+  @IsString()
+  style?: string;
+
+  /** 是否烧录字幕到成片(默认 true) */
+  @IsOptional()
+  @IsBoolean()
+  burnSubtitle?: boolean;
 }

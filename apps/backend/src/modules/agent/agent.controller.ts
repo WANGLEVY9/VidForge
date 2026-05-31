@@ -3,6 +3,8 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AgentService } from './agent.service';
 import { RunAgentDto } from './dto/run-agent.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Agent 编排')
 @ApiBearerAuth()
@@ -13,8 +15,8 @@ export class AgentController {
 
   @Post('run')
   @ApiOperation({ summary: '启动完整 Agent 工作流' })
-  run(@Body() dto: RunAgentDto) {
-    return this.agentService.run(dto);
+  run(@CurrentUser() user: JwtPayload, @Body() dto: RunAgentDto) {
+    return this.agentService.run({ ...dto, userId: user.sub });
   }
 
   @Get('status/:taskId')

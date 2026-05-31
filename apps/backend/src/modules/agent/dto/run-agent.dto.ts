@@ -21,4 +21,13 @@ export class RunAgentDto {
   @IsOptional()
   @IsNumber()
   duration?: number;
+
+  /** 当前用户(由 controller 注入,非前端传) */
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @IsOptional()
+  @IsString()
+  productSpaceId?: string;
 }

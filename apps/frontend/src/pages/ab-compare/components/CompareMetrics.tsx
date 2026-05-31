@@ -9,7 +9,7 @@ interface MetricRow {
   versionA: string;
   versionB: string;
   diff: string;
-  winner: 'A' | 'B' | null;
+  winner: 'A' | 'B' | 'TIE' | null;
 }
 
 interface CompareMetricsProps {
@@ -40,7 +40,10 @@ export const CompareMetrics: React.FC<CompareMetricsProps> = ({ metrics }) => {
     },
     {
       title: '推荐', dataIndex: 'winner', key: 'winner',
-      render: (v: string | null) => v ? <Tag color={v === 'A' ? 'blue' : 'green'}>版本 {v}</Tag> : null,
+      render: (v: 'A' | 'B' | 'TIE' | null) => {
+        if (!v || v === 'TIE') return <Tag>持平</Tag>;
+        return <Tag color={v === 'A' ? 'blue' : 'green'}>版本 {v}</Tag>;
+      },
     },
   ];
 

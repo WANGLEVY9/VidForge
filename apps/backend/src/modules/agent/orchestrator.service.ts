@@ -37,10 +37,14 @@ export class OrchestratorService {
       targetAudience: { value: (a: any, b: any) => b ?? a, default: () => dto.targetAudience },
       style: { value: (a: any, b: any) => b ?? a, default: () => dto.style },
       duration: { value: (a: any, b: any) => b ?? a, default: () => dto.duration },
+      userId: { value: (a: any, b: any) => b ?? a, default: () => dto.userId },
+      productSpaceId: { value: (a: any, b: any) => b ?? a, default: () => dto.productSpaceId },
       materialAnalysis: { value: (a: any, b: any) => b ?? a, default: () => undefined },
       scriptGeneration: { value: (a: any, b: any) => b ?? a, default: () => undefined },
       videoComposition: { value: (a: any, b: any) => b ?? a, default: () => undefined },
       qualityControl: { value: (a: any, b: any) => b ?? a, default: () => undefined },
+      // trace 用追加语义,而不是覆盖
+      trace: { value: (a: any, b: any) => (b ?? a ?? []), default: () => [] },
       errors: { value: (a: any, b: any) => [...(a ?? []), ...(b ?? [])], default: () => [] },
       retryCount: { value: (a: any, b: any) => b ?? a, default: () => 0 },
     };
@@ -93,6 +97,9 @@ export class OrchestratorService {
         targetAudience: dto.targetAudience,
         style: dto.style,
         duration: dto.duration,
+        userId: dto.userId,
+        productSpaceId: dto.productSpaceId,
+        trace: [],
         errors: [],
         retryCount: 0,
       } as any);

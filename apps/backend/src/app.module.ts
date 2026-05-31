@@ -10,6 +10,10 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ExportModule } from './modules/export/export.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProductSpaceModule } from './modules/product-space/product-space.module';
+import { QueueModule } from './modules/queue/queue.module';
+import { MediaModule } from './modules/media/media.module';
+import { TraceModule } from './modules/trace/trace.module';
+import { ComplianceModule } from './modules/compliance/compliance.module';
 import { HealthController } from './modules/common/health.controller';
 
 @Module({
@@ -65,6 +69,10 @@ import { HealthController } from './modules/common/health.controller';
     // 业务模块
     AuthModule,
     ProductSpaceModule,
+    QueueModule.forRoot(),
+    TraceModule,
+    ComplianceModule,
+    MediaModule,
     AiModule,
     MaterialModule,
     ScriptModule,
