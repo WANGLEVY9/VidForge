@@ -14,8 +14,10 @@ import {
 } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { useAutosave, getDraft, clearDraft } from '../../hooks/useAutosave';
-import { scriptApi } from '../../services/script';
+import { scriptApi, ScriptResult } from '../../services/script';
 import { aiApi } from '../../services/ai';
+import { RagReferenceCard } from '../../components/script/RagReferenceCard';
+import { ComplianceCard } from '../../components/script/ComplianceCard';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -52,27 +54,7 @@ const shotTypeLabels: Record<string, string> = {
   cta: '行动号召',
 };
 
-interface ShotItem {
-  index: number;
-  duration: number;
-  description: string;
-  voiceover: string;
-  caption: string;
-  cameraMovement?: string;
-  type?: string;
-}
-
-interface ScriptResult {
-  title: string;
-  duration: number;
-  totalDuration: string;
-  shots: ShotItem[];
-  voiceover: string;
-  bgmSuggestion: string;
-  tags: string[];
-  source?: 'ark' | 'fallback';
-  fallbackReason?: string;
-}
+// 注:剧本结果 / 分镜 类型从 services/script 导入,本页不再重复定义
 
 function ScriptPage() {
   const { spaceId } = useParams<{ spaceId?: string }>();
@@ -549,6 +531,12 @@ function ScriptPage() {
                 }
                 style={{ borderRadius: 'var(--radius-lg)', marginBottom: 'var(--spacing-lg)', padding: '12px 16px' }}
               />
+
+              {/* RAG 爆款参考(V2 差异化能力可视化) */}
+              <RagReferenceCard references={result.ragReferences} source={result.source} />
+
+              {/* 合规审核结果 */}
+              <ComplianceCard report={result.compliance} />
 
               {/* 分镜脚本 */}
               <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)', overflow: 'hidden' }}>

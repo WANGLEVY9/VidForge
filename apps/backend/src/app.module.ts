@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AiModule } from './modules/ai/ai.module';
 import { MaterialModule } from './modules/material/material.module';
 import { ScriptModule } from './modules/script/script.module';
@@ -23,6 +25,14 @@ import { HealthController } from './modules/common/health.controller';
       isGlobal: true,
       envFilePath: '.env',
     }),
+
+    // 全局限流(防 ARK 配额被刷爆)
+    // - 默认 100 req/min/IP
+    // - 短时段(10s)上限 30,防止单点突发
+    ThrottlerModule.forRoot([
+      { name: 'short', ttl: 10_000, limit: 30 },
+      { name: 'medium', ttl: 60_000, limit: 100 },
+    ]),
 
     // 数据库配置
     TypeOrmModule.forRootAsync({
@@ -82,5 +92,11 @@ import { HealthController } from './modules/common/health.controller';
     ExportModule,
   ],
   controllers: [HealthController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

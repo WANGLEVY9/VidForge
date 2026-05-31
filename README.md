@@ -1,141 +1,175 @@
-# VidForge - 电商场景AIGC带货视频生成系统
+# VidForge - 电商场景 AIGC 带货视频生成系统
 
-面向TikTok Shop等跨境电商商家的AIGC带货视频生成全链路系统，基于React、Node.js、TypeScript技术栈，对接火山引擎OpenAPI与开源大模型能力，实现素材管理、剧本智能生成、视频一键创作全流程自动化，支持商家快速生成符合平台规则、高转化潜力的带货短视频。
+面向 TikTok Shop 等跨境电商商家的 AIGC 带货视频生成全链路系统。商家上传商品素材 → 输入卖点 → 系统自动生成多分镜剧本 → 一键合成 ≤15s 的带货短视频(支持 9:16 / 16:9)。
 
-## ✨ 功能特性
+> **V2 升级亮点(2026-05-31)**:LangGraph 多 Agent 真实推理 / FFmpeg 真实合片 / 端到端 Trace + 成本观测 / RAG 爆款知识库 / 商品空间知识飞轮 / 三层合规审核
 
-### 核心功能
-- 📁 **素材管理**：支持图片、视频、音频多类型素材上传，自动结构化处理与标签提取，支持关键词搜索
-- 📝 **智能剧本生成**：输入商品信息，自动生成包含完整分镜、台词、BGM的带货剧本，支持8种视频风格选择
-- 🎬 **视频一键创作**：基于剧本自动合成短视频，支持多分辨率、多格式导出，异步队列处理长耗时任务
-- ⏱️ **实时进度追踪**：视频生成过程实时展示进度，支持失败重试、断点续传
-- 📱 **多端适配**：响应式设计，完美适配PC端和移动端
-- 🔍 **数据看板**：视频效果分析、转化数据统计、模板效果对比（开发中）
+## ✨ 核心能力
 
-### 技术栈
+### 端到端真实管线
+- 🎯 **真实视频合成**:多分镜并行调用 ARK Doubao-Seedance-1.5-pro → FFmpeg concat 拼接 → TTS 配音 + BGM 混音 + 字幕烧录 → 成片落 `/static/outputs/...`
+- 🤖 **LangGraph 多 Agent 编排**:Material → Script → Composition → Quality 4 节点真实推理,Quality 不达标自动 replan,带 self-reflection 反馈
+- 📊 **端到端 Trace**:每次 ARK 调用 / Agent 节点 / FFmpeg 任务都落 trace_spans 表,Token / 成本 / Cache hit / 延迟全部可观测
+- 🔍 **多模态素材理解**:图片素材自动调 ARK Doubao-Seed-2.0-pro 视觉理解,输出商品 / 画面 / 剪辑三层结构化标签 + caption + pgvector 语义检索
+
+### 差异化能力
+- 📚 **RAG 爆款知识库**:内置 25+ 条人工标注电商爆款脚本,按品类 × 风格 Top-K 检索作为 few-shot 注入 prompt
+- 🎁 **商品空间知识飞轮**:每个商品空间维护品牌 TOV / 卖点 / 自定义违禁词 / 高分历史脚本,生成时自动注入,**用得越久越懂品牌**
+- ✅ **三层合规审核**:广告法极限词 + 医疗保健禁用语 + 平台规则(TikTok/抖音电商) + 商家自定义词典,综合分 < 60 才触发 LLM 二次复核(降本)
+- 🔄 **A/B 真实任务对比**:双视频同步播放 + 真实指标(成功率/时长/合片状态/TTS/字幕)差异
+- ⏱️ **断点容错**:单分镜失败不阻塞整体;合片失败回退首段视频作预览;ARK 失败回落内置模板
+
+### 工程基建
+- 🚦 **BullMQ 双轨队列**:Redis 可用走持久化 + 重试 + DLQ;不可用降级进程内执行(单实例可跑通)
+- 💰 **成本观测**:Dashboard 实时显示今日 Token / 估算成本 / Cache hit 率 / 平均延迟
+- 🌐 **响应式设计**:PC + 移动端双适配(Phase 4 移动端代码就绪,可一键启用)
+
+## 🛠 技术栈(V2 实际使用)
+
 | 技术域 | 选型方案 |
 |--------|----------|
-| 前端 | React 18 + TypeScript + Vite + Ant Design |
-| 后端 | NestJS + TypeScript + PostgreSQL + Redis |
-| 媒体处理 | FFmpeg + BullMQ 异步任务队列 |
-| AI能力 | 火山引擎OpenAPI（文生图、文生视频、TTS、内容审核） + 开源大模型 |
-| 存储 | 对象存储（OSS） + 向量数据库（Milvus） |
-| 部署 | Docker + Kubernetes + GPU弹性调度 |
+| 前端 | React 18 + TypeScript + Vite + Ant Design v5 + Zustand + ECharts |
+| 后端 | NestJS 10 + TypeScript + TypeORM + PostgreSQL + pgvector(可选) |
+| 多 Agent | `@langchain/langgraph` StateGraph + 条件回退 |
+| 媒体处理 | FFmpeg(child_process 直调)+ BullMQ + 火山 OpenSpeech TTS(可选) |
+| AI 能力 | 火山方舟 ARK:Doubao-Seed-2.0-pro(文本+视觉)/ Doubao-Seedance-1.5-pro(视频) |
+| 实时通信 | Socket.IO `/creation` namespace |
+| 部署 | Railway(后端 Nixpacks)+ Vercel(前端 Vite) |
 
 ## 🚀 快速开始
 
 ### 环境要求
-- Node.js >= 18.0.0
-- pnpm >= 8.0.0
-- PostgreSQL >= 14.0
-- Redis >= 7.0
-- FFmpeg >= 5.0
+- Node.js ≥ 18
+- PostgreSQL ≥ 14
+- ffmpeg ≥ 4.x(必需,本地 `brew install ffmpeg` 或 `apt install ffmpeg`)
+- Redis ≥ 7(可选,缺失自动降级)
 
-### 安装依赖
+### 本地启动
 ```bash
-# 安装所有依赖
-pnpm install
+# 1. 安装依赖
+cd apps/backend && npm install --legacy-peer-deps
+cd ../frontend && npm install --legacy-peer-deps
+
+# 2. 环境变量(最小集)
+cd ../backend
+cat > .env <<EOF
+DATABASE_URL=postgresql://localhost:5432/vidforge
+DB_SYNCHRONIZE=true
+JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(64).toString('hex'))")
+NODE_ENV=development
+EOF
+
+# ARK Key 已内置,本地无需额外配置即可调真模型
+
+# 3. 启动后端
+npm run start:dev    # http://localhost:3001/api
+                     # Swagger:http://localhost:3001/api/docs
+
+# 4. 另起终端启动前端
+cd ../frontend && npm run dev    # http://localhost:3000
 ```
 
-### 配置环境变量
-复制 `apps/backend/.env` 并填写真实配置信息：
-```bash
-# 数据库配置
-DATABASE_URL=postgresql://username:password@localhost:5432/vidforge
-# Redis配置
-REDIS_URL=redis://localhost:6379
-# JWT配置
-JWT_SECRET=your_jwt_secret_key
-# 火山引擎配置
-VOLC_ENGINE_ACCESS_KEY=your_access_key
-VOLC_ENGINE_SECRET_KEY=your_secret_key
-# OSS配置
-OSS_ACCESS_KEY=your_oss_access_key
-OSS_SECRET_KEY=your_oss_secret_key
-```
-
-### 启动开发环境
-```bash
-# 启动前端开发服务（端口3000）
-pnpm --filter=@vidforge/frontend dev
-
-# 启动后端开发服务（端口3001）
-pnpm --filter=@vidforge/backend start:dev
-
-# 或者同时启动前后端
-pnpm dev
-```
-
-### 访问地址
-- 前端页面：http://localhost:3000
-- 后端API：http://localhost:3001/api
-- Swagger文档：http://localhost:3001/api/docs
+### 默认账号
+后端启动时自动播种 demo 账号:`demo@vidforge.app` / `demo1234`
 
 ## 📁 项目结构
 ```
-├── apps
-│   ├── frontend          # 前端应用
-│   │   ├── src
-│   │   │   ├── api       # API接口定义
-│   │   │   ├── components # 公共组件
-│   │   │   ├── pages     # 页面组件
-│   │   │   ├── types     # TypeScript类型定义
-│   │   │   └── utils     # 工具函数
-│   └── backend           # 后端应用
-│       ├── src
-│       │   ├── modules   # 业务模块
-│       │   │   ├── material # 素材模块
-│       │   │   ├── script   # 剧本模块
-│       │   │   ├── creation # 视频创作模块
-│       │   │   ├── common   # 公共模块
-│       │   │   └── auth     # 鉴权模块
-│       │   └── main.ts   # 应用入口
-├── packages              # 公共包
-│   └── common            # 跨端通用类型、工具函数
-├── docs                  # 项目文档
-└── package.json
+apps/
+├── frontend/              # React 18 + Vite SPA
+│   └── src/
+│       ├── pages/         # material / script / creation / dashboard / ab-compare / workspace
+│       ├── components/    # storyboard / layout / dashboard / studio / common
+│       ├── store/         # Zustand: useAppStore / useAuthStore / useSpaceStore / useStoryboardStore
+│       └── services/      # auth / space / material / script / creation / agent / analytics / ai
+└── backend/               # NestJS 10 + TypeORM
+    └── src/modules/
+        ├── auth          # JWT 鉴权 + bcrypt + 自动 demo 账号
+        ├── product-space # 商品空间(数据隔离 + 知识库飞轮)
+        ├── material      # 素材库 + ARK 视觉理解打标 + pgvector 语义检索
+        ├── script        # 剧本生成(ARK + RAG few-shot + 知识库注入)
+        ├── creation      # 视频任务(ARK Seedance + FFmpeg 合片 + Socket.IO 推送)
+        ├── agent         # LangGraph 4 节点编排
+        ├── analytics     # 数据看板(全部接真数据)
+        ├── export        # 导出转码(FFmpeg)
+        ├── ai            # ARK 文本/视觉/视频 客户端封装
+        ├── media         # FFmpeg / TTS / 字幕 / BGM / Composer / Storage
+        ├── queue         # BullMQ 双轨队列
+        ├── trace         # 端到端 trace + 成本观测
+        ├── compliance    # 三层合规审核
+        └── rag           # 爆款脚本种子库
 ```
 
-## 📖 使用流程
+## 📖 关键流程
 
-### 1. 上传素材
-进入「素材管理」页面，上传商品主图、视频、参考素材等，系统会自动进行格式校验和结构化处理。
+### 1. 创建商品空间 + 配置知识库
+进入 `/workspace`,新建商品空间,在知识库里配置:
+- 核心卖点(短句数组)
+- 目标人群画像
+- 品牌 TOV(语气调性)
+- 自定义违禁词
 
-### 2. 生成剧本
-进入「剧本生成」页面，输入商品名称、核心卖点、目标人群、使用场景等信息，选择视频风格，点击生成即可自动生成完整的带货剧本，包含多分镜脚本。
+每次生成剧本时,这些会自动拼到 prompt,**让系统越用越懂你的品牌**。
 
-### 3. 创建视频任务
-进入「视频创作」页面，点击「生成视频」，选择要使用的剧本、分辨率、视频比例、导出格式，提交后系统会自动开始视频生成。
+### 2. 上传素材并智能分析
+进入「素材库」上传图片 → 点击 ✨ "智能分析" 按钮 → ARK 视觉理解自动写入三层标签 + 一句话描述 + embedding。
 
-### 4. 查看进度与导出
-任务创建后可实时查看生成进度，生成完成后支持在线预览和下载导出。
+### 3. 生成剧本(自动 RAG + 合规扫描)
+进入「剧本工作室」输入商品信息,系统会:
+1. 检索同品类同风格的爆款 Top-K 注入 prompt
+2. 调 ARK Doubao-Seed-2.0-pro 生成 hook/demo/cta 三分镜
+3. 自动合规扫描,返回 `compliance` 字段
+4. 注入商品空间知识库
 
-## 🔧 构建部署
-```bash
-# 构建前端
-pnpm --filter=@vidforge/frontend build
+### 4. 生成视频(全链路真实)
+进入「视频创作」点击生成:
+- 并发调 ARK Seedance 生成所有分镜
+- WebSocket 实时推进度
+- 全部成功后 FFmpeg 合片 + TTS + BGM + 字幕烧录
+- 产物落 `/static/outputs/creation/<id>.mp4`
 
-# 构建后端
-pnpm --filter=@vidforge/backend build
+### 5. 数据看板查看成本
+Dashboard 页面会显示:
+- 今日生成 Token 数 / 估算成本
+- ARK Prompt Cache 命中率
+- 任务追踪瀑布图(LangGraph 各节点耗时)
 
-# 生产环境启动
-pnpm --filter=@vidforge/backend start:prod
+## 🔧 部署
+
+### Railway(后端)+ Vercel(前端)
+推荐部署方式。详见 [生产部署方案](./docs/生产部署方案.md)。
+
+**Railway 必填环境变量**:
+```
+DATABASE_URL          # 必填
+DB_SYNCHRONIZE=true   # 首次部署开启,验证后改为 false
+JWT_SECRET            # 64 字节 hex
+NODE_ENV=production
+WEB_BASE_URL          # https://<vercel-domain>
 ```
 
-## 🤝 开发规范
-- 代码提交前必须通过ESLint、Prettier校验
-- 遵循Conventional Commits提交规范
-- 接口变更必须更新Swagger文档
-- 新增功能必须补充对应的测试用例
+**可选**:
+```
+REDIS_URL             # 缺失则降级进程内队列
+VOLC_TTS_APPID/TOKEN  # 缺失则 TTS 生成静音占位
+```
+
+**首次部署后必跑验证清单**:
+1. `GET /api/health` → 200
+2. `GET /api/ai/ark/diagnose` → 双模型 ping 成功
+3. 注册 / 登录 / 上传图片 / 智能分析 / 生成剧本 / 创建视频任务全链路 OK
+4. 视频任务完成后 `result.url` 直接浏览器访问可播放
 
 ## 📄 相关文档
-- [技术实现规划](./docs/电商场景AIGC带货视频生成系统实现规划.md)
+- [项目记忆 / 迭代记录](./docs/项目记忆.md)
+- [生产部署方案](./docs/生产部署方案.md)
+- [部署检查清单](./docs/部署检查清单.md)
 - [占位符记录](./docs/占位符记录.md)
-- [项目记忆文档](./docs/项目记忆.md)
-- [架构说明文档](./docs/架构说明.md)
+- [架构说明](./docs/架构说明.md)
 
-## 📄 许可证
+## 📝 开发规范
+- ESLint + Prettier + Stylelint + Husky + lint-staged 全部启用
+- 遵循 Conventional Commits(`feat:` / `fix:` / `docs:` / ...)
+- 所有 ARK 调用经过 trace 落库,新增模型务必复用 ArkTextService/ArkVideoService
+
+## 📜 许可证
 MIT License
-
-## 🤝 贡献
-欢迎提交Issue和Pull Request！

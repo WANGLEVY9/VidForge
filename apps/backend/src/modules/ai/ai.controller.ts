@@ -65,11 +65,11 @@ export class AiController {
   @ApiOperation({
     summary: 'ARK 文本模型自检',
     description:
-      '一键诊断: 是否配置了文本模型 + 实际能否调通 (发送一条最小 ping 请求)',
+      '一键诊断: 是否配置了文本模型 + 实际能否调通 (发送一条最小 ping 请求) + 当前 key 来源(env / 内置默认 / 黑名单回落)',
   })
   async diagnose() {
-    const active = this.arkConfigService.getActiveApiKey('text');
-    if (!active) {
+    const primary = this.arkConfigService.getPrimaryConfig('text');
+    if (!primary) {
       return {
         ok: false,
         stage: 'config',
@@ -78,9 +78,30 @@ export class AiController {
       };
     }
 
+    // 直接从 config 读取来源元数据,不再做字符串猜测
+    const keySource = primary.apiKeySource ?? 'builtin';
+    const endpointSource = primary.endpointSource ?? 'builtin';
+    const blockedEnvKey = primary.blockedEnvKey;
+    const envBlocked = keySource === 'builtin-fallback';
+
     const startedAt = Date.now();
-    const apiKeyFingerprint = fingerprint(active.apiKey);
-    const endpointFingerprint = fingerprint(active.endpointId);
+    const apiKeyFingerprint = fingerprint(primary.apiKey);
+    const endpointFingerprint = fingerprint(primary.endpointId);
+
+    const buildHint = (ok: boolean): string => {
+      if (envBlocked) {
+        return `检测到 env ARK_TEXT_PRIMARY_API_KEY=${blockedEnvKey} 命中失效黑名单,已自动回落到代码内置默认值。建议从部署平台删除该 env 以彻底清理。${
+          ok ? '当前调用 ✅ 成功。' : ''
+        }`;
+      }
+      if (keySource === 'env') {
+        return ok
+          ? '当前使用 env 注入的 key,调用成功'
+          : 'Key 来源: env(ARK_TEXT_PRIMARY_API_KEY)。若调用失败,大概率是该 env 值已失效,建议删除该环境变量改用代码内置默认值';
+      }
+      return ok ? '当前使用代码内置默认 key,调用成功' : '当前使用代码内置默认 key,但调用失败,请检查代码硬编码 key 是否仍然有效';
+    };
+
     try {
       const resp = await this.arkTextService.chatCompletion({
         messages: [
@@ -90,14 +111,18 @@ export class AiController {
         temperature: 0,
         maxTokens: 8,
       });
-      const content =
-        resp?.choices?.[0]?.message?.content ?? '(empty)';
+      const content = resp?.choices?.[0]?.message?.content ?? '(empty)';
       return {
         ok: true,
         stage: 'call',
-        endpointId: active.endpointId,
+        endpointId: primary.endpointId,
         durationMs: Date.now() - startedAt,
         sample: String(content).slice(0, 64),
+        keySource,
+        endpointSource,
+        envBlocked,
+        blockedEnvKey,
+        hint: buildHint(true),
         apiKeyFingerprint,
         endpointFingerprint,
       };
@@ -105,9 +130,14 @@ export class AiController {
       return {
         ok: false,
         stage: 'call',
-        endpointId: active.endpointId,
+        endpointId: primary.endpointId,
         durationMs: Date.now() - startedAt,
         reason: error?.message ?? String(error),
+        keySource,
+        endpointSource,
+        envBlocked,
+        blockedEnvKey,
+        hint: buildHint(false),
         apiKeyFingerprint,
         endpointFingerprint,
       };
