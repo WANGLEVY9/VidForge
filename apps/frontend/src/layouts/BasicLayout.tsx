@@ -1,10 +1,9 @@
-import { Avatar, Badge, Tooltip, Tag, Dropdown, Menu, Modal } from 'antd';
+import { Avatar, Tooltip, Dropdown, Menu, Modal } from 'antd';
 import {
   RocketOutlined,
   AppstoreOutlined,
   UserOutlined,
   ExperimentOutlined,
-  BellOutlined,
   SettingOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -16,8 +15,11 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSpaceStore } from '../store/useSpaceStore';
+import { useTheme } from '../hooks/useTheme';
 import ThemeToggle from '../components/common/ThemeToggle';
 import PrivacySettings from '../components/common/PrivacySettings';
+import NotificationCenter from '../components/layout/NotificationCenter';
+import ApiStatusCenter from '../components/layout/ApiStatusCenter';
 import { ShellProvider } from '../components/layout/shell-context';
 
 const SIDEBAR_WIDTH = 240;
@@ -36,6 +38,7 @@ function BasicLayout() {
   const user = useAuthStore((s) => s.user);
   const clearSession = useAuthStore((s) => s.clearSession);
   const clearSpaces = useSpaceStore((s) => s.clear);
+  const { isDark } = useTheme();
   const [privacySettingsVisible, setPrivacySettingsVisible] = useState(false);
 
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
@@ -157,7 +160,7 @@ function BasicLayout() {
           {/* Menu */}
           <Menu
             mode="inline"
-            theme="dark"
+            theme={isDark ? 'dark' : 'light'}
             inlineCollapsed={collapsed}
             selectedKeys={[selectedKey]}
             items={menuItems}
@@ -214,7 +217,7 @@ function BasicLayout() {
               alignItems: 'center',
               justifyContent: 'space-between',
               borderBottom: '1px solid var(--border-color)',
-              background: 'rgba(15, 15, 19, 0.7)',
+              background: 'var(--header-bg)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
             }}
@@ -263,23 +266,8 @@ function BasicLayout() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <ThemeToggle />
-              <Tag
-                color="success"
-                style={{
-                  margin: 0,
-                  borderRadius: 'var(--radius-md)',
-                  fontWeight: 500,
-                }}
-              >
-                API 已连接
-              </Tag>
-              <Tooltip title="通知">
-                <Badge count={3} size="small">
-                  <BellOutlined
-                    style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }}
-                  />
-                </Badge>
-              </Tooltip>
+              <ApiStatusCenter />
+              <NotificationCenter />
               <Tooltip title="设置">
                 <SettingOutlined
                   style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }}

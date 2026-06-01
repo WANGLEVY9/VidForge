@@ -63,7 +63,8 @@ export function FabButton({ actions = defaultActions, hidden = false }: FabButto
             >
               <span style={{
                 padding: '4px 8px', borderRadius: 'var(--radius-sm)',
-                background: 'rgba(15,15,19,0.85)', color: 'var(--text-primary)',
+                background: 'var(--bg-elevated)', color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
                 fontSize: 12, whiteSpace: 'nowrap',
               }}>
                 {action.label}

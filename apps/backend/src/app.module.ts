@@ -16,6 +16,7 @@ import { QueueModule } from './modules/queue/queue.module';
 import { MediaModule } from './modules/media/media.module';
 import { TraceModule } from './modules/trace/trace.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
+import { NotificationModule } from './modules/notification/notification.module';
 import { HealthController } from './modules/common/health.controller';
 
 @Module({
@@ -82,6 +83,7 @@ import { HealthController } from './modules/common/health.controller';
     QueueModule.forRoot(),
     TraceModule,
     ComplianceModule,
+    NotificationModule,
     MediaModule,
     AiModule,
     MaterialModule,

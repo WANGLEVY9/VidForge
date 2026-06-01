@@ -14,7 +14,7 @@ export function TopBar() {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 12px',
-        background: 'rgba(15,15,19,0.9)',
+        background: 'var(--header-bg)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
         position: 'sticky',
         top: 0,
