@@ -14,6 +14,7 @@ import {
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { StoryboardEditor } from '../../components/storyboard/StoryboardEditor';
 import { useStoryboardStore, Shot } from '../../store/useStoryboardStore';
+import { useScriptHandoffStore } from '../../store/useScriptHandoffStore';
 import { useShell } from '../../components/layout/shell-context';
 import { agentApi } from '../../services/agent';
 import { creationApi } from '../../services/creation';
@@ -60,6 +61,27 @@ interface LogEntry {
   text: string;
 }
 
+/**
+ * 把 ScriptResult.shots 映射为视频页用的 StoryboardItem 列表。
+ * 同时被「视频页 prompt 输入再调 LLM 生成分镜」与「从剧本页 handoff 带入」两条路径复用。
+ */
+function mapShotsToStoryboardItems(
+  shots: Array<{ index?: number; description?: string; voiceover?: string; caption?: string; duration?: number }>,
+  fallbackDuration: number,
+): StoryboardItem[] {
+  const perShot = Math.max(1, Math.round(fallbackDuration / Math.max(1, shots.length)));
+  return shots.map((s, i) => ({
+    id: `shot_${Date.now()}_${i + 1}`,
+    order: s.index ?? i + 1,
+    description: s.description ?? '',
+    voiceover: s.voiceover,
+    caption: s.caption,
+    duration: s.duration ?? perShot,
+    type: 'text-to-video' as const,
+    status: 'pending' as const,
+  }));
+}
+
 function CreationPage() {
   const { spaceId } = useParams<{ spaceId?: string }>();
   const [currentStep, setCurrentStep] = useState<CreationStep>('config');
@@ -82,6 +104,12 @@ function CreationPage() {
   const [, setAgentTaskId] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  /**
+   * 来自剧本页的一次性 handoff 信息(消费即清),用于在顶部展示
+   * "已从剧本页带入「xxx」" 的提示。
+   */
+  const [handoffBanner, setHandoffBanner] = useState<{ title: string; shotCount: number } | null>(null);
+  const consumeHandoff = useScriptHandoffStore((s) => s.consume);
   const DRAFT_KEY = 'creation_config';
   const draftRestored = useRef(false);
   const wsCleanup = useRef<null | (() => void)>(null);
@@ -100,6 +128,40 @@ function CreationPage() {
     }
     draftRestored.current = true;
   }, [form]);
+
+  /**
+   * 消费来自剧本页的剧本 handoff:
+   * - 把剧本 shots 直接转为 storyboard,跳过分镜生成步骤
+   * - 表单 prompt 字段填入产品名/标题
+   * - 用户在视频页可直接开始合成,不必再次调 LLM
+   * - 只在挂载时消费一次,刷新视频页不会重复带入
+   */
+  useEffect(() => {
+    const handoff = consumeHandoff();
+    if (!handoff) return;
+    const { script, prompt } = handoff;
+    if (!script.shots || script.shots.length === 0) return;
+
+    // 表单 prompt
+    form.setFieldsValue({ prompt });
+    setFormValues((prev) => ({ ...prev, prompt }));
+
+    // 时长沿用剧本设定(若有),并以此为基准映射分镜
+    const totalDuration =
+      typeof script.duration === 'number' && script.duration > 0
+        ? script.duration
+        : duration;
+    setDuration(totalDuration);
+
+    const items = mapShotsToStoryboardItems(script.shots, totalDuration);
+    setStoryboard(items);
+    setCurrentStep('storyboard');
+    setHandoffBanner({ title: script.title, shotCount: items.length });
+
+    // draft 已被填充,标记已恢复以避免后续 useAutosave 早期写覆盖
+    draftRestored.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Autosave
   const formValuesForSave = { prompt: formValues?.prompt, model: selectedModel, aspectRatio, quality };
@@ -163,16 +225,7 @@ function CreationPage() {
         duration,
         productSpaceId: spaceId,
       });
-      const shots: StoryboardItem[] = (result?.shots ?? []).map((s: any, i: number) => ({
-        id: `shot_${Date.now()}_${i + 1}`,
-        order: s.index ?? i + 1,
-        description: s.description,
-        voiceover: s.voiceover,
-        caption: s.caption,
-        duration: s.duration ?? Math.round(duration / 3),
-        type: 'text-to-video',
-        status: 'pending',
-      }));
+      const shots = mapShotsToStoryboardItems(result?.shots ?? [], duration);
       setStoryboard(shots);
       setCurrentStep('storyboard');
       message.success(`已生成 ${shots.length} 个分镜（来源：${result?.source === 'ark' ? 'AI' : '兜底'}）`);
@@ -377,6 +430,28 @@ function CreationPage() {
           closable
           message={errorMsg}
           onClose={() => setErrorMsg(null)}
+          style={{ marginBottom: 'var(--spacing-lg)', borderRadius: 'var(--radius-lg)' }}
+        />
+      )}
+
+      {handoffBanner && (
+        <Alert
+          type="info"
+          showIcon
+          closable
+          icon={<ThunderboltOutlined />}
+          message={
+            <Space wrap>
+              <Text strong style={{ color: 'var(--text-primary)' }}>
+                已从剧本页带入「{handoffBanner.title}」
+              </Text>
+              <Tag color="blue">{handoffBanner.shotCount} 个分镜</Tag>
+              <Text style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                可直接点击「开始视频生成」
+              </Text>
+            </Space>
+          }
+          onClose={() => setHandoffBanner(null)}
           style={{ marginBottom: 'var(--spacing-lg)', borderRadius: 'var(--radius-lg)' }}
         />
       )}
@@ -676,103 +751,173 @@ function CreationPage() {
 
       {/* 完成阶段 */}
       {currentStep === 'complete' && (
-        <div style={{ textAlign: 'center', padding: 'var(--spacing-xxxl) 0' }}>
-          <div
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: '50%',
-              background: 'rgba(16,185,129,0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 24px',
-            }}
-          >
-            <CheckCircleOutlined style={{ fontSize: 40, color: '#10b981' }} />
-          </div>
-          <Title level={3} style={{ color: 'var(--text-primary)', marginBottom: 8 }}>
-            视频生成完成！
-          </Title>
-          <Paragraph type="secondary" style={{ maxWidth: 480, margin: '0 auto 32px' }}>
-            共 {totalCount} 个分镜片段，{completedCount} 成功
-            {failedCount > 0 ? `，${failedCount} 失败` : ''}，总时长约{' '}
-            {storyboard.reduce((sum, s) => sum + (s.duration ?? 0), 0)} 秒
-          </Paragraph>
-
-          {/* 视频预览区 */}
-          <GlassPanel variant="card" style={{ maxWidth: 640, margin: '0 auto 24px', padding: 'var(--spacing-xl)' }}>
-            <div
-              style={{
-                aspectRatio: aspectRatio === '9:16' ? '9/16' : aspectRatio === '16:9' ? '16/9' : '1/1',
-                maxWidth: aspectRatio === '9:16' ? 280 : 480,
-                margin: '0 auto',
-                background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                borderRadius: 'var(--radius-lg)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-              }}
-            >
-              {resultUrl ? (
-                <video
-                  src={resultUrl}
-                  controls
-                  autoPlay={false}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
-                />
-              ) : (
-                <div style={{ textAlign: 'center', color: '#fff', opacity: 0.6 }}>
-                  <PlayCircleOutlined style={{ fontSize: 56 }} />
-                  <div style={{ marginTop: 8, fontSize: 13 }}>暂无可播放的视频</div>
-                </div>
-              )}
-            </div>
-            {resultUrl && (
-              <Text
-                copyable={{ text: resultUrl }}
-                style={{ display: 'block', marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)' }}
-              >
-                视频地址（24h 内有效）：{resultUrl.slice(0, 60)}…
-              </Text>
-            )}
+        <div style={{ padding: 'var(--spacing-lg) 0' }}>
+          {/* 顶部成功摘要 */}
+          <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)', padding: 'var(--spacing-xl) var(--spacing-xxxl)' }}>
+            <Row align="middle" gutter={[16, 16]}>
+              <Col xs={24} md={16}>
+                <Space size={16} align="center">
+                  <div
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '50%',
+                      background: 'rgba(16,185,129,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <CheckCircleOutlined style={{ fontSize: 28, color: '#10b981' }} />
+                  </div>
+                  <div>
+                    <Title level={4} style={{ color: 'var(--text-primary)', margin: 0 }}>
+                      视频生成完成
+                    </Title>
+                    <Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                      共 {totalCount} 个分镜,{completedCount} 成功
+                      {failedCount > 0 ? `,${failedCount} 失败` : ''},总时长约{' '}
+                      {storyboard.reduce((sum, s) => sum + (s.duration ?? 0), 0)} 秒
+                    </Text>
+                  </div>
+                </Space>
+              </Col>
+              <Col xs={24} md={8} style={{ textAlign: 'right' }}>
+                <Space wrap>
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={() => setCurrentStep('storyboard')}
+                  >
+                    编辑分镜
+                  </Button>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => {
+                      setCurrentStep('config');
+                      setStoryboard([]);
+                      setLogs([]);
+                      setOverallProgress(0);
+                      setResultUrl(null);
+                      setTaskId(null);
+                    }}
+                  >
+                    重新创作
+                  </Button>
+                </Space>
+              </Col>
+            </Row>
           </GlassPanel>
 
-          <Space size="middle" wrap>
-            <Button
-              type="primary"
-              icon={<DownloadOutlined />}
-              size="large"
-              onClick={() => setExportOpen(true)}
-              style={{ borderRadius: 'var(--radius-md)', height: 44 }}
-            >
-              导出视频
-            </Button>
-            <Button
-              icon={<ReloadOutlined />}
-              size="large"
-              style={{ borderRadius: 'var(--radius-md)', height: 44 }}
-              onClick={() => {
-                setCurrentStep('config');
-                setStoryboard([]);
-                setLogs([]);
-                setOverallProgress(0);
-                setResultUrl(null);
-                setTaskId(null);
+          {/* 主区域:左侧合成视频 + 右侧 ExportPanel CTA */}
+          <Row gutter={24} style={{ marginBottom: 'var(--spacing-lg)' }}>
+            <Col xs={24} lg={14}>
+              <GlassPanel variant="card" style={{ padding: 'var(--spacing-xl)' }}>
+                <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <PlayCircleOutlined style={{ color: 'var(--brand-primary)' }} />
+                  <Text strong style={{ color: 'var(--text-primary)' }}>合成视频</Text>
+                  <Tag color="cyan" style={{ marginLeft: 'auto' }}>
+                    {aspectRatio} · {quality}
+                  </Tag>
+                </div>
+                <div
+                  style={{
+                    aspectRatio: aspectRatio === '9:16' ? '9/16' : aspectRatio === '16:9' ? '16/9' : '1/1',
+                    maxWidth: aspectRatio === '9:16' ? 320 : 560,
+                    margin: '0 auto',
+                    background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                    borderRadius: 'var(--radius-lg)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {resultUrl ? (
+                    <video
+                      src={resultUrl}
+                      controls
+                      autoPlay={false}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                    />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#fff', opacity: 0.6 }}>
+                      <PlayCircleOutlined style={{ fontSize: 56 }} />
+                      <div style={{ marginTop: 8, fontSize: 13 }}>暂无合成版可播放</div>
+                    </div>
+                  )}
+                </div>
+                {resultUrl && (
+                  <Text
+                    copyable={{ text: resultUrl }}
+                    style={{ display: 'block', marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center' }}
+                  >
+                    视频地址(24h 内有效):{resultUrl.slice(0, 60)}…
+                  </Text>
+                )}
+              </GlassPanel>
+            </Col>
+
+            <Col xs={24} lg={10}>
+              <GlassPanel variant="card" style={{ padding: 'var(--spacing-xl)', height: '100%' }}>
+                <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <DownloadOutlined style={{ color: 'var(--brand-primary)' }} />
+                  <Text strong style={{ color: 'var(--text-primary)' }}>导出与下载</Text>
+                </div>
+                <Paragraph type="secondary" style={{ fontSize: 13 }}>
+                  ✅ 合成视频已生成,可直接下载或导出为 MP4 / MOV / WebM / GIF。
+                </Paragraph>
+                <Paragraph type="secondary" style={{ fontSize: 13 }}>
+                  📦 单独下载某个分镜:在下方分镜列表中点击「下载」图标,
+                  或在中间预览区下方点击「下载本分镜」按钮。
+                </Paragraph>
+                <Space wrap style={{ marginTop: 'var(--spacing-md)' }}>
+                  <Button
+                    type="primary"
+                    icon={<DownloadOutlined />}
+                    size="large"
+                    onClick={() => setExportOpen(true)}
+                    style={{ borderRadius: 'var(--radius-md)', height: 44 }}
+                  >
+                    导出合成视频
+                  </Button>
+                  {resultUrl && (
+                    <Button
+                      icon={<DownloadOutlined />}
+                      size="large"
+                      onClick={() => {
+                        // 直接下载合成版 mp4
+                        import('../../utils/download').then((m) =>
+                          m.triggerDownload(resultUrl, '合成视频.mp4'),
+                        );
+                      }}
+                      style={{ borderRadius: 'var(--radius-md)', height: 44 }}
+                    >
+                      下载合成版
+                    </Button>
+                  )}
+                </Space>
+              </GlassPanel>
+            </Col>
+          </Row>
+
+          {/* 分镜结果浏览(只读 StoryboardEditor) */}
+          <GlassPanel variant="card" style={{ overflow: 'hidden' }}>
+            <div
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: 'var(--spacing-lg) var(--spacing-xl)',
+                borderBottom: '1px solid var(--border-color)',
               }}
             >
-              重新创作
-            </Button>
-            <Button
-              icon={<EditOutlined />}
-              size="large"
-              style={{ borderRadius: 'var(--radius-md)', height: 44 }}
-              onClick={() => setCurrentStep('storyboard')}
-            >
-              编辑分镜
-            </Button>
-          </Space>
+              <FileTextOutlined style={{ color: 'var(--brand-primary)' }} />
+              <Text strong style={{ color: 'var(--text-primary)' }}>分镜结果浏览</Text>
+              <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, marginLeft: 'auto' }}>
+                点击列表项切换预览,或点击「下载」单独保存某个分镜
+              </Text>
+            </div>
+            <StoryboardEditor readonly />
+          </GlassPanel>
 
           <ExportPanel creationTaskId={taskId ?? 'current'} open={exportOpen} onClose={() => setExportOpen(false)} />
         </div>

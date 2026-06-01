@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useShell } from '../../components/layout/shell-context';
 import {
   Button, Input, Form, Select, Slider, Switch, Space, Typography,
@@ -10,12 +10,13 @@ import {
   FileTextOutlined, ThunderboltOutlined,
   ExperimentOutlined, CustomerServiceOutlined, ShoppingCartOutlined,
   VideoCameraOutlined, SoundOutlined, AimOutlined,
-  ApiOutlined,
+  ApiOutlined, ArrowRightOutlined,
 } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { useAutosave, getDraft, clearDraft } from '../../hooks/useAutosave';
 import { scriptApi, ScriptResult } from '../../services/script';
 import { aiApi } from '../../services/ai';
+import { useScriptHandoffStore } from '../../store/useScriptHandoffStore';
 import { RagReferenceCard } from '../../components/script/RagReferenceCard';
 import { ComplianceCard } from '../../components/script/ComplianceCard';
 
@@ -58,6 +59,8 @@ const shotTypeLabels: Record<string, string> = {
 
 function ScriptPage() {
   const { spaceId } = useParams<{ spaceId?: string }>();
+  const navigate = useNavigate();
+  const setPendingHandoff = useScriptHandoffStore((s) => s.setPending);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScriptResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -261,6 +264,27 @@ function ScriptPage() {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => message.success('已复制到剪贴板'));
+  };
+
+  /**
+   * 把当前剧本写入 handoff store,跳转到视频生成页 — 视频页 mount 时
+   * 会消费 store 中的剧本,自动初始化 storyboard,免去用户重新输入主题
+   * 再次调用 LLM 生成。
+   */
+  const handleGoToVideo = () => {
+    if (!result) return;
+    const values = form.getFieldsValue();
+    const prompt =
+      values.productName ??
+      result.title ??
+      result.shots?.[0]?.description ??
+      '带货短视频';
+    setPendingHandoff(result, String(prompt), spaceId);
+    if (spaceId) {
+      navigate(`/workspace/${spaceId}/video`);
+    } else {
+      navigate('/creation');
+    }
   };
 
   const handleSave = async () => {
@@ -531,6 +555,74 @@ function ScriptPage() {
                 }
                 style={{ borderRadius: 'var(--radius-lg)', marginBottom: 'var(--spacing-lg)', padding: '12px 16px' }}
               />
+
+              {/* CTA: 一键流转到视频生成 */}
+              <GlassPanel
+                variant="card"
+                style={{
+                  marginBottom: 'var(--spacing-lg)',
+                  padding: 'var(--spacing-lg) var(--spacing-xl)',
+                  background:
+                    result.source === 'fallback'
+                      ? 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(168,85,247,0.05))'
+                      : 'linear-gradient(135deg, rgba(99,102,241,0.10), rgba(168,85,247,0.06))',
+                  border: '1px solid rgba(99,102,241,0.25)',
+                }}
+              >
+                <Row align="middle" gutter={[16, 16]}>
+                  <Col xs={24} md={16}>
+                    <Space align="start" size={12}>
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 'var(--radius-md)',
+                          background:
+                            'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#fff',
+                          fontSize: 20,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <ThunderboltOutlined />
+                      </div>
+                      <div>
+                        <Text strong style={{ color: 'var(--text-primary)', fontSize: 15, display: 'block' }}>
+                          剧本已就绪 · 一键合成视频
+                        </Text>
+                        <Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                          {result.source === 'fallback'
+                            ? '当前为兜底剧本,合成质量有限。检查 ARK 配置后建议重新生成'
+                            : `共 ${result.shots.length} 个分镜,可直接带入视频生成页开始 AI 视频合成`}
+                        </Text>
+                      </div>
+                    </Space>
+                  </Col>
+                  <Col xs={24} md={8} style={{ textAlign: 'right' }}>
+                    <Space wrap>
+                      <Button
+                        icon={<SaveOutlined />}
+                        onClick={handleSave}
+                        size="large"
+                      >
+                        保存剧本
+                      </Button>
+                      <Button
+                        type="primary"
+                        icon={<ArrowRightOutlined />}
+                        size="large"
+                        onClick={handleGoToVideo}
+                        style={{ height: 44 }}
+                      >
+                        前往视频生成
+                      </Button>
+                    </Space>
+                  </Col>
+                </Row>
+              </GlassPanel>
 
               {/* RAG 爆款参考(V2 差异化能力可视化) */}
               <RagReferenceCard references={result.ragReferences} source={result.source} />
