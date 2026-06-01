@@ -9,15 +9,16 @@ export interface ArkModelConfig {
   rateLimit?: string;
   /**
    * 当前生效 apiKey 的来源:
-   * - env       : 来自环境变量
-   * - builtin   : 来自代码内置默认值
-   * - builtin-fallback: env 上的 key 命中黑名单/被强制屏蔽,自动回落到 builtin
+   * - db                : 来自 ark_model_overrides 表(用户在 API 配置中心写入)
+   * - env               : 来自环境变量
+   * - builtin           : 来自代码内置默认值
+   * - builtin-fallback  : env 上的 key 命中黑名单/被强制屏蔽,自动回落到 builtin
    */
-  apiKeySource?: 'env' | 'builtin' | 'builtin-fallback';
+  apiKeySource?: 'db' | 'env' | 'builtin' | 'builtin-fallback';
   /**
-   * endpointId 的来源(同上)
+   * endpointId 的来源
    */
-  endpointSource?: 'env' | 'builtin';
+  endpointSource?: 'db' | 'env' | 'builtin';
   /**
    * 如果 env 上的 key 被屏蔽,这里记录被屏蔽的脱敏指纹,用于诊断端点展示
    */
