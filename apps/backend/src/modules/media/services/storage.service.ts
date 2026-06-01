@@ -24,9 +24,28 @@ export class StorageService implements OnModuleInit {
     this.storageRoot = path.resolve(process.cwd(), 'storage');
     this.tmpRoot = path.join(this.storageRoot, 'tmp');
     this.outputsRoot = path.join(this.storageRoot, 'outputs');
-    // 统一通过 /static 路径暴露
-    const apiBase = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
-    this.publicBaseUrl = `${apiBase.replace(/\/$/, '')}/static`;
+    // 统一通过 /static 路径暴露。
+    // 公网前缀推导优先级:
+    //   1) API_BASE_URL            显式配置(最高优先)
+    //   2) RAILWAY_PUBLIC_DOMAIN   Railway 部署时自动注入的公网域名(裸域名,无协议)
+    //   3) http://localhost:PORT   本地兜底
+    // 关键:绝不能在生产环境把 localhost 写进产物 URL,否则前端(异源)拿到的
+    //       合成视频地址不可达,导致「完成后无法查看/下载合成视频」。
+    this.publicBaseUrl = `${StorageService.resolveApiBase().replace(/\/$/, '')}/static`;
+  }
+
+  /**
+   * 推导对外可访问的 API 基础地址(裸 origin,无尾斜杠)。
+   * 优先 API_BASE_URL → Railway 注入的 RAILWAY_PUBLIC_DOMAIN → 本地兜底。
+   */
+  private static resolveApiBase(): string {
+    const explicit = process.env.API_BASE_URL?.trim();
+    if (explicit) return explicit;
+    const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
+    if (railwayDomain) {
+      return /^https?:\/\//i.test(railwayDomain) ? railwayDomain : `https://${railwayDomain}`;
+    }
+    return `http://localhost:${process.env.PORT || 3001}`;
   }
 
   async onModuleInit(): Promise<void> {
@@ -34,6 +53,12 @@ export class StorageService implements OnModuleInit {
     await fs.mkdir(this.outputsRoot, { recursive: true });
     this.logger.log(`存储根目录: ${this.storageRoot}`);
     this.logger.log(`产物公网 URL 前缀: ${this.publicBaseUrl}`);
+    // 生产环境若仍指向 localhost,前端将无法访问合成产物,显式告警提示运维补 env
+    if (process.env.NODE_ENV === 'production' && /localhost|127\.0\.0\.1/.test(this.publicBaseUrl)) {
+      this.logger.warn(
+        '产物公网 URL 前缀指向 localhost!请在部署平台配置 API_BASE_URL=后端公网地址(如 https://xxx.up.railway.app),否则前端无法播放/下载合成视频。',
+      );
+    }
   }
 
   /** 给某个任务分配一个临时工作目录 */
