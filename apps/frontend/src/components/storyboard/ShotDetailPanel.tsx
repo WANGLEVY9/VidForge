@@ -1,19 +1,26 @@
 import React from 'react';
-import { Button, Typography, Input, Slider, Select, Space, Divider, Tooltip } from 'antd';
+import { Button, Typography, Input, Slider, Select, Space, Divider, Tooltip, Tag } from 'antd';
 import {
-  ReloadOutlined, DeleteOutlined,
+  ReloadOutlined, DeleteOutlined, DownloadOutlined, ExportOutlined,
 } from '@ant-design/icons';
 import { useStoryboardStore } from '../../store/useStoryboardStore';
 import { MaterialSelector } from './MaterialSelector';
 import { MaterialItem } from '../../services/material';
+import { triggerDownload, openInNewTab } from '../../utils/download';
 
 const { Text } = Typography;
 
 interface ShotDetailPanelProps {
   onRegenerate?: (id: string) => void;
+  /**
+   * 只读模式:隐藏所有编辑控件(描述/类型/素材/时长/台词、删除/重新生成),
+   * 仅展示分镜信息 + 「下载本分镜」「在新标签打开」两个操作按钮。
+   * 用于视频生成完成后浏览结果。
+   */
+  readonly?: boolean;
 }
 
-export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({ onRegenerate }) => {
+export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({ onRegenerate, readonly = false }) => {
   const shots = useStoryboardStore((s) => s.shots);
   const activeShotId = useStoryboardStore((s) => s.activeShotId);
   const updateShot = useStoryboardStore((s) => s.updateShot);
@@ -31,6 +38,83 @@ export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({ onRegenerate }
     );
   }
 
+  const hasVideo = shot.status === 'completed' && !!shot.videoUrl;
+
+  // 只读视图:仅展示信息 + 下载/打开
+  if (readonly) {
+    return (
+      <div className="shot-detail-panel">
+        <div className="shot-detail-panel__header">
+          <Text strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>
+            分镜 {shot.order} 信息
+          </Text>
+        </div>
+
+        <div className="shot-detail-panel__body">
+          <div className="shot-detail-field">
+            <Text className="shot-detail-field__label">画面描述</Text>
+            <Text style={{ color: 'var(--text-primary)', fontSize: 13, lineHeight: 1.6 }}>
+              {shot.description || '—'}
+            </Text>
+          </div>
+
+          {shot.script && (
+            <div className="shot-detail-field">
+              <Text className="shot-detail-field__label">配音台词</Text>
+              <Text style={{ color: 'var(--text-primary)', fontSize: 13, lineHeight: 1.6 }}>
+                {shot.script}
+              </Text>
+            </div>
+          )}
+
+          <div className="shot-detail-field">
+            <Text className="shot-detail-field__label">基础信息</Text>
+            <Space size={6} wrap>
+              <Tag>{shot.duration}s</Tag>
+              <Tag color="blue">{shot.type === 'image-to-video' ? '图生视频' : '文生视频'}</Tag>
+              <Tag color={hasVideo ? 'success' : shot.status === 'failed' ? 'error' : 'default'}>
+                {hasVideo ? '已生成' : shot.status === 'failed' ? '生成失败' : shot.status}
+              </Tag>
+            </Space>
+          </div>
+
+          <Divider style={{ borderColor: 'var(--border-color)', margin: '12px 0' }} />
+
+          {hasVideo ? (
+            <Space wrap>
+              <Tooltip title="下载本分镜的 mp4 文件">
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  size="small"
+                  onClick={() => triggerDownload(shot.videoUrl!, `shot-${shot.order}.mp4`)}
+                >
+                  下载本分镜
+                </Button>
+              </Tooltip>
+              <Tooltip title="在新标签页查看完整视频">
+                <Button
+                  icon={<ExportOutlined />}
+                  size="small"
+                  onClick={() => openInNewTab(shot.videoUrl!)}
+                >
+                  在新标签打开
+                </Button>
+              </Tooltip>
+            </Space>
+          ) : (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {shot.status === 'failed'
+                ? '该分镜生成失败,无可下载内容'
+                : '该分镜尚未生成完毕'}
+            </Text>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 可编辑视图(原有)
   return (
     <div className="shot-detail-panel">
       <div className="shot-detail-panel__header">
@@ -102,7 +186,7 @@ export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({ onRegenerate }
         <Divider style={{ borderColor: 'var(--border-color)', margin: '12px 0' }} />
 
         {/* 操作按钮 */}
-        <Space>
+        <Space wrap>
           {onRegenerate && (
             <Tooltip title="仅重新生成此分镜">
               <Button
@@ -112,6 +196,17 @@ export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({ onRegenerate }
                 onClick={() => onRegenerate(shot.id)}
               >
                 重新生成
+              </Button>
+            </Tooltip>
+          )}
+          {hasVideo && (
+            <Tooltip title="下载本分镜的 mp4 文件">
+              <Button
+                icon={<DownloadOutlined />}
+                size="small"
+                onClick={() => triggerDownload(shot.videoUrl!, `shot-${shot.order}.mp4`)}
+              >
+                下载
               </Button>
             </Tooltip>
           )}

@@ -14,9 +14,11 @@ const { Text } = Typography;
 
 interface ShotListProps {
   onRegenerateShot?: (id: string) => void;
+  /** 只读模式:列表项隐藏拖拽/删除/重新生成,且禁用「添加」按钮 */
+  readonly?: boolean;
 }
 
-export const ShotList: React.FC<ShotListProps> = ({ onRegenerateShot }) => {
+export const ShotList: React.FC<ShotListProps> = ({ onRegenerateShot, readonly = false }) => {
   const shots = useStoryboardStore((s) => s.shots);
   const activeShotId = useStoryboardStore((s) => s.activeShotId);
   const setActiveShot = useStoryboardStore((s) => s.setActiveShot);
@@ -29,6 +31,7 @@ export const ShotList: React.FC<ShotListProps> = ({ onRegenerateShot }) => {
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (readonly) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIdx = shots.findIndex((s) => s.id === active.id);
@@ -44,14 +47,16 @@ export const ShotList: React.FC<ShotListProps> = ({ onRegenerateShot }) => {
           <Text strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>分镜列表</Text>
           <span className="shot-list__count">{shots.length}</span>
         </Space>
-        <Button
-          type="dashed"
-          size="small"
-          icon={<PlusOutlined />}
-          onClick={() => addShot()}
-        >
-          添加
-        </Button>
+        {!readonly && (
+          <Button
+            type="dashed"
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={() => addShot()}
+          >
+            添加
+          </Button>
+        )}
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -64,6 +69,7 @@ export const ShotList: React.FC<ShotListProps> = ({ onRegenerateShot }) => {
               onSelect={setActiveShot}
               onDelete={removeShot}
               onRegenerate={onRegenerateShot}
+              readonly={readonly}
             />
           ))}
         </SortableContext>

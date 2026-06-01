@@ -108,6 +108,11 @@
   justify-content: center;
 }
 
+/* hover 时显示视频缩略图上的播放叠层 */
+.shot-item__thumb:hover .shot-item__thumb-overlay {
+  opacity: 1 !important;
+}
+
 .shot-item__actions {
   display: none;
   align-items: center;
