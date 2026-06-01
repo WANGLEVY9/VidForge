@@ -113,6 +113,10 @@ function CreationPage() {
   const DRAFT_KEY = 'creation_config';
   const draftRestored = useRef(false);
   const wsCleanup = useRef<null | (() => void)>(null);
+  /** 任务是否已进入终态(成功或失败),用于 WS 与轮询去重,避免重复处理 */
+  const terminalRef = useRef(false);
+  /** REST 轮询兜底定时器(WS 丢事件时的安全网) */
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   usePageTiming('Creation');
 
   // Restore draft
@@ -202,6 +206,76 @@ function CreationPage() {
     setLogs((prev) => [...prev.slice(-49), { ts: Date.now(), level, text }]);
   }, []);
 
+  /** 停止 WS 订阅与轮询(终态后统一清理) */
+  const stopTaskWatchers = useCallback(() => {
+    wsCleanup.current?.();
+    wsCleanup.current = null;
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  /**
+   * 任务成功终态的统一处理(WS complete 与 REST 轮询共用,去重)。
+   * - 用 result.shots 回填各分镜 videoUrl / 状态
+   * - 设置合成视频 URL;若后端 result.url 缺失或指向 localhost(API_BASE_URL 未配),
+   *   回退到首个成功分镜的直链,保证至少有可播放/可下载的内容
+   * - 切到 complete 步骤
+   */
+  const finalizeSuccess = useCallback((result: any) => {
+    if (terminalRef.current) return;
+    terminalRef.current = true;
+
+    setOverallProgress(100);
+    setGenerating(false);
+    pushLog('success', '所有分镜处理完成');
+
+    const resultShots: any[] = result?.shots ?? [];
+    if (resultShots.length > 0) {
+      setStoryboard((prev) =>
+        prev.map((s) => {
+          const r = resultShots.find((x: any) => String(x.id) === String(s.id));
+          if (!r) return s;
+          return {
+            ...s,
+            status: r.status ?? s.status,
+            videoUrl: r.videoUrl ?? s.videoUrl,
+            thumbnailUrl: r.thumbnailUrl ?? s.thumbnailUrl,
+            errorMessage: r.errorMessage ?? s.errorMessage,
+          };
+        }),
+      );
+    }
+
+    const composed: string | undefined = result?.url;
+    const firstShotUrl: string | undefined = resultShots.find(
+      (x: any) => x.status === 'completed' && x.videoUrl,
+    )?.videoUrl;
+    const unreachable = !composed || /localhost|127\.0\.0\.1/i.test(composed);
+    if (unreachable && firstShotUrl) {
+      pushLog('warn', '合成视频地址不可达,已回退到首个分镜直链预览');
+      setResultUrl(firstShotUrl);
+    } else if (composed) {
+      setResultUrl(composed);
+    }
+
+    setCurrentStep('complete');
+    stopTaskWatchers();
+    message.success('视频生成完成！');
+  }, [pushLog, stopTaskWatchers]);
+
+  /** 任务失败终态的统一处理 */
+  const finalizeFailure = useCallback((msg: string) => {
+    if (terminalRef.current) return;
+    terminalRef.current = true;
+    setGenerating(false);
+    setErrorMsg(msg);
+    pushLog('error', msg);
+    stopTaskWatchers();
+    message.error(msg);
+  }, [pushLog, stopTaskWatchers]);
+
   const completedCount = storyboard.filter((s) => s.status === 'completed').length;
   const failedCount = storyboard.filter((s) => s.status === 'failed').length;
   const totalCount = storyboard.length;
@@ -250,6 +324,7 @@ function CreationPage() {
     setErrorMsg(null);
     setResultUrl(null);
     setGenerating(true);
+    terminalRef.current = false;
     pushLog('info', `提交任务，共 ${storyboard.length} 个分镜...`);
 
     try {
@@ -274,7 +349,7 @@ function CreationPage() {
       wsCleanup.current?.();
       wsCleanup.current = creationApi.subscribe(created.id, {
         onProgress: (data) => {
-          setOverallProgress(data.progress);
+          setOverallProgress((prev) => Math.max(prev, data.progress));
           if (data.message) pushLog('info', data.message);
         },
         onShotProgress: (data) => {
@@ -297,48 +372,38 @@ function CreationPage() {
           );
         },
         onComplete: (data) => {
-          setOverallProgress(100);
-          setGenerating(false);
-          pushLog('success', '所有分镜处理完成');
-          // 用 result 回填分镜的 videoUrl / thumbnailUrl
-          const resultShots: any[] = data?.result?.shots ?? [];
-          if (resultShots.length > 0) {
-            setStoryboard((prev) =>
-              prev.map((s) => {
-                const r = resultShots.find((x: any) => x.id === s.id);
-                if (!r) return s;
-                return {
-                  ...s,
-                  status: r.status ?? s.status,
-                  videoUrl: r.videoUrl ?? s.videoUrl,
-                  thumbnailUrl: r.thumbnailUrl ?? s.thumbnailUrl,
-                  errorMessage: r.errorMessage ?? s.errorMessage,
-                };
-              }),
-            );
-          }
-          if (data?.result?.url) {
-            setResultUrl(data.result.url);
-          }
-          setCurrentStep('complete');
-          message.success('视频生成完成！');
+          finalizeSuccess(data?.result);
         },
         onError: (data) => {
-          setGenerating(false);
-          setErrorMsg(data?.message ?? '生成失败');
-          pushLog('error', data?.message ?? '生成失败');
-          message.error(data?.message ?? '生成失败');
+          finalizeFailure(data?.message ?? '生成失败');
         },
         onConnectError: () => {
-          pushLog('warn', 'WebSocket 连接失败，进度将无法实时刷新');
+          pushLog('warn', 'WebSocket 连接失败，将通过轮询获取进度');
         },
       });
+
+      // REST 轮询兜底:视频生成耗时长,WS 可能在生成期间掉线丢失 complete 事件。
+      // 这里每 5s 主动查任务状态,一旦进入终态就用 result 回填(与 WS 去重)。
+      pollRef.current = setInterval(async () => {
+        if (terminalRef.current) return;
+        try {
+          const t = await creationApi.getById(created.id);
+          if (typeof t.progress === 'number') {
+            setOverallProgress((prev) => Math.max(prev, t.progress));
+          }
+          if (t.status === 'completed') {
+            pushLog('info', '已通过轮询确认任务完成');
+            finalizeSuccess(t.result);
+          } else if (t.status === 'failed') {
+            finalizeFailure(t.errorMessage ?? '生成失败');
+          }
+        } catch {
+          // 瞬时网络抖动忽略,下一轮继续
+        }
+      }, 5000);
     } catch (err: any) {
-      setGenerating(false);
       const msg = err?.response?.data?.message || err?.message || '任务创建失败';
-      setErrorMsg(msg);
-      pushLog('error', msg);
-      message.error(msg);
+      finalizeFailure(msg);
     }
   };
 
@@ -394,11 +459,15 @@ function CreationPage() {
     }
   };
 
-  // 离开页面/卸载时清理 WS
+  // 离开页面/卸载时清理 WS 与轮询
   useEffect(() => {
     return () => {
       wsCleanup.current?.();
       wsCleanup.current = null;
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
     };
   }, []);
 
