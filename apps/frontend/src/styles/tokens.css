@@ -22,6 +22,14 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.4);
   --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5);
+  /* Layout chrome (顶栏 / 侧栏 / 底部 tab) - 默认深色 */
+  --header-bg: rgba(15, 15, 19, 0.7);
+  --sidebar-bg: rgba(15, 15, 19, 0.85);
+  --tab-bar-bg: rgba(15, 15, 19, 0.85);
+  /* Layout chrome (顶栏 / 侧栏 / 底部 tab) - 默认深色 */
+  --header-bg: rgba(15, 15, 19, 0.7);
+  --sidebar-bg: rgba(15, 15, 19, 0.85);
+  --tab-bar-bg: rgba(15, 15, 19, 0.85);
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -62,6 +70,9 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.12);
   --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15);
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --sidebar-bg: rgba(255, 255, 255, 0.92);
+  --tab-bar-bg: rgba(255, 255, 255, 0.85);
 }
 
 /* ======== Mobile-specific tokens ======== */

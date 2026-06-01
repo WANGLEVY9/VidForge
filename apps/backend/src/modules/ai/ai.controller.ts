@@ -1,5 +1,18 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Req,
+  HttpException,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Request } from 'express';
 import { ArkConfigService } from './services/ark-config.service';
 import { ArkTextService } from './services/ark-text.service';
 import { ArkVideoService } from './services/ark-video.service';
@@ -166,5 +179,59 @@ export class AiController {
   @ApiOperation({ summary: '查询视频生成任务状态' })
   async queryVideoTask(@Param('taskId') taskId: string) {
     return this.arkVideoService.queryTask(taskId);
+  }
+
+  /**
+   * 由前端 API 配置中心写入 override:任意登录用户都可改(项目当前无 admin 角色)
+   * TODO: 后续接入 role 系统,仅 admin 可改
+   */
+  @Patch('ark/configs/:key')
+  @ApiOperation({ summary: '更新某个模型的 endpoint / apiKey,持久化到 ark_model_overrides' })
+  async updateConfig(
+    @Param('key') key: string,
+    @Body() dto: { endpointId?: string; apiKey?: string },
+    @Req() req: Request,
+  ) {
+    if (!dto || (dto.endpointId === undefined && dto.apiKey === undefined)) {
+      throw new HttpException('请至少提供 endpointId 或 apiKey 之一', HttpStatus.BAD_REQUEST);
+    }
+    const userId = (req as any).user?.sub as string | undefined;
+    try {
+      const updated = await this.arkConfigService.setOverride(key, dto, userId);
+      if (!updated) {
+        throw new HttpException(`未知模型 key: ${key}`, HttpStatus.NOT_FOUND);
+      }
+      return {
+        ...updated,
+        apiKey: updated.apiKey
+          ? `${updated.apiKey.slice(0, 4)}...${updated.apiKey.slice(-4)}`
+          : '',
+        apiKeyFingerprint: fingerprint(updated.apiKey),
+        endpointFingerprint: fingerprint(updated.endpointId),
+      };
+    } catch (err: any) {
+      if (err instanceof HttpException) throw err;
+      throw new HttpException(
+        err?.message ?? '写入 override 失败',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Delete('ark/configs/:key/override')
+  @ApiOperation({ summary: '清除某个模型的 DB override,回落到 env / builtin' })
+  async clearOverride(@Param('key') key: string) {
+    const result = await this.arkConfigService.clearOverride(key);
+    if (!result) {
+      throw new HttpException(`未知模型 key: ${key}`, HttpStatus.NOT_FOUND);
+    }
+    return {
+      ...result,
+      apiKey: result.apiKey
+        ? `${result.apiKey.slice(0, 4)}...${result.apiKey.slice(-4)}`
+        : '',
+      apiKeyFingerprint: fingerprint(result.apiKey),
+      endpointFingerprint: fingerprint(result.endpointId),
+    };
   }
 }
