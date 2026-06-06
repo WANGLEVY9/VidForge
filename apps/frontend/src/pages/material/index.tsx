@@ -94,7 +94,7 @@ function MaterialPage() {
     });
   }, [materials, searchText]);
 
-  /** 上传暂时只走"创建一条记录" — 真实文件上传在 P1 阶段(对象存储)做 */
+  /** 文件上传:通过 multipart/form-data 发送到后端,由 multer 落盘 */
   const uploadProps: UploadProps = {
     multiple: true,
     fileList,
@@ -102,30 +102,14 @@ function MaterialPage() {
     customRequest: async ({ file, onSuccess, onError }) => {
       try {
         const f = file as File;
-        const isImage = f.type.startsWith('image/');
-        const isVideo = f.type.startsWith('video/');
-        const isAudio = f.type.startsWith('audio/');
-        const t = isImage ? 'image' : isVideo ? 'video' : isAudio ? 'audio' : 'image';
-        // 用 base64 data URL 作为 url(P1 改为对象存储后,直接换 putObject 返回的 URL)
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = reject;
-          reader.readAsDataURL(f);
-        });
-        await materialApi.create({
-          name: f.name,
-          type: t as any,
-          url: dataUrl,
-          size: f.size,
-          productSpaceId: activeSpaceId ?? undefined,
-        });
+        await materialApi.upload(f, { productSpaceId: activeSpaceId ?? undefined });
         onSuccess?.('ok');
         message.success(`${f.name} 上传成功`);
         fetchList();
       } catch (err: any) {
         onError?.(err);
-        message.error(`上传失败:${err?.message ?? '未知错误'}`);
+        const detail = err?.response?.data?.message ?? err?.message ?? '未知错误';
+        message.error(`上传失败:${detail}`);
       }
     },
   };

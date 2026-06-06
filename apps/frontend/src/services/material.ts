@@ -53,6 +53,16 @@ export const materialApi = {
     return apiClient.post<any, MaterialItem>('/material', data);
   },
 
+  /** 文件上传( multipart/form-data ) */
+  upload(file: File, extra?: { productSpaceId?: string; category?: string; tags?: string }) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (extra?.productSpaceId) formData.append('productSpaceId', extra.productSpaceId);
+    if (extra?.category) formData.append('category', extra.category);
+    if (extra?.tags) formData.append('tags', extra.tags);
+    return apiClient.post<any, MaterialItem>('/material/upload', formData);
+  },
+
   delete(id: string) {
     return apiClient.delete(`/material/${id}`);
   },
