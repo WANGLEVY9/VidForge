@@ -16,6 +16,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { Material } from './entities/material.entity';
+import { QueueRunnerService } from '../queue/queue-runner.service';
+import { QUEUE_NAMES, JOB_NAMES } from '../queue/queue.constants';
 
 const UPLOAD_DIR = join(process.cwd(), 'storage', 'uploads');
 
@@ -24,7 +26,10 @@ const UPLOAD_DIR = join(process.cwd(), 'storage', 'uploads');
 @UseGuards(JwtAuthGuard)
 @Controller('material')
 export class MaterialController {
-  constructor(private readonly materialService: MaterialService) {}
+  constructor(
+    private readonly materialService: MaterialService,
+    private readonly queueRunner: QueueRunnerService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: '创建素材(JSON)' })
@@ -95,7 +100,21 @@ export class MaterialController {
       productSpaceId: productSpaceId || undefined,
     };
 
-    return this.materialService.create(user.sub, dto);
+    const material = await this.materialService.create(user.sub, dto);
+    await this.enqueueAutoAnalyze(user.sub, material);
+    return material;
+  }
+
+  /** 上传完成后自动入队 AI 分析(异步,不阻塞返回) */
+  private async enqueueAutoAnalyze(userId: string, material: Material): Promise<void> {
+    if (material.type === 'audio') return; // 音频暂不支持视觉分析
+    await this.queueRunner.enqueue(
+      QUEUE_NAMES.MATERIAL_ANALYZE,
+      JOB_NAMES.ANALYZE_MATERIAL,
+      { userId, materialId: material.id, category: material.category },
+      // Redis 不可用时降级为进程内直接分析
+      async () => { await this.materialService.analyzeTags(userId, material.id, { category: material.category }); },
+    );
   }
 
   @Get()

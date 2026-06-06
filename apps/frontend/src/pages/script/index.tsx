@@ -3,18 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useShell } from '../../components/layout/shell-context';
 import {
   Button, Input, Form, Select, Slider, Switch, Space, Typography,
-  Tag, Divider, message, Row, Col, Steps, Tooltip, Spin, Alert, Modal,
+  Tag, Divider, message, Row, Col, Steps, Tooltip, Spin, Alert, Modal, Drawer,
+  Card,
 } from 'antd';
 import {
   RocketOutlined, BulbOutlined, CopyOutlined, SaveOutlined,
   FileTextOutlined, ThunderboltOutlined,
   ExperimentOutlined, CustomerServiceOutlined, ShoppingCartOutlined,
   VideoCameraOutlined, SoundOutlined, AimOutlined,
-  ApiOutlined, ArrowRightOutlined,
+  ApiOutlined, ArrowRightOutlined, FireOutlined,
 } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { useAutosave, getDraft, clearDraft } from '../../hooks/useAutosave';
-import { scriptApi, ScriptResult } from '../../services/script';
+import { scriptApi, ScriptResult, InspireSeed } from '../../services/script';
 import { aiApi } from '../../services/ai';
 import { useScriptHandoffStore } from '../../store/useScriptHandoffStore';
 import { RagReferenceCard } from '../../components/script/RagReferenceCard';
@@ -65,6 +66,9 @@ function ScriptPage() {
   const [result, setResult] = useState<ScriptResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [diagnosing, setDiagnosing] = useState(false);
+  const [inspireOpen, setInspireOpen] = useState(false);
+  const [inspireData, setInspireData] = useState<InspireSeed[]>([]);
+  const [inspireLoading, setInspireLoading] = useState(false);
   const [scriptStyle, setScriptStyle] = useState<ScriptStyle>('professional');
   const [duration, setDuration] = useState<number>(15);
   const [form] = Form.useForm();
@@ -160,6 +164,21 @@ function ScriptPage() {
       message.error(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenInspire = async () => {
+    setInspireOpen(true);
+    setInspireLoading(true);
+    try {
+      const values = form.getFieldsValue();
+      const data = await scriptApi.inspire(values.category, scriptStyle);
+      setInspireData(data ?? []);
+    } catch (err: any) {
+      message.error(`加载爆款参考失败:${err?.message ?? ''}`);
+      setInspireData([]);
+    } finally {
+      setInspireLoading(false);
     }
   };
 
@@ -333,6 +352,15 @@ function ScriptPage() {
                   <ThunderboltOutlined style={{ color: 'var(--brand-primary)', fontSize: 18 }} />
                   <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>剧本配置</Text>
                 </div>
+                <Tooltip title="查看同品类爆款参考视频脚本">
+                  <Button
+                    size="small"
+                    icon={<FireOutlined />}
+                    onClick={handleOpenInspire}
+                  >
+                    爆款参考
+                  </Button>
+                </Tooltip>
                 <Tooltip title="一键自检后端 ARK 文本模型是否可用">
                   <Button
                     size="small"
@@ -786,6 +814,120 @@ function ScriptPage() {
           )}
         </Col>
       </Row>
+
+      {/* ─── 爆款参考抽屉 ─── */}
+      <Drawer
+        title={
+          <Space>
+            <FireOutlined style={{ color: '#f59e0b' }} />
+            <span>爆款参考脚本</span>
+            <Tag style={{ borderRadius: 12, fontSize: 11 }}>
+              {inspireData.length} 条
+            </Tag>
+          </Space>
+        }
+        placement="right"
+        width={420}
+        open={inspireOpen}
+        onClose={() => setInspireOpen(false)}
+        extra={
+          <Button size="small" onClick={handleOpenInspire} loading={inspireLoading}>
+            刷新
+          </Button>
+        }
+      >
+        {inspireLoading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <Spin />
+            <div style={{ marginTop: 12, color: 'var(--text-tertiary)', fontSize: 13 }}>
+              加载爆款参考...
+            </div>
+          </div>
+        ) : inspireData.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <div style={{ fontSize: 40, color: 'var(--text-tertiary)', marginBottom: 12, opacity: 0.5 }}>
+              <FireOutlined />
+            </div>
+            <Text style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>
+              暂无匹配的爆款参考
+            </Text>
+            <Text style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
+              请先在左侧配置商品品类后重新加载
+            </Text>
+          </div>
+        ) : (
+          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            {inspireData.map((seed) => (
+              <Card
+                key={seed.id}
+                size="small"
+                style={{
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-surface)',
+                }}
+                bodyStyle={{ padding: 16 }}
+              >
+                {/* 头部:品类+风格+效果 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <Space size={6}>
+                    <Tag color="blue" style={{ borderRadius: 10, fontSize: 10, margin: 0 }}>{seed.category}</Tag>
+                    <Tag color="cyan" style={{ borderRadius: 10, fontSize: 10, margin: 0 }}>{seed.style}</Tag>
+                  </Space>
+                  <Tag color="gold" style={{ borderRadius: 10, fontSize: 10 }}>
+                    {seed.performance}
+                  </Tag>
+                </div>
+
+                {/* 分镜概要 */}
+                <div style={{ marginBottom: 10 }}>
+                  {seed.shots?.hook && (
+                    <div style={{ marginBottom: 4, padding: '4px 8px', background: 'var(--bg-surface-2)', borderRadius: 6, borderLeft: '3px solid #ef4444' }}>
+                      <Text style={{ fontSize: 11, color: '#ef4444', fontWeight: 600 }}>HOOK </Text>
+                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>{seed.shots.hook}</Text>
+                    </div>
+                  )}
+                  {seed.shots?.demo && (
+                    <div style={{ marginBottom: 4, padding: '4px 8px', background: 'var(--bg-surface-2)', borderRadius: 6, borderLeft: '3px solid #10b981' }}>
+                      <Text style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>DEMO </Text>
+                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>{seed.shots.demo}</Text>
+                    </div>
+                  )}
+                  {seed.shots?.cta && (
+                    <div style={{ padding: '4px 8px', background: 'var(--bg-surface-2)', borderRadius: 6, borderLeft: '3px solid #ec4899' }}>
+                      <Text style={{ fontSize: 11, color: '#ec4899', fontWeight: 600 }}>CTA </Text>
+                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>{seed.shots.cta}</Text>
+                    </div>
+                  )}
+                </div>
+
+                {/* 关键信息 */}
+                {seed.keyMessages && seed.keyMessages.length > 0 && (
+                  <div style={{ marginBottom: 6 }}>
+                    <Text style={{ fontSize: 11, color: 'var(--text-tertiary)', display: 'block', marginBottom: 2 }}>核心信息</Text>
+                    <Space size={4} wrap>
+                      {seed.keyMessages.map((msg, i) => (
+                        <Tag key={i} style={{ borderRadius: 10, fontSize: 10, margin: 0 }} color="default">
+                          {msg}
+                        </Tag>
+                      ))}
+                    </Space>
+                  </div>
+                )}
+
+                {/* BGM */}
+                {seed.bgmStyle && (
+                  <div>
+                    <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      BGM: {seed.bgmStyle}
+                    </Text>
+                  </div>
+                )}
+              </Card>
+            ))}
+          </Space>
+        )}
+      </Drawer>
     </div>
   );
 }

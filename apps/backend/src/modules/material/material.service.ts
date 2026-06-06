@@ -35,7 +35,7 @@ export class MaterialService {
   }
 
   async findAll(userId: string, query: QueryMaterialDto) {
-    const { search, type, tag, spaceId, page = 1, pageSize = 20 } = query;
+    const { search, type, tag, spaceId, page = 1, pageSize = 20, orderBy = 'createdAt', orderDirection = 'DESC' } = query;
     const where: any = { userId };
 
     if (spaceId) where.productSpaceId = spaceId;
@@ -45,7 +45,7 @@ export class MaterialService {
 
     const [list, total] = await this.materialRepository.findAndCount({
       where,
-      order: { createdAt: 'DESC' },
+      order: { [orderBy]: orderDirection },
       skip: (page - 1) * pageSize,
       take: pageSize,
     });

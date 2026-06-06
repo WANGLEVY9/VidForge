@@ -1,23 +1,34 @@
 /* VidForge Animations */
 
-/* Page transition — 自启动入场动画
- * 之前的 .page-enter 只定义了 opacity:0 起点而无 active 触发，
- * 配合 react-transition-group 才有效；项目并未引入该库，
- * 因此改为 @keyframes 自动播放，避免页面永远停留在透明状态。
- */
+/* Page enter — 页面入场动画 */
 @keyframes pageEnter {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 .page-enter {
-  animation: pageEnter 0.35s ease both;
+  animation: pageEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.page-enter-active {
-  opacity: 1;
-  transform: translateY(0);
+/* Staggered children — 子元素逐一入场 */
+@keyframes staggerFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
+
+.stagger-children > * {
+  opacity: 0;
+  animation: staggerFadeIn 0.3s ease both;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
 
 /* Fade in */
 @keyframes fadeIn {
@@ -39,17 +50,27 @@
   animation: slideUp 0.3s var(--ease-out);
 }
 
-/* Scale in */
+/* Slide down — 用于下拉面板 */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-down {
+  animation: slideDown 0.25s var(--ease-out);
+}
+
+/* Scale in — 用于弹窗内容 */
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
 }
 
 .scale-in {
-  animation: scaleIn 0.3s var(--ease-out);
+  animation: scaleIn 0.25s var(--ease-out);
 }
 
-/* Pulse */
+/* Pulse — 用于加载/等待指示 */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -90,6 +111,17 @@
 
 .spin {
   animation: spin 1s linear infinite;
+}
+
+/* Progress pulse — 用于进度条动画 */
+@keyframes progressPulse {
+  0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
+.progress-pulse {
+  animation: progressPulse 2s ease-in-out infinite;
 }
 
 /* ======== Mobile Animations ======== */
