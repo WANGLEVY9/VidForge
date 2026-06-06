@@ -43,6 +43,8 @@ const KNOWN_DEAD_KEYS: ReadonlySet<string> = new Set([
   // 2026-05-31: Railway env 上残留的旧 key,curl 直测返回
   // {"error":{"code":"AuthenticationError","message":"The API key doesn't exist..."}}
   'REDACTED_ARK_API_KEY',
+  // 2026-06-06: 赛事主办方更换 apikey,旧 key 已失效
+  'REDACTED_ARK_API_KEY',
 ]);
 
 /**
