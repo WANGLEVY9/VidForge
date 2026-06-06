@@ -119,3 +119,103 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Ant Design Segmented 主题适配 */
+.ant-segmented {
+  background: var(--bg-surface-2) !important;
+  border: 1px solid var(--border-color) !important;
+  padding: 2px !important;
+}
+.ant-segmented-item {
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-secondary) !important;
+}
+.ant-segmented-item-selected {
+  background: var(--brand-primary) !important;
+  color: #fff !important;
+  font-weight: 500 !important;
+}
+
+/* Ant Design Tag 主题适配 */
+.ant-tag {
+  border-radius: 12px !important;
+  border: none !important;
+  font-size: 12px !important;
+  padding: 0 10px !important;
+  line-height: 24px !important;
+}
+
+/* Ant Design Drawer 主题适配 */
+.ant-drawer-content {
+  background: var(--bg-surface) !important;
+}
+.ant-drawer-header {
+  background: var(--bg-surface) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+.ant-drawer-title {
+  color: var(--text-primary) !important;
+}
+
+/* Ant Design Modal 主题适配 */
+.ant-modal-content {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-elevated) !important;
+}
+.ant-modal-header {
+  background: var(--bg-surface) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+}
+.ant-modal-title {
+  color: var(--text-primary) !important;
+}
+.ant-modal-close {
+  color: var(--text-secondary) !important;
+}
+
+/* Ant Design Dropdown 主题适配 */
+.ant-dropdown-menu {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-md) !important;
+  backdrop-filter: blur(20px) !important;
+}
+.ant-dropdown-menu-item {
+  color: var(--text-primary) !important;
+  border-radius: var(--radius-sm) !important;
+}
+.ant-dropdown-menu-item:hover {
+  background: var(--bg-surface-2) !important;
+}
+.ant-dropdown-menu-item-selected {
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: var(--brand-primary) !important;
+}
+
+/* Ant Design Steps 主题适配 */
+.ant-steps-item-title {
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+}
+.ant-steps-item-active .ant-steps-item-title {
+  color: var(--brand-primary) !important;
+}
+
+/* 上传拖拽区悬停美化 */
+.ant-upload-drag {
+  transition: all 0.3s ease !important;
+}
+
+/* Ant Design Alert 主题适配 */
+.ant-alert {
+  border-radius: var(--radius-md) !important;
+  border: none !important;
+}
+
+/* Ant Design Skeleton 主题适配 */
+.ant-skeleton-element .ant-skeleton-image {
+  background: var(--bg-surface-2) !important;
+}
