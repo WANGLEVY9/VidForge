@@ -17,6 +17,7 @@ import { MediaModule } from './modules/media/media.module';
 import { TraceModule } from './modules/trace/trace.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { TemplateModule } from './modules/template/template.module';
 import { HealthController } from './modules/common/health.controller';
 
 @Module({
@@ -92,6 +93,7 @@ import { HealthController } from './modules/common/health.controller';
     AgentModule,
     AnalyticsModule,
     ExportModule,
+    TemplateModule,
   ],
   controllers: [HealthController],
   providers: [

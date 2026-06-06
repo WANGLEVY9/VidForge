@@ -16,7 +16,8 @@
     "prettier": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "prettier:fix": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "stylelint": "stylelint \"**/*.{css,less,scss}\"",
-    "stylelint:fix": "stylelint \"**/*.{css,less,scss}\" --fix"
+    "stylelint:fix": "stylelint \"**/*.{css,less,scss}\" --fix",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
