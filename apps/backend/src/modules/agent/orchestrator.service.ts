@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { StateGraph, END } from '@langchain/langgraph';
+import { RunnableConfig } from '@langchain/core/runnables';
 import { AgentState } from './interfaces/agent-state.interface';
 import { AgentResult } from './interfaces/agent-result.interface';
 import { RunAgentDto } from './dto/run-agent.dto';
@@ -89,6 +90,9 @@ export class OrchestratorService {
 
     const app = workflow.compile();
 
+    const controller = new AbortController();
+    this.activeRuns.set(taskId, { abort: () => controller.abort() });
+
     try {
       const finalState = await app.invoke({
         taskId,
@@ -106,7 +110,7 @@ export class OrchestratorService {
         trace: [],
         errors: [],
         retryCount: 0,
-      } as any);
+      } as any, { signal: controller.signal } as RunnableConfig);
 
       // ── 自学习闭环 ───────────────────────────────────────
       // 当本轮综合分 ≥85 + 通过合规,把核心信息沉淀到商品空间知识库,
@@ -123,10 +127,11 @@ export class OrchestratorService {
         completedAt: new Date(),
       };
     } catch (error: any) {
-      this.logger.error(`[${taskId}] Workflow failed: ${error.message}`);
+      const isAbort = error.name === 'AbortError' || error.message?.includes('abort');
+      this.logger.error(`[${taskId}] Workflow ${isAbort ? 'cancelled' : 'failed'}: ${error.message}`);
       return {
         taskId,
-        status: 'failed',
+        status: isAbort ? 'cancelled' : 'failed',
         progress: 0,
         currentNode: '',
         result: {} as AgentState,
@@ -134,6 +139,8 @@ export class OrchestratorService {
         completedAt: new Date(),
         error: error.message,
       };
+    } finally {
+      this.activeRuns.delete(taskId);
     }
   }
 

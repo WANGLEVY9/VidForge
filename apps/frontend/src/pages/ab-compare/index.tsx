@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Button, Typography, Space, Tag, Select, Empty, Spin, message } from 'antd';
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { Button, Typography, Space, Tag, Select, Empty, Spin, message, Modal, Input } from 'antd';
+import { PlusOutlined, ReloadOutlined, DownloadOutlined, FileTextOutlined } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { ComparePlayer } from './components/ComparePlayer';
 import { CompareMetrics } from './components/CompareMetrics';
 import { useShell } from '../../components/layout/shell-context';
 import { creationApi, CreationTask } from '../../services/creation';
+import { templateApi } from '../../services/template';
+import { triggerDownload } from '../../utils/download';
 import { useSpaceStore } from '../../store/useSpaceStore';
 import './ab-compare.css';
 
@@ -175,6 +177,69 @@ function AbComparePage() {
   const versionB = toVersionConfig(taskB, '版本 B');
   const metrics = buildMetrics(taskA, taskB);
 
+  // ── 模板保存状态 ─────────────────────────────────────
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  const handleAdopt = useCallback((versionLabel: string, videoUrl?: string) => {
+    if (!videoUrl) { message.warning('该版本无可用视频'); return; }
+    triggerDownload(videoUrl, `vidforge-${versionLabel}.mp4`);
+  }, []);
+
+  const handleSaveTemplate = useCallback(async () => {
+    if (!templateName.trim()) { message.warning('请输入模板名称'); return; }
+    const sourceTask = taskA || taskB;
+    if (!sourceTask) { message.warning('请先选择任务'); return; }
+    setSavingTemplate(true);
+    try {
+      const scriptData = (sourceTask.result as any)?.script ?? {};
+      const shots = Array.isArray(sourceTask.storyboard) ? sourceTask.storyboard : [];
+      await templateApi.create({
+        name: templateName.trim(),
+        category: scriptData.category || sourceTask.title || '未分类',
+        style: scriptData.style || 'professional',
+        shots,
+        voiceover: scriptData.voiceover,
+        bgmSuggestion: scriptData.bgmSuggestion,
+        duration: scriptData.duration,
+        sourceScriptId: sourceTask.id,
+      });
+      message.success('模板已保存');
+      setTemplateModalOpen(false);
+      setTemplateName('');
+    } catch {
+      message.error('保存模板失败');
+    } finally {
+      setSavingTemplate(false);
+    }
+  }, [templateName, taskA, taskB]);
+
+  const handleExportReport = useCallback(() => {
+    const lines: string[] = [
+      '=== VidForge A/B 对比报告 ===',
+      `生成时间: ${new Date().toLocaleString()}`,
+      '',
+      `版本 A: ${versionA.label}`,
+      `  时长: ${versionA.duration}s | 分镜: ${versionA.shots} | TTS: ${versionA.tts} | BGM: ${versionA.bgm} | 画质: ${versionA.resolution}`,
+      '',
+      `版本 B: ${versionB.label}`,
+      `  时长: ${versionB.duration}s | 分镜: ${versionB.shots} | TTS: ${versionB.tts} | BGM: ${versionB.bgm} | 画质: ${versionB.resolution}`,
+      '',
+      '--- 指标对比 ---',
+      ...metrics.map((m) => `${m.metric}: A=${m.versionA} | B=${m.versionB} | 差异=${m.diff} | 优胜=${m.winner}`),
+      '',
+      '--- 优胜总结 ---',
+      `A 赢 ${metrics.filter((m) => m.winner === 'A').length} 项`,
+      `B 赢 ${metrics.filter((m) => m.winner === 'B').length} 项`,
+      `平局 ${metrics.filter((m) => m.winner === 'TIE').length} 项`,
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    triggerDownload(url, 'ab-compare-report.txt');
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }, [versionA, versionB, metrics]);
+
   const taskOptions = tasks.map((t) => ({
     value: t.id,
     label: `${t.title} · ${new Date(t.createdAt).toLocaleString()}`,
@@ -237,11 +302,32 @@ function AbComparePage() {
             <CompareMetrics metrics={metrics} />
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 'var(--spacing-lg)', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-              <Button type="primary" block={isMobile}>采用版本 A</Button>
-              <Button block={isMobile}>采用版本 B</Button>
-              <Button block={isMobile}>另存为模板</Button>
-              <Button block={isMobile}>导出报告</Button>
+              <Button type="primary" block={isMobile} icon={<DownloadOutlined />} onClick={() => handleAdopt('A', versionA.videoUrl)}>采用版本 A</Button>
+              <Button block={isMobile} icon={<DownloadOutlined />} onClick={() => handleAdopt('B', versionB.videoUrl)}>采用版本 B</Button>
+              <Button block={isMobile} icon={<FileTextOutlined />} onClick={() => setTemplateModalOpen(true)}>另存为模板</Button>
+              <Button block={isMobile} onClick={handleExportReport}>导出报告</Button>
             </div>
+
+            {/* 另存为模板弹窗 */}
+            <Modal
+              title="保存为模板"
+              open={templateModalOpen}
+              onCancel={() => { setTemplateModalOpen(false); setTemplateName(''); }}
+              onOk={handleSaveTemplate}
+              confirmLoading={savingTemplate}
+              okText="保存"
+              cancelText="取消"
+            >
+              <div style={{ marginTop: 16 }}>
+                <Input
+                  placeholder="输入模板名称"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  onPressEnter={handleSaveTemplate}
+                  autoFocus
+                />
+              </div>
+            </Modal>
           </>
         ) : (
           <GlassPanel variant="card" style={{ padding: 60, textAlign: 'center' }}>

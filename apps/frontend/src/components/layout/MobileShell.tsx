@@ -3,6 +3,7 @@ import { useShell } from './shell-context';
 import { TopBar } from './TopBar';
 import { BottomTabBar } from './BottomTabBar';
 import { FabButton } from './FabButton';
+import { GlobalShortcuts } from './GlobalShortcuts';
 
 interface MobileShellProps {
   sidebar: ReactNode;
@@ -32,6 +33,7 @@ export function MobileShell({ sidebar, children }: MobileShellProps) {
   if (isMobile) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+        <GlobalShortcuts />
         <TopBar />
         <div className="page-container" style={{ flex: 1 }}>
           <div className="page-content" style={{ padding: '12px', paddingBottom: 'calc(var(--tab-bar-height-total) + 12px)' }}>
@@ -47,6 +49,7 @@ export function MobileShell({ sidebar, children }: MobileShellProps) {
   // Desktop / tablet
   return (
     <div className="page-container" style={{ display: 'flex', minHeight: '100vh' }}>
+      <GlobalShortcuts />
       <div className="desktop-sidebar">{sidebar}</div>
       <div className="page-content" style={{ flex: 1 }}>
         {children}
