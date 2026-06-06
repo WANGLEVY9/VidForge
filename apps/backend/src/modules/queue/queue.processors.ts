@@ -1,7 +1,9 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { Job } from 'bullmq';
 import { QUEUE_NAMES } from './queue.constants';
+import { MaterialService } from '../material/material.service';
 
 /**
  * 通用日志 Processor 基类(暂不绑定具体业务逻辑)
@@ -67,9 +69,29 @@ export class ExportEncodeProcessor extends WorkerHost {
 @Processor(QUEUE_NAMES.MATERIAL_ANALYZE)
 export class MaterialAnalyzeProcessor extends WorkerHost {
   private readonly logger = new Logger(MaterialAnalyzeProcessor.name);
+  private materialService: MaterialService | null = null;
 
-  async process(job: Job): Promise<any> {
-    this.logger.log(`[material:analyze] processing ${job.name} id=${job.id}`);
-    return { ok: true, jobId: job.id };
+  constructor(private readonly moduleRef: ModuleRef) {
+    super();
+  }
+
+  async process(job: Job<{ userId: string; materialId: string; category?: string }>): Promise<any> {
+    this.logger.log(`[material:analyze] processing job=${job.id} material=${job.data.materialId}`);
+
+    // 延迟获取 MaterialService:QueueModule 初始化早于 MaterialModule
+    if (!this.materialService) {
+      this.materialService = this.moduleRef.get(MaterialService, { strict: false });
+    }
+
+    const { userId, materialId, category } = job.data;
+    try {
+      const result = await this.materialService.analyzeTags(userId, materialId, { category });
+      const caption = (result.metadata as any)?.caption ?? 'ok';
+      this.logger.log(`[material:analyze] completed ${materialId}: ${caption}`);
+      return { ok: true, materialId, caption };
+    } catch (err: any) {
+      this.logger.error(`[material:analyze] failed ${materialId}: ${err.message}`);
+      throw err; // BullMQ 自动重试
+    }
   }
 }

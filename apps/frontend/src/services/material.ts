@@ -32,6 +32,8 @@ export const materialApi = {
     spaceId?: string;
     page?: number;
     pageSize?: number;
+    orderBy?: string;
+    orderDirection?: string;
   }) {
     return apiClient.get<any, PaginatedResult<MaterialItem>>('/material', { params });
   },
