@@ -36,7 +36,7 @@ export interface ShotOutput {
 
 export interface AgentState {
   taskId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
   currentNode: string;
   progress: number;
 
