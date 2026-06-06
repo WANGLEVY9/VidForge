@@ -43,6 +43,8 @@ const KNOWN_DEAD_KEYS: ReadonlySet<string> = new Set([
   // 2026-05-31: Railway env 上残留的旧 key,curl 直测返回
   // {"error":{"code":"AuthenticationError","message":"The API key doesn't exist..."}}
   'ark-f26df94a-6b3a-4535-bd66-465266a7e1af-dd663',
+  // 2026-06-06: 赛事主办方更换 apikey,旧 key 已失效
+  'ark-0a0ae159-729d-4b5d-9c2d-a5bf04824ff5-d42e3',
 ]);
 
 /**
@@ -118,13 +120,13 @@ function pickEndpoint(
 const BUILTIN_DEFAULTS = {
   textPrimary: {
     endpointId: 'ep-20260514115629-vhldw',
-    apiKey: 'ark-0a0ae159-729d-4b5d-9c2d-a5bf04824ff5-d42e3',
+    apiKey: 'ark-1249de72-68c5-4737-8777-789f626d0a3b-c7bc9',
     name: 'Doubao-Seed-2.0-pro',
     rateLimit: '100RPM 50WTPM',
   },
   videoPrimary: {
     endpointId: 'ep-20260514120705-pqv86',
-    apiKey: 'ark-0a0ae159-729d-4b5d-9c2d-a5bf04824ff5-d42e3',
+    apiKey: 'ark-1249de72-68c5-4737-8777-789f626d0a3b-c7bc9',
     name: 'Doubao-Seedance-1.5-pro',
     rateLimit: '5并发',
   },
