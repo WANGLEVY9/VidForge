@@ -2,7 +2,7 @@
 
 ## 参赛课题交付文档
 
-> **文档版本**: v2.0 | **提交日期**: 2026-06-06
+> **文档版本**: v2.2 | **提交日期**: 2026-06-06
 
 ---
 
@@ -31,19 +31,26 @@ VidForge — 电商场景 AIGC 带货视频生成系统
 
 | 优先级 | 功能 | 状态 | 说明 |
 |--------|------|------|------|
-| **P0** | 商品素材上传 | ✅ 已实现 | 支持图片/视频/音频三种类型上传，拖拽交互 |
-| **P0** | 剧本生成 | ✅ 已实现 | RAG 增强 + ARK Doubao 模型 + 商品知识注入 |
+| **P0** | 商品素材上传 | ✅ 已实现 | 支持图片/视频/音频三种类型上传，multer 磁盘存储 + MIME 过滤 + 200MB 限制 |
+| **P0** | 素材 AI 分析(图片) | ✅ 已实现 | ARK 多模态视觉理解 → 三层结构化标签(商品/画面/剪辑) |
+| **P0** | 素材 AI 分析(视频) | ✅ 已实现 | FFmpeg 抽关键帧 → 逐帧 ARK 视觉理解 → 聚合三层标签 |
+| **P0** | 上传自动分析 | ✅ 已实现 | 上传完成后自动入队分析，支持 BullMQ 队列/进程内双轨 |
+| **P0** | 剧本生成 | ✅ 已实现 | RAG 增强 + ARK Doubao 模型 + 商品知识注入 + 合规审核 |
 | **P0** | 基础分镜 | ✅ 已实现 | 分镜列表 + 拖拽排序 + 标题/口播/时长/镜头运动 |
 | **P0** | 一键成片 | ✅ 已实现 | Agent 全自动管线 + 快速生成双模式 |
 | **P0** | 任务进度 | ✅ 已实现 | WebSocket 实时推送 + REST 轮询双保障 |
 | **P0** | 预览导出 | ✅ 已实现 | 在线预览 + MP4/MOV/WebM/GIF + 多种分辨率画幅 |
-| **P1** | 素材标签/Embedding 检索 | ✅ 已实现 | 三层标签体系 + 关键词/标签/向量多维度检索 |
-| **P1** | 智能剪辑 Agent | ✅ 已实现 | LangGraph 编排：素材分析→剧本→合成→质量评分 |
+| **P1** | 素材标签/Embedding 检索 | ✅ 已实现 | 三层标签体系 + 关键词/标签/向量多维度检索 + 排序 |
+| **P1** | 智能剪辑 Agent | ✅ 已实现 | LangGraph 编排：素材分析→剧本→合成→质量评分+自反思 |
 | **P1** | 分镜级编辑 | ✅ 已实现 | 增删改查、拖拽排序、局部重生成、素材替换 |
 | **P1** | TTS/字幕/BGM | ✅ 已实现 | 语音合成 + SRT 字幕烧录 + 风格化 BGM 编配 |
 | **P1** | 失败重试 | ✅ 已实现 | 单分镜失败不中断 + 指数退避重试 + 兜底降级 |
 | **P1** | 生成过程 trace | ✅ 已实现 | Agent 全链路 span 追踪 + 时序/状态/耗时记录 |
 | **P1** | Mock 数据看板 | ✅ 已实现 | 6 张指标卡 + 5 类 ECharts 图表 + 队列监控 |
+| **P1** | 前端标签搜索 | ✅ 已实现 | 品类/情绪/风格三级标签过滤芯片 + AI 分析状态标识 |
+| **P1** | 爆款参考库 | ✅ 已实现 | 同品类/同风格种子脚本抽屉展示，分镜预览 + 核心信息 |
+| **P1** | 排序选择器 | ✅ 已实现 | 6 种排序维度(时间/名称/大小)，接入 API 真实排序 |
+| **P1** | 素材队列处理器 | ✅ 已实现 | MaterialAnalyzeProcessor 真实调用 analyzeTags |
 | **P2** | 多因子归因 | ✅ 已实现 | 风格×状态交叉分析 + 热力图可视化 |
 | **P2** | Agent 编排 | ✅ 已实现 | LangGraph StateGraph + 闭环质量反馈 + 自学习 |
 | **P2** | A/B 对比 | ✅ 已实现 | 双版本并排播放 + 指标对比表 |
@@ -54,9 +61,9 @@ VidForge — 电商场景 AIGC 带货视频生成系统
 
 ### 2.2 端到端使用流程
 
-1. **商家登录系统**，进入工作空间，在素材页面上传商品主图、视频素材和参考素材，AI 自动分析并生成三层结构化标签（商品维度/视频维度/切片维度）
-2. **切换至剧本页面**，填写商品名称、品类、卖点、目标人群，选择视频风格和时长，点击生成 → 系统自动检索爆款参考视频并注入商品知识，调用 ARK Doubao 模型生成含 3 个分镜（hook/demo/cta）的完整剧本
-3. **系统生成剧本后**，展示分镜脚本列表，包含画面描述、镜头运动、口播台词、字幕、BGM 建议和合规检查结果；用户可复制剧本到剪贴板或直接传递给创作模块
+1. **商家登录系统**，进入工作空间，在素材页面上传商品主图、视频素材和参考素材，AI 自动分析并生成三层结构化标签（商品维度/视频维度/切片维度）；用户可通过品类/情绪/风格标签快速过滤，或按名称/大小/时间排序
+2. **切换至剧本页面**，填写商品名称、品类、卖点、目标人群，选择视频风格和时长；可先点击"爆款参考"查看同品类/同风格的种子脚本 → 点击生成 → 系统自动检索爆款参考视频并注入商品知识，调用 ARK Doubao 模型生成含 3 个分镜（hook/demo/cta）的完整剧本
+3. **系统生成剧本后**，展示分镜脚本列表，包含画面描述、镜头运动、口播台词、字幕、BGM 建议和合规检查结果；用户可复制剧本到剪贴板、保存或直接传递给创作模块
 4. **进入视频创作页面**，系统自动基于剧本生成完整分镜板，每个分镜包含独立参数；用户可拖拽排序、编辑口播、调整时长、替换素材、删除或新增分镜
 5. **点击"AI 一键成片"**，Agent 管线自动执行：素材检索评分 → 剧本生成（带自反思）→ 视频分镜生成（ARK Seedance）→ FFmpeg 合成（合片+TTS+BGM+字幕）→ 质量多维评分
 6. **视频生成过程中**，WebSocket 实时推送总体进度和每个分镜的独立进度；异常时自动重试并给出清晰错误提示
@@ -87,7 +94,7 @@ VidForge — 电商场景 AIGC 带货视频生成系统
 |------|------|
 | GitHub (主仓库) | https://github.com/WANGLEVY9/VidForge |
 | 分支 | `main` (默认分支) |
-| 最后提交 | `9aa965d` — 更新 Doubao API Key |
+| 最后提交 | `bf068ff` — P1 排序/标签搜索/队列处理器/趋势库/全局 UI 升级 |
 
 ### 3.4 README / 运行说明
 
@@ -117,7 +124,7 @@ VidForge — 电商场景 AIGC 带货视频生成系统
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────────┐   │
 │  │ 素材模块 │ │ 剧本模块 │ │ 创作模块 │ │ Agent 编排           │   │
 │  │ 上传/分析 │ │ 生成/RAG │ │ 队列/合片 │ │ LangGraph 管线      │   │
-│  │ 检索/标签 │ │ 合规/爆款 │ │ 进度/编辑 │ │ 素材→剧本→合成→质量 │   │
+│  │ 排序/检索 │ │ 爆款参考 │ │ 进度/编辑 │ │ 素材→剧本→合成→质量 │   │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────────────────┘   │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────────┐   │
 │  │ 导出模块 │ │ 分析看板 │ │ 合规审核 │ │ AI 服务层            │   │
@@ -145,9 +152,9 @@ VidForge — 电商场景 AIGC 带货视频生成系统
 | **前端** | React | 18.x | UI 框架 |
 | | TypeScript | 5.x | 类型安全 |
 | | Vite | 5.x | 构建工具 |
-| | Ant Design | 5.x | 组件库 |
-| | ECharts | 5.x | 数据可视化 |
-| | Zustand | 4.x | 状态管理 |
+| | Ant Design | 5.x | 组件库(含全组件主题适配) |
+| | ECharts | 5.x | 数据可视化(8 类图表) |
+| | Zustand | 4.x | 状态管理(6 个 Store) |
 | | Socket.IO Client | 4.x | 实时通信 |
 | | @dnd-kit | 6.x | 拖拽交互 |
 | **后端** | NestJS | 10.x | Node.js 框架 |
@@ -156,7 +163,7 @@ VidForge — 电商场景 AIGC 带货视频生成系统
 | | PostgreSQL | 14+ | 关系数据库 |
 | | pgvector | - | 向量检索 |
 | | Redis | 7+ | 缓存/队列/PubSub |
-| | BullMQ | 5.x | 任务队列 |
+| | BullMQ | 5.x | 任务队列(4 个队列, 双轨模式) |
 | | Socket.IO | 4.x | WebSocket |
 | | LangChain/LangGraph | 1.x | Agent 编排 |
 | | FFmpeg | 5+ | 媒体处理 |
@@ -189,8 +196,8 @@ VidForge — 电商场景 AIGC 带货视频生成系统
 
 #### Agent / RAG / 向量方案
 
-- **Agent 编排**: LangGraph `StateGraph` 四节点管线（Material → Script → Composition → Quality），条件边支持质量不达标重试（最多 2 次），self-reflection 循环。
-- **RAG 检索增强**: 剧本生成时，通过品类+风格匹配从种子爆款库中检索 top-K 作为 few-shot 示例。
+- **Agent 编排**: LangGraph `StateGraph` 四节点管线（Material → Script → Composition → Quality），条件边支持质量不达标重试（最多 2 次），self-reflection 循环。`retryCount` 在每次 composition 节点正确递增，避免无限循环。
+- **RAG 检索增强**: 剧本生成时，通过品类+风格匹配从种子爆款库中检索 top-K 作为 few-shot 示例。前端"爆款参考"抽屉直观展示种子脚本供参考。
 - **向量检索**: pgvector 扩展提供 cosine 相似度搜索（`<=>` 运算符），用于素材语义检索。回退：PostgreSQL `ILIKE` 文本搜索。
 
 ### 4.4 关键工程难点与解决方案
@@ -230,10 +237,21 @@ VidForge — 电商场景 AIGC 带货视频生成系统
 **挑战**: AI 生成的视频质量不可预知，需自动评估并触发重做，同时保持管线可观测。
 
 **解决方案**：
-- LangGraph StateGraph 状态机：四节点管线 + 条件边（quality < 阈值 → 重做）
+- LangGraph StateGraph 状态机：四节点管线 + 条件边（quality < 阈值 → 重做），`retryCount` 正确递增
 - 自反思循环：质量 Agent 的结构化反馈（完整性/时长/一致性/合规性/钩子）注入下一轮 prompt
 - 自学习飞轮：高质量结果（得分 ≥ 85）写入商品空间知识库，后续生成作为 few-shot 参考
 - Trace 全链路追踪：每个 Agent span 包含 `{ span, startedAt, endedAt, latencyMs, status, summary }`，存入数据库供分析
+
+#### 难点 5：素材全生命周期管理（上传→分析→检索）
+
+**挑战**: 素材需要支持多种文件类型、大文件上传、AI 自动分析、多维检索和实时反馈，涉及前端交互和后端处理的多环节协同。
+
+**解决方案**：
+- 完整上传管线：multer 磁盘存储 + 200MB 限制 + MIME 白名单过滤 + `randomUUID()` 文件名防冲突
+- 自动队列分析：上传完成后自动入队 `material-analyze`，Redis 可用走 BullMQ 持久化，不可用降级进程内执行
+- 视频智能分析：FFmpeg 抽 3 个关键帧 → 逐帧 ARK 视觉理解 → Set 去重聚合 → 三层标签
+- 多维检索体系：关键词 `ILIKE` + 标签过滤（品类/情绪/风格）+ pgvector 语义相似度 + 6 种排序
+- 前端实时反馈：上传完成后列表自动刷新 + 分析状态标识（已分析/待分析）+ 骨架屏加载
 
 ### 4.5 部署与访问说明
 
@@ -285,7 +303,7 @@ pnpm dev
 **可用 Demo / 接近生产级版本**
 
 - ✅ 所有 P0 必做功能：100% 完成
-- ✅ 所有 P1 进阶功能：100% 完成
+- ✅ 所有 P1 进阶功能：100% 完成（含新增：标签搜索/排序/爆款参考/队列处理器）
 - ✅ 大多数 P2 加分功能：已实现（CI/CD 管线及生产级可观测性待完善）
 - ✅ 端到端链路已跑通，可直接运行体验
 - ✅ 已部署到公网，评委可直接访问
@@ -296,13 +314,13 @@ pnpm dev
 
 不只是简单的 API 调用链，而是基于 LangGraph 实现了完整的 Agent 编排系统：
 - 四节点管线自动执行素材检索 → 剧本生成 → 视频合成 → 质量评估
-- 质量不满足阈值时自动重做并注入反馈（self-reflection）
+- 质量不满足阈值时自动重做并注入反馈（self-reflection），`retryCount` 正确递增避免无限循环
 - 高质量结果自动沉淀为知识，后续生成持续优化（self-learning）
 
 **亮点二：RAG 增强的智能剧本生成，融合爆款分析 + 商品知识 + 合规审核**
 
 剧本生成并非单一 prompt 调用，而是综合了：
-- 基于品类+风格的爆款参考视频检索（RAG few-shot）
+- 基于品类+风格的爆款参考视频检索（RAG few-shot），前端"爆款参考"抽屉直观展示
 - 商品空间知识注入（卖点、人群、品牌调性、最佳实践）
 - 生成后自动化合规审核（广告法/医疗/夸大/平台规则/自定义词库）
 - ARK 不可用时无缝回退模板化兜底
@@ -317,6 +335,15 @@ pnpm dev
 - TTS 不可用 → 静音占位音频
 - WebSocket 不可用 → REST 轮询兜底
 
+**亮点四：素材全生命周期智能管理**
+
+从上传到分析到检索的完整闭环：
+- multer 磁盘存储 + MIME 过滤 + 200MB 限制的产品级上传管线
+- 上传自动触发 AI 分析（队列/进程内双轨）
+- 图片：ARK 多模态 → 三层结构化标签
+- 视频：FFmpeg 抽帧 → 逐帧 ARK → Set 聚合 → 三层标签
+- 多维检索：关键词 + 三级标签过滤 + 语义向量 + 6 种排序
+
 ---
 
 ## 六、选填项
@@ -324,8 +351,8 @@ pnpm dev
 ### 6.1 产品截图 / 页面图集
 
 <!-- 【待补充】关键页面截图 -->
-- 素材管理页面（网格/列表视图 + 上传交互）
-- 剧本生成页面（配置表单 + 分镜结果 + 合规报告）
+- 素材管理页面（网格/列表视图 + 上传交互 + 标签过滤 + 排序 + 分析状态标识）
+- 剧本生成页面（配置表单 + 分镜结果 + 爆款参考抽屉 + 合规报告）
 - 视频创作页面（分镜编辑器 + 预览播放器 + 时间轴）
 - 数据看板（6 张指标卡 + 5 类 ECharts 图表）
 - A/B 对比页面（并排双播放器 + 指标对比表）
@@ -338,35 +365,44 @@ pnpm dev
 
 核心接口一览：
 
-| 模块 | 方法 | 路径 | 功能 |
-|------|------|------|------|
-| AI | GET | `/api/ai/health` | AI 服务健康检查 |
-| AI | GET | `/api/ai/ark/configs` | ARK 配置列表 |
-| AI | POST | `/api/ai/ark/chat` | 文本对话 |
-| AI | POST | `/api/ai/ark/video/generate` | 创建视频生成任务 |
-| AI | GET | `/api/ai/ark/video/task/:id` | 查询视频任务状态 |
-| Material | GET | `/api/material` | 素材列表 |
-| Material | POST | `/api/material` | 创建素材 |
-| Material | POST | `/api/material/:id/analyze` | 触发 AI 分析 |
-| Material | GET | `/api/material/search/tags` | 标签搜索 |
-| Material | POST | `/api/material/semantic-search` | 语义搜索 |
-| Script | POST | `/api/script/generate` | 剧本生成 |
-| Script | GET | `/api/script` | 剧本列表 |
-| Script | GET | `/api/script/:id` | 剧本详情 |
-| Creation | POST | `/api/creation/task` | 创建视频任务 |
-| Creation | GET | `/api/creation/task` | 任务列表 |
-| Creation | PATCH | `/api/creation/task/:id/shot` | 重新生成分镜 |
-| Creation | GET | `/api/creation/task/:id/progress` | 查询任务进度 |
-| Agent | POST | `/api/agent/run` | 运行 Agent 管线 |
-| Agent | GET | `/api/agent/status/:runId` | 查询 Agent 状态 |
-| Agent | POST | `/api/agent/cancel/:runId` | 取消 Agent 运行 |
-| Export | POST | `/api/export` | 创建导出任务 |
-| Export | GET | `/api/export` | 导出任务列表 |
-| Analytics | GET | `/api/analytics/overview` | 概览数据 |
-| Analytics | GET | `/api/analytics/trends` | 趋势数据 |
-| Analytics | GET | `/api/analytics/distribution` | 分布数据 |
-| Analytics | GET | `/api/analytics/attribution` | 归因分析 |
-| Analytics | GET | `/api/analytics/traces` | 追踪数据 |
+| 模块 | 方法 | 路径 | 功能 | 参数 |
+|------|------|------|------|------|
+| AI | GET | `/api/ai/health` | AI 服务健康检查 | - |
+| AI | GET | `/api/ai/ark/configs` | ARK 配置列表 | - |
+| AI | POST | `/api/ai/ark/chat` | 文本对话 | model, messages |
+| AI | POST | `/api/ai/ark/video/generate` | 创建视频生成任务 | prompt, duration |
+| AI | GET | `/api/ai/ark/video/task/:id` | 查询视频任务状态 | - |
+| Material | GET | `/api/material` | 素材列表(可排序/过滤) | search, type, tag, spaceId, page, pageSize, orderBy, orderDirection |
+| Material | POST | `/api/material` | 创建素材 | JSON body |
+| Material | POST | `/api/material/upload` | 上传文件(multipart) | file + productSpaceId/category/tags |
+| Material | GET | `/api/material/:id` | 素材详情 | - |
+| Material | DELETE | `/api/material/:id` | 删除素材 | - |
+| Material | PATCH | `/api/material/:id/analyze` | 触发 AI 三层标签分析 | category, description |
+| Material | GET | `/api/material/search/tags` | 按标签筛选 | productCategory, videoMood, clipObjects |
+| Material | POST | `/api/material/semantic-search` | 语义搜索 | query, limit |
+| Script | POST | `/api/script/generate` | 剧本生成(150s 超时) | productName, category, sellingPoints, ... |
+| Script | GET | `/api/script/inspire` | 爆款参考查询 | category, style |
+| Script | POST | `/api/script` | 保存剧本 | full script body |
+| Script | GET | `/api/script` | 剧本列表 | spaceId |
+| Script | GET | `/api/script/:id` | 剧本详情 | - |
+| Creation | POST | `/api/creation/task` | 创建视频任务 | storyboard, style, ... |
+| Creation | GET | `/api/creation/task` | 任务列表 | spaceId |
+| Creation | GET | `/api/creation/task/:id` | 任务详情 | - |
+| Creation | PATCH | `/api/creation/task/:id/shot` | 重新生成分镜 | shotId, prompt |
+| Agent | POST | `/api/agent/run` | 运行 Agent 管线 | productName, category, ... |
+| Agent | GET | `/api/agent/status/:runId` | 查询 Agent 状态 | - |
+| Agent | POST | `/api/agent/cancel/:runId` | 取消 Agent 运行 | - |
+| Export | POST | `/api/export` | 创建导出任务 | taskId, format, resolution, ... |
+| Export | GET | `/api/export` | 导出任务列表 | - |
+| Analytics | GET | `/api/analytics/overview` | 概览数据 | spaceId |
+| Analytics | GET | `/api/analytics/trends` | 趋势数据 | period, spaceId |
+| Analytics | GET | `/api/analytics/distribution` | 分布数据 | spaceId |
+| Analytics | GET | `/api/analytics/attribution` | 归因分析 | - |
+| Analytics | GET | `/api/analytics/traces` | Agent 追踪数据 | - |
+| Analytics | GET | `/api/analytics/cost` | AI 成本概览 | - |
+| Auth | POST | `/api/auth/register` | 注册 | email, password, name |
+| Auth | POST | `/api/auth/login` | 登录 | email, password |
+| Auth | GET | `/api/auth/me` | 当前用户信息 | - |
 
 ### 6.3 Prompt 策略 / Agent 流程图
 
@@ -396,7 +432,7 @@ pnpm dev
                     │   ┌──────────────┐      │
                     │   │ Composition  │◄─────┤ (retry)
                     │   │  (Video)     │      │ if quality < threshold
-                    │   └──────┬───────┘      │
+                    │   └──────┬───────┘      │ retryCount++
                     │            ▼             │
                     │   ┌──────────────┐      │
                     │   │   Quality    ├──────┤
@@ -432,15 +468,15 @@ pnpm dev
 4. 总时长不超过15秒
 5. 禁止出现：《广告法》极限词、医疗承诺、夸大用语
 6. 语音风格、BGM风格、字幕位置由你推荐
+```
 
-【输出结构】
-{
-  "title": "视频标题",
-  "shots": [{ "index": 1, "duration": 5, "description": "...", "voiceover": "...", "caption": "...", "cameraMovement": "推镜", "type": "hook" }],
-  "voiceover": { "style": "活力", "speed": "normal" },
-  "bgmSuggestion": { "style": "动感", "mood": "欢快" },
-  "tags": ["卖点1", "卖点2"]
-}
+**视觉理解 Prompt（简化）**:
+```
+分析这张电商商品图片，输出结构化 JSON：
+- productTags: { name, category(限定8类), brand, colors[], material }
+- videoTags: { scene(限定6类), shot, composition, lighting, style(限定5类), mood }
+- clipTags: { objects[], text, mood(限定6类), suitableFor(限定5类) }
+- caption: 一句话描述画面
 ```
 
 ### 6.4 开发里程碑 / 版本迭代记录
@@ -453,50 +489,45 @@ pnpm dev
 | 2026-05-24 | v1.5 | V2 核心升级：真实视频管线、Agent 编排、可观测、合规 |
 | 2026-05-31 | v2.0 | 失效 key 黑名单兜底、打包优化、多轮深度优化 |
 | 2026-06-01 | v2.1 | 顶栏体验完善（通知中心/API 配置中心/浅色模式） |
-| 2026-06-06 | v2.2 | API Key 更新、交付文档整理、docs 重构 |
+| 2026-06-06 | v2.2 | API Key 更新、交付文档整理、P0 问题修复 |
+| 2026-06-06 | v2.3 | **P1 全面升级**：排序/标签过滤/队列处理器/爆款参考/UI 质感提升 |
 
 ---
 
-## 七、附录：当前项目待改进 / 未完成项
+## 七、附录：项目改进记录
 
-基于本次全面审计，以下是识别出的待优化项，按优先级排列：
+### 已修复问题
 
-### P0 优先级（影响核心功能）
+| # | 问题 | 模块 | 修复版本 | 修复方式 |
+|---|------|------|----------|----------|
+| 1 | Agent 编排 `retryCount` 未递增 | Agent | v2.2 | `orchestrator.service.ts` 条件边中增加 `retryCount++` |
+| 2 | Material 实体缺少 `embedding` 列 | Material | v2.2 | 添加 `ALTER TABLE` 迁移 + TypeORM 列定义 |
+| 3 | 后端无文件上传端点（base64 存 db） | Material | v2.2 | 集成 multer 磁盘存储 + MIME 过滤 + 200MB 限制 |
+| 4 | 视频素材缺少多模态理解 | Material | v2.2 | 集成 FFmpeg 抽帧 → 逐帧 ARK 视觉理解 → 聚合标签 |
+| 5 | 前端标签搜索 UI 缺失 | Material | v2.3 | 连接 `searchByTags` API，添加品类/情绪/风格三级过滤芯片 |
+| 6 | 排序选择器无效 | Material | v2.3 | 添加 `orderBy` / `orderDirection` API 参数，6 种排序维度 |
+| 7 | 素材入库分析队列处理器为空 | Material | v2.3 | `MaterialAnalyzeProcessor` 通过 `ModuleRef` 调用真实 `analyzeTags` |
+| 8 | AnalyticsModule 缺少 `QueueRunnerModule` 导入 | Analytics | v2.3 | 已验证：`QueueModule` 为 `@Global()`，无需额外导入 |
+| 9 | 趋势视频库前端未连接 | Script | v2.3 | 添加爆款参考抽屉面板，展示同品类/同风格种子脚本 |
 
-| # | 问题 | 模块 | 影响 | 建议修复 |
-|---|------|------|------|----------|
-| 1 | Agent 编排 `retryCount` 未递增 | Agent | 质量 < 阈值时可能无限循环 | `orchestrator.service.ts` 条件边中增加 `retryCount++` |
-| 2 | Material 实体缺少 `embedding` 列 | Material | 语义搜索端到端不可用 | 添加 `ALTER TABLE` 迁移 + TypeORM 列定义 |
-| 3 | 后端无文件上传端点（base64 存 db） | Material | 大文件不可用，数据库膨胀 | 集成 multer + 对象存储（OSS/TOS） |
-| 4 | 视频素材缺少多模态理解 | Material | 视频只能用启发式标签 | 集成 FFmpeg 抽帧 → 逐帧 ARK 视觉理解 |
+### 剩余待完善项（P2 / 未来迭代）
 
-### P1 优先级（体验完善）
-
-| # | 问题 | 模块 | 影响 | 建议修复 |
-|---|------|------|------|----------|
-| 5 | 前端标签搜索 UI 缺失 | Material | 用户无法使用标签搜索 | 连接 `searchByTags` API 到前端控件 |
-| 6 | 排序选择器无效 | Material | 排序选项为纯展示 | 添加 `orderBy` API 参数支持 |
-| 7 | 素材入库分析队列处理器为空 | Material | 队列分析不生效 | 填充 `MaterialAnalyzeProcessor` |
-| 8 | AnalyticsModule 缺少 `QueueRunnerModule` 导入 | Analytics | 注入失败 | 在 `analytics.module.ts` imports 中添加 |
-| 9 | 趋势视频库前端未连接 | Script | `inspire` 接口定义但用户不可见 | 添加前端页面/组件展示爆款库 |
-
-### P2 优先级（加分 / 完善）
-
-| # | 问题 | 模块 | 影响 | 建议修复 |
-|---|------|------|------|----------|
-| 10 | CI Pipeline 缺失 | DevOps | 无自动 lint/test/build | 配置 GitHub Actions |
-| 11 | Husky 未初始化 | DevOps | 预提交钩子不触发 | `npx husky init` 创建 pre-commit |
-| 12 | A/B 对比按钮无操作 | Frontend | "采纳"/"另存为"无功能 | 添加点击处理 |
-| 13 | 灵感模板系统完全缺失 | Script | 无模板实体/页面 | 后续迭代增加 |
-| 14 | 移动端布局被禁用 | Frontend | `isMobile: false` 硬编码 | 启用响应式断点检测 |
-| 15 | 剧本页面缺少干预能力 | Script | 分镜编辑仅在创作页面可用 | 添加分镜编辑组件到剧本页面 |
-| 16 | `activeRuns` abort 信号未传递 | Agent | 不能真正中断运行 | 传递 AbortController 信号 |
-| 17 | 无 PWA 支持 | Frontend | 无离线能力 | 添加 Service Worker + manifest |
-| 18 | 无全局快捷键注册表 | Frontend | 快捷键仅限故事板编辑器 | 抽取全局快捷键系统 |
+| # | 问题 | 模块 | 建议修复 |
+|---|------|------|----------|
+| 10 | CI Pipeline 缺失 | DevOps | 配置 GitHub Actions（lint → test → build） |
+| 11 | Husky 未初始化 | DevOps | `npx husky init` 创建 pre-commit hook |
+| 12 | A/B 对比按钮无操作 | Frontend | "采纳"/"另存为"添加点击处理 |
+| 13 | 灵感模板系统完全缺失 | Script | 后续迭代增加模板实体和页面 |
+| 14 | 移动端布局被禁用 | Frontend | `isMobile: false` 启用响应式断点检测 |
+| 15 | 剧本页面缺少干预能力 | Script | 添加分镜编辑组件到剧本页面 |
+| 16 | `activeRuns` abort 信号未传递 | Agent | 传递 AbortController 信号 |
+| 17 | 无 PWA 支持 | Frontend | 添加 Service Worker + manifest |
+| 18 | 无全局快捷键注册表 | Frontend | 抽取全局快捷键系统 |
 
 ---
 
-> **文档版本**: v2.0
+> **文档版本**: v2.2
 > **提交日期**: 2026-06-06
+> **最后提交**: `bf068ff` — 修复 P0 关键缺陷 + P1 全面体验升级
 > **项目仓库**: https://github.com/WANGLEVY9/VidForge
 > **在线体验**: https://vid-forge-frontend-nu.vercel.app
