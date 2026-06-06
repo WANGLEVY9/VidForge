@@ -66,7 +66,9 @@ export class OrchestratorService {
       })
       .addNode('video_composition', async (state: AgentState): Promise<NodeReturn> => {
         const result = await this.compositionAgent.compose(state);
-        return { ...result, currentNode: 'quality_control', progress: 75 };
+        // 每次合成尝试递增 retryCount，确保 quality_control 的条件边
+        // retryCount < 2 能在两次尝试后正确结束，避免无限循环
+        return { ...result, currentNode: 'quality_control', progress: 75, retryCount: (state.retryCount ?? 0) + 1 };
       })
       .addNode('quality_control', async (state: AgentState): Promise<NodeReturn> => {
         const result = await this.qualityAgent.evaluate(state);

@@ -46,6 +46,19 @@ export class Material {
   @Column({ type: 'json', nullable: true })
   metadata: Record<string, any>;
 
+  /**
+   * pgvector 向量列(1024 维),用于语义相似度检索。
+   *
+   * 前置条件(首次部署需手动执行):
+   *   CREATE EXTENSION IF NOT EXISTS vector;
+   *   ALTER TABLE materials ADD COLUMN IF NOT EXISTS "embedding" vector(1024);
+   *
+   * TypeORM 同步(synchronize:true)会自动检测 vector 类型,
+   * 但需要 pgvector 扩展已安装,否则建表/改表会报错。
+   */
+  @Column({ type: 'vector', precision: 1024, nullable: true, select: false })
+  embedding: number[] | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
