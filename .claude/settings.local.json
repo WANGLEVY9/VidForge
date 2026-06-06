@@ -63,7 +63,8 @@
       "Bash(node node_modules/typescript/bin/tsc --noEmit)",
       "Bash(node -e \"require\\('typescript'\\)\")",
       "Bash(npx --no-install tsc --noEmit)",
-      "Bash(node_modules/.bin/tsc --noEmit)"
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(node -e \"console.log\\(require\\('uuid/package.json'\\).version\\)\")"
     ]
   }
 }
