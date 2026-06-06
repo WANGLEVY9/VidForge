@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useShell } from '../../components/layout/shell-context';
 import {
@@ -11,8 +11,17 @@ import {
   FileTextOutlined, ThunderboltOutlined,
   ExperimentOutlined, CustomerServiceOutlined, ShoppingCartOutlined,
   VideoCameraOutlined, SoundOutlined, AimOutlined,
-  ApiOutlined, ArrowRightOutlined, FireOutlined,
+  ApiOutlined, ArrowRightOutlined, FireOutlined, EditOutlined, UndoOutlined,
 } from '@ant-design/icons';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates, useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { useAutosave, getDraft, clearDraft } from '../../hooks/useAutosave';
 import { scriptApi, ScriptResult, InspireSeed } from '../../services/script';
@@ -58,6 +67,123 @@ const shotTypeLabels: Record<string, string> = {
 
 // 注:剧本结果 / 分镜 类型从 services/script 导入,本页不再重复定义
 
+function SortableShot({
+  shot, shotTypeColors, shotTypeLabels,
+  editingCell, onEditCell, onCellChange, onCopy, onRegenerate, regenerating,
+}: {
+  shot: ScriptResult['shots'][0];
+  shotTypeColors: Record<string, string>;
+  shotTypeLabels: Record<string, string>;
+  editingCell: { index: number; field: string } | null;
+  onEditCell: (index: number, field: string) => void;
+  onCellChange: (index: number, field: string, value: string) => void;
+  onCopy: (text: string) => void;
+  onRegenerate: (index: number) => void;
+  regenerating: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: shot.index });
+  const style: React.CSSProperties = {
+    display: 'flex',
+    gap: 12,
+    padding: 'var(--spacing-md) var(--spacing-xl)',
+    borderBottom: '1px solid var(--border-color)',
+    borderLeft: `3px solid ${shotTypeColors[shot.type ?? 'demo']}`,
+    transition: transition || 'background 0.2s',
+    transform: CSS.Transform.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+    cursor: 'grab',
+    background: 'transparent',
+  };
+  const isEditing = (field: string) => editingCell?.index === shot.index && editingCell?.field === field;
+
+  const editableField = (field: keyof typeof shot, value: string | undefined) => {
+    if (isEditing(field as string)) {
+      return (
+        <Input
+          size="small"
+          value={value || ''}
+          onChange={(e) => onCellChange(shot.index, field as string, e.target.value)}
+          onBlur={() => onEditCell(shot.index, field as string)}
+          onPressEnter={() => onEditCell(shot.index, field as string)}
+          autoFocus
+          style={{ width: '100%', borderRadius: 4 }}
+        />
+      );
+    }
+    return (
+      <span
+        onClick={() => onEditCell(shot.index, field as string)}
+        style={{ cursor: 'pointer', borderBottom: '1px dashed var(--border-color)', padding: '0 2px' }}
+        title="点击编辑"
+      >
+        {value || <Text type="secondary">(空)</Text>}
+      </span>
+    );
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <div style={{ width: 84, flexShrink: 0 }}>
+        <Tag color={shotTypeColors[shot.type ?? 'demo']} style={{ borderRadius: 20, fontSize: 11 }}>
+          {shotTypeLabels[shot.type ?? 'demo'] ?? shot.type ?? '分镜'}
+        </Tag>
+        <div style={{ marginTop: 4 }}>
+          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            #{shot.index} · {shot.duration}s
+          </Text>
+        </div>
+        {shot.cameraMovement && (
+          <div style={{ marginTop: 2 }}>
+            <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+              {shot.cameraMovement}
+            </Text>
+          </div>
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div>
+          <Text style={{ color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1.6 }}>
+            {editableField('description', shot.description)}
+          </Text>
+        </div>
+        {shot.voiceover !== undefined && (
+          <div style={{ marginTop: 6 }}>
+            <Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+              🎙 {editableField('voiceover', shot.voiceover)}
+            </Text>
+          </div>
+        )}
+        {shot.caption !== undefined && (
+          <div style={{ marginTop: 4 }}>
+            <Text style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
+              💬 {editableField('caption', shot.caption)}
+            </Text>
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+        <Tooltip title="复制本分镜">
+          <Button
+            type="text"
+            size="small"
+            icon={<CopyOutlined />}
+            onClick={() => onCopy(`[${shot.index}] ${shot.description}\n口播：${shot.voiceover}\n字幕：${shot.caption}`)}
+          />
+        </Tooltip>
+        <Tooltip title="重新生成此分镜">
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            loading={regenerating}
+            onClick={() => onRegenerate(shot.index)}
+          />
+        </Tooltip>
+      </div>
+    </div>
+  );
+}
+
 function ScriptPage() {
   const { spaceId } = useParams<{ spaceId?: string }>();
   const navigate = useNavigate();
@@ -65,6 +191,93 @@ function ScriptPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScriptResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // ── 分镜编辑状态 ─────────────────────────────────────
+  const [editingShots, setEditingShots] = useState<ScriptResult['shots']>([]);
+  const [editingCell, setEditingCell] = useState<{ index: number; field: string } | null>(null);
+  const [savingShots, setSavingShots] = useState(false);
+  const [regeneratingShot, setRegeneratingShot] = useState<number | null>(null);
+  const [regenerateResultId, setRegenerateResultId] = useState<string | null>(null);
+
+  // 当 result 变化时同步 editingShots
+  useEffect(() => {
+    if (result) {
+      setEditingShots(result.shots.map((s) => ({ ...s })));
+    }
+  }, [result]);
+
+  // ── @dnd-kit 传感器 ───────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setEditingShots((prev) => {
+      const oldIndex = prev.findIndex((s) => s.index === Number(active.id));
+      const newIndex = prev.findIndex((s) => s.index === Number(over.id));
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const reordered = [...prev];
+      const [moved] = reordered.splice(oldIndex, 1);
+      reordered.splice(newIndex, 0, moved);
+      // 重编号
+      return reordered.map((s, i) => ({ ...s, index: i + 1 }));
+    });
+  }, []);
+
+  const handleEditCell = (index: number, field: string) => {
+    setEditingCell(editingCell?.index === index && editingCell?.field === field ? null : { index, field });
+  };
+
+  const handleCellChange = (index: number, field: string, value: string) => {
+    setEditingShots((prev) => prev.map((s) => (s.index === index ? { ...s, [field]: value } : s)));
+  };
+
+  const handleRegenerateShot = async (index: number) => {
+    if (!result) return;
+    setRegeneratingShot(index);
+    // 需要保存后的 script id；取 handoff store 或固定 ID
+    const scriptId = regenerateResultId || 'current';
+    try {
+      const data = await scriptApi.regenerateShot(scriptId, index);
+      setEditingShots((prev) => prev.map((s) => (s.index === index ? { ...s, ...data, _regenerated: true } : s)));
+      message.success('分镜已重新生成');
+    } catch (err: any) {
+      message.error(err?.message || '重生成失败');
+    } finally {
+      setRegeneratingShot(null);
+    }
+  };
+
+  const handleSaveShots = async () => {
+    if (!result) return;
+    setSavingShots(true);
+    try {
+      // 先保存剧本本体
+      const values = form.getFieldsValue();
+      const saved = await scriptApi.save({
+        title: result.title,
+        productName: values.productName,
+        category: values.category,
+        sellingPoints: values.sellingPoints,
+        targetAudience: Array.isArray(values.targetAudience) ? values.targetAudience.join('、') : values.targetAudience,
+        style: scriptStyle,
+        storyboard: editingShots as any,
+        voiceover: result.voiceover,
+        bgmSuggestion: result.bgmSuggestion,
+        tags: result.tags,
+        duration: result.duration,
+        productSpaceId: spaceId,
+      });
+      setRegenerateResultId(saved.id);
+      message.success('分镜已保存');
+    } catch (err: any) {
+      message.error(err?.message || '保存失败');
+    } finally {
+      setSavingShots(false);
+    }
+  };
   const [diagnosing, setDiagnosing] = useState(false);
   const [inspireOpen, setInspireOpen] = useState(false);
   const [inspireData, setInspireData] = useState<InspireSeed[]>([]);
@@ -667,14 +880,15 @@ function ScriptPage() {
                 }}>
                   <Space>
                     <VideoCameraOutlined style={{ color: 'var(--brand-primary)' }} />
-                    <Text strong style={{ color: 'var(--text-primary)' }}>分镜脚本（{result.shots.length}）</Text>
+                    <Text strong style={{ color: 'var(--text-primary)' }}>分镜脚本（{editingShots.length}）</Text>
+                    <Tag style={{ borderRadius: 10, fontSize: 10 }}>拖拽可排序 · 点击文字可编辑</Tag>
                   </Space>
                   <Space>
                     <Button
                       icon={<CopyOutlined />}
                       onClick={() =>
                         handleCopy(
-                          result.shots
+                          editingShots
                             .map(
                               (s) =>
                                 `[${s.index}] ${s.description}\n口播：${s.voiceover}\n字幕：${s.caption}`,
@@ -688,72 +902,44 @@ function ScriptPage() {
                     <Button icon={<SaveOutlined />} type="primary" onClick={handleSave}>保存剧本</Button>
                   </Space>
                 </div>
-                {result.shots.map((shot) => (
-                  <div
-                    key={shot.index}
-                    style={{
-                      display: 'flex',
-                      gap: 12,
-                      padding: 'var(--spacing-md) var(--spacing-xl)',
-                      borderBottom: '1px solid var(--border-color)',
-                      borderLeft: `3px solid ${shotTypeColors[shot.type ?? 'demo']}`,
-                      transition: 'background 0.2s',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <div style={{ width: 84, flexShrink: 0 }}>
-                      <Tag color={shotTypeColors[shot.type ?? 'demo']} style={{ borderRadius: 20, fontSize: 11 }}>
-                        {shotTypeLabels[shot.type ?? 'demo'] ?? shot.type ?? '分镜'}
-                      </Tag>
-                      <div style={{ marginTop: 4 }}>
-                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                          #{shot.index} · {shot.duration}s
-                        </Text>
-                      </div>
-                      {shot.cameraMovement && (
-                        <div style={{ marginTop: 2 }}>
-                          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                            {shot.cameraMovement}
-                          </Text>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div>
-                        <Text style={{ color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1.6 }}>
-                          {shot.description}
-                        </Text>
-                      </div>
-                      {shot.voiceover && (
-                        <div style={{ marginTop: 6 }}>
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                            🎙 {shot.voiceover}
-                          </Text>
-                        </div>
-                      )}
-                      {shot.caption && (
-                        <div style={{ marginTop: 4 }}>
-                          <Text style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
-                            💬 {shot.caption}
-                          </Text>
-                        </div>
-                      )}
-                    </div>
-                    <Tooltip title="复制本分镜">
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<CopyOutlined />}
-                        onClick={() =>
-                          handleCopy(
-                            `[${shot.index}] ${shot.description}\n口播：${shot.voiceover}\n字幕：${shot.caption}`,
-                          )
-                        }
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={editingShots.map((s) => s.index)} strategy={verticalListSortingStrategy}>
+                    {editingShots.map((shot) => (
+                      <SortableShot
+                        key={shot.index}
+                        shot={shot}
+                        shotTypeColors={shotTypeColors}
+                        shotTypeLabels={shotTypeLabels}
+                        editingCell={editingCell}
+                        onEditCell={handleEditCell}
+                        onCellChange={handleCellChange}
+                        onCopy={handleCopy}
+                        onRegenerate={handleRegenerateShot}
+                        regenerating={regeneratingShot === shot.index}
                       />
-                    </Tooltip>
+                    ))}
+                  </SortableContext>
+                </DndContext>
+                {editingShots.length > 0 && (
+                  <div style={{ padding: 'var(--spacing-md) var(--spacing-xl)', borderTop: '1px solid var(--border-color)', textAlign: 'right' }}>
+                    <Space>
+                      <Button
+                        icon={<UndoOutlined />}
+                        onClick={() => setEditingShots(result!.shots.map((s) => ({ ...s })))}
+                      >
+                        重置
+                      </Button>
+                      <Button
+                        type="primary"
+                        icon={<SaveOutlined />}
+                        onClick={handleSaveShots}
+                        loading={savingShots}
+                      >
+                        保存分镜
+                      </Button>
+                    </Space>
                   </div>
-                ))}
+                )}
               </GlassPanel>
 
               {/* 配音建议 */}

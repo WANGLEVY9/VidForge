@@ -2,7 +2,7 @@
 
 ## 参赛课题交付文档
 
-> **文档版本**: v2.2 | **提交日期**: 2026-06-06
+> **文档版本**: v2.4 | **提交日期**: 2026-06-06
 
 ---
 
@@ -53,11 +53,17 @@ VidForge — 电商场景 AIGC 带货视频生成系统
 | **P1** | 素材队列处理器 | ✅ 已实现 | MaterialAnalyzeProcessor 真实调用 analyzeTags |
 | **P2** | 多因子归因 | ✅ 已实现 | 风格×状态交叉分析 + 热力图可视化 |
 | **P2** | Agent 编排 | ✅ 已实现 | LangGraph StateGraph + 闭环质量反馈 + 自学习 |
-| **P2** | A/B 对比 | ✅ 已实现 | 双版本并排播放 + 指标对比表 |
-| **P2** | CI/CD | ⚠️ 部分完成 | Railway 部署配置就绪；GitHub Actions CI 待补充 |
+| **P2** | A/B 对比 | ✅ 已实现 | 双版本并排播放 + 指标对比表 + 采用/导出/存为模板 |
+| **P2** | CI/CD | ✅ 已实现 | GitHub Actions CI（lint → build）+ Husky pre-commit |
 | **P2** | 可观测性 | ⚠️ 部分完成 | 健康检查 + 日志 + Trace 追踪；日志聚合待完善 |
 | **P2** | 长任务体验 | ✅ 已实现 | WebSocket 实时进度 + 断点续创 + 失败清晰反馈 |
 | **P2** | 合规审核流 | ✅ 已实现 | 广告法/医疗/夸大用语/平台规则/自定义词库全覆盖 |
+| **P2** | 移动端布局 | ✅ 已实现 | matchMedia 断点检测 + 响应式布局适配 |
+| **P2** | PWA 支持 | ✅ 已实现 | Service Worker 缓存 + manifest + 可安装 |
+| **P2** | 全局快捷键 | ✅ 已实现 | Ctrl+S 保存 / Ctrl+K 搜索 / ? 帮助弹窗 |
+| **P2** | 灵感模板系统 | ✅ 已实现 | Template 实体 + CRUD + 前端浏览/保存/加载 |
+| **P2** | Agent 取消 | ✅ 已实现 | activeRuns 注入 AbortController → LangGraph 信号传递 |
+| **P2** | 剧本干预 | ✅ 已实现 | 分镜拖拽排序 + 行内编辑 + 单分镜重生成 |
 
 ### 2.2 端到端使用流程
 
@@ -304,7 +310,7 @@ pnpm dev
 
 - ✅ 所有 P0 必做功能：100% 完成
 - ✅ 所有 P1 进阶功能：100% 完成（含新增：标签搜索/排序/爆款参考/队列处理器）
-- ✅ 大多数 P2 加分功能：已实现（CI/CD 管线及生产级可观测性待完善）
+- ✅ 绝大多数 P2 加分功能：已实现（CI/CD、PWA、快捷键、模板、AB 按钮、移动端、剧本干预、Agent 取消；仅生产级日志聚合待完善）
 - ✅ 端到端链路已跑通，可直接运行体验
 - ✅ 已部署到公网，评委可直接访问
 
@@ -385,6 +391,12 @@ pnpm dev
 | Script | POST | `/api/script` | 保存剧本 | full script body |
 | Script | GET | `/api/script` | 剧本列表 | spaceId |
 | Script | GET | `/api/script/:id` | 剧本详情 | - |
+| Script | PATCH | `/api/script/:id/shots` | 更新分镜(编辑/排序后保存) | shots[] |
+| Script | POST | `/api/script/:id/regenerate-shot` | 重新生成单个分镜 | index |
+| Template | POST | `/api/template` | 创建模板 | name, category, style, shots |
+| Template | GET | `/api/template` | 模板列表(可过滤) | category, style |
+| Template | GET | `/api/template/:id` | 模板详情 | - |
+| Template | DELETE | `/api/template/:id` | 删除模板 | - |
 | Creation | POST | `/api/creation/task` | 创建视频任务 | storyboard, style, ... |
 | Creation | GET | `/api/creation/task` | 任务列表 | spaceId |
 | Creation | GET | `/api/creation/task/:id` | 任务详情 | - |
@@ -491,6 +503,7 @@ pnpm dev
 | 2026-06-01 | v2.1 | 顶栏体验完善（通知中心/API 配置中心/浅色模式） |
 | 2026-06-06 | v2.2 | API Key 更新、交付文档整理、P0 问题修复 |
 | 2026-06-06 | v2.3 | **P1 全面升级**：排序/标签过滤/队列处理器/爆款参考/UI 质感提升 |
+| 2026-06-06 | v2.4 | **P2 全部完成**：CI/CD + Husky + 移动端 + PWA + 快捷键 + 模板 + A/B 按钮 + 剧本干预 + Agent 取消 |
 
 ---
 
@@ -510,24 +523,29 @@ pnpm dev
 | 8 | AnalyticsModule 缺少 `QueueRunnerModule` 导入 | Analytics | v2.3 | 已验证：`QueueModule` 为 `@Global()`，无需额外导入 |
 | 9 | 趋势视频库前端未连接 | Script | v2.3 | 添加爆款参考抽屉面板，展示同品类/同风格种子脚本 |
 
-### 剩余待完善项（P2 / 未来迭代）
+| 10 | CI Pipeline 缺失 | DevOps | v2.4 | 配置 GitHub Actions（lint → build） |
+| 11 | Husky 未初始化 | DevOps | v2.4 | `npx husky init` 创建 pre-commit hook |
+| 12 | A/B 对比按钮无操作 | Frontend | v2.4 | 采用(下载) / 另存为模板(调用 Template API) / 导出报告 |
+| 13 | 灵感模板系统完全缺失 | Script | v2.4 | Template 实体 + CRUD + 前端浏览/保存模态框 |
+| 14 | 移动端布局被禁用 | Frontend | v2.4 | 恢复 matchMedia 断点检测，移除硬编码 `isMobile: false` |
+| 15 | 剧本页面缺少干预能力 | Script | v2.4 | @dnd-kit 拖拽排序 + 行内编辑 + 单分镜重生成 |
+| 16 | `activeRuns` abort 信号未传递 | Agent | v2.4 | AbortController 存储 → 信号传入 LangGraph invoke |
+| 17 | 无 PWA 支持 | Frontend | v2.4 | Service Worker + manifest + 离线缓存 |
+| 18 | 无全局快捷键注册表 | Frontend | v2.4 | Ctrl+S / Ctrl+K / ? 全局注册 |
 
-| # | 问题 | 模块 | 建议修复 |
-|---|------|------|----------|
-| 10 | CI Pipeline 缺失 | DevOps | 配置 GitHub Actions（lint → test → build） |
-| 11 | Husky 未初始化 | DevOps | `npx husky init` 创建 pre-commit hook |
-| 12 | A/B 对比按钮无操作 | Frontend | "采纳"/"另存为"添加点击处理 |
-| 13 | 灵感模板系统完全缺失 | Script | 后续迭代增加模板实体和页面 |
-| 14 | 移动端布局被禁用 | Frontend | `isMobile: false` 启用响应式断点检测 |
-| 15 | 剧本页面缺少干预能力 | Script | 添加分镜编辑组件到剧本页面 |
-| 16 | `activeRuns` abort 信号未传递 | Agent | 传递 AbortController 信号 |
-| 17 | 无 PWA 支持 | Frontend | 添加 Service Worker + manifest |
-| 18 | 无全局快捷键注册表 | Frontend | 抽取全局快捷键系统 |
+### 未来展望
+
+| # | 方向 | 说明 |
+|---|------|------|
+| 19 | 生产级日志聚合 | 接入 ELK / Loki + Grafana 集中日志 |
+| 20 | Docker 容器化 | 编写 Dockerfile + docker-compose 用于本地一键部署 |
+| 21 | 单元/集成测试 | 补充 Jest 测试覆盖率 |
+| 22 | CI 增加 lint-staged + 自动化测试 | 在 GitHub Actions 中加入 pnpm lint:fix + 测试步骤 |
 
 ---
 
-> **文档版本**: v2.2
+> **文档版本**: v2.4
 > **提交日期**: 2026-06-06
-> **最后提交**: `bf068ff` — 修复 P0 关键缺陷 + P1 全面体验升级
+> **最后提交**: TBD — P2 全部完成（CI/CD + PWA + 模板 + 快捷键 + 移动端 + 剧本干预 + Agent 取消 + A/B 按钮）
 > **项目仓库**: https://github.com/WANGLEVY9/VidForge
 > **在线体验**: https://vid-forge-frontend-nu.vercel.app

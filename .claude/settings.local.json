@@ -48,7 +48,22 @@
       "Bash(curl -s -X POST https://ark.cn-beijing.volces.com/api/v3/chat/completions -H 'Content-Type: application/json' -H 'Authorization: Bearer ark-f26df94a-6b3a-4535-bd66-465266a7e1af-dd663' -d '{ *)",
       "Bash(curl -s -X POST https://ark.cn-beijing.volces.com/api/v3/chat/completions -H 'Content-Type: application/json' -H 'Authorization: Bearer ark-0a0ae159-729d-4b5d-9c2d-a5bf04824ff5-d42e3' -d '{\"model\":\"ep-20260514115629-vhldw\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":5}')",
       "Bash(curl -s -X POST https://ark.cn-beijing.volces.com/api/v3/chat/completions -H 'Content-Type: application/json' -H 'Authorization: Bearer ark-f26df94a-6b3a-4535-bd66-465266a7e1af-dd663' -d '{\"model\":\"ep-20260514115629-vhldw\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":5}')",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(npx husky *)",
+      "Bash(node -e \"try { require\\('@langchain/core/runnables'\\); console.log\\('OK'\\); } catch\\(e\\) { console.log\\(e.message\\); }\")",
+      "Bash(pnpm --filter frontend add vite-plugin-pwa)",
+      "Bash(Get-Command pnpm *)",
+      "Bash(Get-Command npm *)",
+      "Read(//e/nodejs/**)",
+      "Read(//usr/local/**)",
+      "Read(//c/Users/22166/AppData/Roaming/npm/**)",
+      "Bash(/c/Users/22166/AppData/Roaming/npm/pnpm *)",
+      "Bash(node_modules/.bin/tsc --noEmit -p apps/frontend/tsconfig.json)",
+      "Bash(node node_modules/typescript/bin/tsc --noEmit -p apps/frontend/tsconfig.json)",
+      "Bash(node node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(node -e \"require\\('typescript'\\)\")",
+      "Bash(npx --no-install tsc --noEmit)",
+      "Bash(node_modules/.bin/tsc --noEmit)"
     ]
   }
 }

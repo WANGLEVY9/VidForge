@@ -104,4 +104,12 @@ export const scriptApi = {
   getById(id: string) {
     return apiClient.get<any, ScriptItem>(`/script/${id}`);
   },
+
+  updateShots(id: string, shots: Record<string, any>[]) {
+    return apiClient.patch<any, ScriptItem>(`/script/${id}/shots`, { shots });
+  },
+
+  regenerateShot(id: string, index: number) {
+    return apiClient.post<any, any>(`/script/${id}/regenerate-shot`, { index });
+  },
 };

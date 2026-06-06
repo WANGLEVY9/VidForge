@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ScriptService } from './script.service';
 import { CreateScriptDto } from './dto/create-script.dto';
 import { GenerateScriptDto } from './dto/generate-script.dto';
+import { UpdateScriptShotsDto } from './dto/update-script-shots.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
@@ -43,5 +44,17 @@ export class ScriptController {
   @ApiOperation({ summary: '获取剧本详情' })
   findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.scriptService.findOne(user.sub, id);
+  }
+
+  @Patch(':id/shots')
+  @ApiOperation({ summary: '更新分镜列表(编辑/排序后保存)' })
+  updateShots(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: UpdateScriptShotsDto) {
+    return this.scriptService.updateShots(user.sub, id, dto);
+  }
+
+  @Post(':id/regenerate-shot')
+  @ApiOperation({ summary: '重新生成单个分镜' })
+  regenerateShot(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body('index') index: number) {
+    return this.scriptService.regenerateShot(user.sub, id, index);
   }
 }

@@ -7,6 +7,15 @@ import App from './App';
 import { useTheme } from './hooks/useTheme';
 import './index.css';
 
+// Register Service Worker for PWA
+(function registerSW() {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+})();
+
 // Initialize theme before React renders to prevent flash
 (function initTheme() {
   const stored = localStorage.getItem('vidforge_theme');

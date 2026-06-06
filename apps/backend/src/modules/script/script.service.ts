@@ -436,4 +436,72 @@ ${schema}`;
     }
     return script;
   }
+
+  async updateShots(userId: string, id: string, dto: { shots: any[] }): Promise<Script> {
+    const script = await this.findOne(userId, id);
+    script.storyboard = dto.shots;
+    return this.scriptRepository.save(script);
+  }
+
+  async regenerateShot(userId: string, id: string, shotIndex: number): Promise<any> {
+    const script = await this.findOne(userId, id);
+    const shots = Array.isArray(script.storyboard) ? script.storyboard : [];
+    const shot = shots.find((s: any) => s.index === shotIndex);
+    if (!shot) throw new NotFoundException(`分镜 #${shotIndex} 不存在`);
+
+    // 简单 ARK 调用:仅重新生成该分镜描述和口播
+    try {
+      if (this.arkConfigService.getActiveApiKey('text')) {
+        const prompt = `你是一位电商视频分镜编剧。请为以下商品重新生成第 ${shotIndex} 个分镜的内容。
+
+商品: ${script.productName}
+品类: ${script.category}
+卖点: ${script.sellingPoints}
+分镜类型: ${shot.type ?? 'general'}
+当前描述: ${shot.description}
+
+要求:
+1. 输出 JSON: { "description": "画面描述", "voiceover": "口播文案", "caption": "字幕(≤16字)", "cameraMovement": "镜头运动" }
+2. 不要输出任何额外文字
+3. 全部使用中文`;
+
+        const response = await this.arkTextService.chatCompletion({
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.8,
+          maxTokens: 500,
+        });
+
+        const content: string = response?.choices?.[0]?.message?.content ?? '';
+        if (content) {
+          const trimmed = content.trim();
+          const match = trimmed.match(/\{[\s\S]*\}/);
+          const parsed = match ? JSON.parse(match[0]) : JSON.parse(trimmed);
+          return {
+            ...shot,
+            description: parsed.description ?? shot.description,
+            voiceover: parsed.voiceover ?? shot.voiceover,
+            caption: (parsed.caption ?? shot.caption)?.slice(0, 24),
+            cameraMovement: parsed.cameraMovement ?? shot.cameraMovement,
+            _regenerated: true,
+          };
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`regenerateShot ARK 调用失败: ${err.message}, 使用基本重写`);
+    }
+
+    // 兜底:修改描述
+    const alternatives = [
+      '全新角度展示产品细节，镜头缓缓推进',
+      '近距离特写，突出产品质感和工艺',
+      '动态场景切换，全方位呈现使用效果',
+      '柔和自然光线下，展示产品真实状态',
+    ];
+    const altIdx = shotIndex % alternatives.length;
+    return {
+      ...shot,
+      description: `${alternatives[altIdx]} — ${script.productName}`,
+      _regenerated: true,
+    };
+  }
 }
