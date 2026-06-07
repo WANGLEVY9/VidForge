@@ -92,9 +92,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     const items = get().items;
     const prevCount = get().unreadCount;
     set({
-      items: items.map((it) =>
-        it.userId !== null ? { ...it, read: true } : it,
-      ),
+      items: items.map((it) => (it.userId !== null ? { ...it, read: true } : it)),
       unreadCount: 0,
     });
     try {
@@ -111,9 +109,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     if (target.userId === null) return; // 广播不可删
     set({
       items: items.filter((it) => it.id !== id),
-      unreadCount: target.read
-        ? get().unreadCount
-        : Math.max(0, get().unreadCount - 1),
+      unreadCount: target.read ? get().unreadCount : Math.max(0, get().unreadCount - 1),
     });
     try {
       await notificationApi.remove(id);

@@ -28,11 +28,7 @@ export const TimelineBar: React.FC = () => {
       {/* Time ruler */}
       <div className="timeline-bar__ruler">
         {Array.from({ length: Math.ceil(totalDuration / 5) + 1 }, (_, i) => (
-          <div
-            key={i}
-            className="timeline-bar__tick"
-            style={{ left: i * 5 * pixelsPerSecond }}
-          >
+          <div key={i} className="timeline-bar__tick" style={{ left: i * 5 * pixelsPerSecond }}>
             <div className="timeline-bar__tick-line" />
             <Text className="timeline-bar__tick-label">{i * 5}s</Text>
           </div>

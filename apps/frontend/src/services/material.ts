@@ -75,11 +75,7 @@ export const materialApi = {
   },
 
   /** 按标签筛选 */
-  searchByTags(filters: {
-    productCategory?: string;
-    videoMood?: string;
-    clipObjects?: string;
-  }) {
+  searchByTags(filters: { productCategory?: string; videoMood?: string; clipObjects?: string }) {
     return apiClient.get<any, MaterialItem[]>('/material/search/tags', { params: filters });
   },
 

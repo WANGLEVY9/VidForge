@@ -53,14 +53,9 @@ export const aiApi = {
     });
   },
   updateConfig(modelKey: string, payload: UpdateArkConfigPayload) {
-    return apiClient.patch<any, ArkConfigPublic>(
-      `/ai/ark/configs/${modelKey}`,
-      payload,
-    );
+    return apiClient.patch<any, ArkConfigPublic>(`/ai/ark/configs/${modelKey}`, payload);
   },
   clearOverride(modelKey: string) {
-    return apiClient.delete<any, ArkConfigPublic>(
-      `/ai/ark/configs/${modelKey}/override`,
-    );
+    return apiClient.delete<any, ArkConfigPublic>(`/ai/ark/configs/${modelKey}/override`);
   },
 };

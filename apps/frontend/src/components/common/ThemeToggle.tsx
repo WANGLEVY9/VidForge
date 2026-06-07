@@ -15,7 +15,8 @@ const buttonStyle: React.CSSProperties = {
   fontSize: 16,
   lineHeight: 1,
   padding: 0,
-  transition: 'background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out)',
+  transition:
+    'background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out)',
 };
 
 const ThemeToggle: React.FC = () => {

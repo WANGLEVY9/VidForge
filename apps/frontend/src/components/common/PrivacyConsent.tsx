@@ -95,17 +95,12 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ visible, onAccept, onDe
         {/* 草稿自动保存 */}
         <div style={rowStyle}>
           <div style={labelStyle}>
-            <Text style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-              草稿自动保存
-            </Text>
+            <Text style={{ color: 'var(--text-primary)', fontWeight: 500 }}>草稿自动保存</Text>
             <Text style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}>
               在本地保存剧本和视频创作草稿
             </Text>
           </div>
-          <Switch
-            checked={settings.drafts}
-            onChange={handleToggle('drafts')}
-          />
+          <Switch checked={settings.drafts} onChange={handleToggle('drafts')} />
         </div>
 
         <Divider style={{ margin: 0, borderColor: 'var(--border-color)' }} />
@@ -113,17 +108,12 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ visible, onAccept, onDe
         {/* 使用统计和分析 */}
         <div style={rowStyle}>
           <div style={labelStyle}>
-            <Text style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-              使用统计和分析
-            </Text>
+            <Text style={{ color: 'var(--text-primary)', fontWeight: 500 }}>使用统计和分析</Text>
             <Text style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}>
               记录页面性能数据以优化体验
             </Text>
           </div>
-          <Switch
-            checked={settings.analytics}
-            onChange={handleToggle('analytics')}
-          />
+          <Switch checked={settings.analytics} onChange={handleToggle('analytics')} />
         </div>
 
         <Divider style={{ margin: 0, borderColor: 'var(--border-color)' }} />
@@ -131,17 +121,12 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ visible, onAccept, onDe
         {/* 调试日志 */}
         <div style={rowStyle}>
           <div style={labelStyle}>
-            <Text style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-              调试日志
-            </Text>
+            <Text style={{ color: 'var(--text-primary)', fontWeight: 500 }}>调试日志</Text>
             <Text style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}>
               本地存储调试日志（最多 200 条）
             </Text>
           </div>
-          <Switch
-            checked={settings.logging}
-            onChange={handleToggle('logging')}
-          />
+          <Switch checked={settings.logging} onChange={handleToggle('logging')} />
         </div>
       </div>
 
@@ -156,7 +141,9 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ visible, onAccept, onDe
           borderRadius: 'var(--radius-md)',
         }}
       >
-        <InfoCircleOutlined style={{ color: 'var(--brand-primary)', marginTop: 2, flexShrink: 0 }} />
+        <InfoCircleOutlined
+          style={{ color: 'var(--brand-primary)', marginTop: 2, flexShrink: 0 }}
+        />
         <Text style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)' }}>
           所有数据仅存储在您的浏览器本地，不会自动上传至服务器。您可以随时在设置中修改隐私偏好或清除本地数据。
         </Text>
@@ -169,7 +156,8 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ visible, onAccept, onDe
           block
           onClick={handleAccept}
           style={{
-            background: 'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
+            background:
+              'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
             border: 'none',
             height: 44,
             borderRadius: 'var(--radius-md)',

@@ -1,10 +1,13 @@
 import React from 'react';
 import {
-  DndContext, DragEndEvent, closestCenter, PointerSensor, useSensor, useSensors,
+  DndContext,
+  DragEndEvent,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
 } from '@dnd-kit/core';
-import {
-  SortableContext, verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Button, Typography, Space } from 'antd';
 import { PlusOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { useStoryboardStore } from '../../store/useStoryboardStore';
@@ -26,9 +29,7 @@ export const ShotList: React.FC<ShotListProps> = ({ onRegenerateShot, readonly =
   const removeShot = useStoryboardStore((s) => s.removeShot);
   const addShot = useStoryboardStore((s) => s.addShot);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (readonly) return;
@@ -44,16 +45,13 @@ export const ShotList: React.FC<ShotListProps> = ({ onRegenerateShot, readonly =
       <div className="shot-list__header">
         <Space>
           <VideoCameraOutlined style={{ color: 'var(--brand-primary)' }} />
-          <Text strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>分镜列表</Text>
+          <Text strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>
+            分镜列表
+          </Text>
           <span className="shot-list__count">{shots.length}</span>
         </Space>
         {!readonly && (
-          <Button
-            type="dashed"
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={() => addShot()}
-          >
+          <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => addShot()}>
             添加
           </Button>
         )}

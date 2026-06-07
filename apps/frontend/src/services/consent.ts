@@ -1,7 +1,7 @@
 export interface ConsentSettings {
-  analytics: boolean;    // performance monitoring
-  drafts: boolean;       // auto-save drafts
-  logging: boolean;      // debug logs
+  analytics: boolean; // performance monitoring
+  drafts: boolean; // auto-save drafts
+  logging: boolean; // debug logs
 }
 
 export interface PrivacySettings {

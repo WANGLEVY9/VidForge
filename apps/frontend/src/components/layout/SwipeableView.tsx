@@ -18,29 +18,35 @@ export function SwipeableView({ pages, activeKey, onChange, threshold = 60 }: Sw
     dragRef.current.isDragging = false;
   }, []);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    const deltaX = e.touches[0].clientX - dragRef.current.startX;
-    const deltaY = e.touches[0].clientY - dragRef.current.startY;
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      const deltaX = e.touches[0].clientX - dragRef.current.startX;
+      const deltaY = e.touches[0].clientY - dragRef.current.startY;
 
-    if (!dragRef.current.isDragging) {
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        dragRef.current.isDragging = true;
-      } else {
-        return;
+      if (!dragRef.current.isDragging) {
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          dragRef.current.isDragging = true;
+        } else {
+          return;
+        }
       }
-    }
 
-    if (dragRef.current.isDragging) {
-      dragRef.current.currentX = deltaX;
-      if (containerRef.current) {
-        const el = containerRef.current;
-        const boundedX = (activeIndex === 0 && deltaX > 0) ? deltaX * 0.3
-          : (activeIndex === pages.length - 1 && deltaX < 0) ? deltaX * 0.3
-          : deltaX;
-        el.style.transform = `translate3d(${boundedX}px, 0, 0)`;
+      if (dragRef.current.isDragging) {
+        dragRef.current.currentX = deltaX;
+        if (containerRef.current) {
+          const el = containerRef.current;
+          const boundedX =
+            activeIndex === 0 && deltaX > 0
+              ? deltaX * 0.3
+              : activeIndex === pages.length - 1 && deltaX < 0
+                ? deltaX * 0.3
+                : deltaX;
+          el.style.transform = `translate3d(${boundedX}px, 0, 0)`;
+        }
       }
-    }
-  }, [activeIndex, pages.length]);
+    },
+    [activeIndex, pages.length]
+  );
 
   const handleTouchEnd = useCallback(() => {
     if (!dragRef.current.isDragging) return;

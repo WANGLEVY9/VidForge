@@ -12,7 +12,13 @@ interface ChartPanelProps {
   extra?: React.ReactNode;
 }
 
-export const ChartPanel = memo(function ChartPanel({ title, icon, option, height = 260, extra }: ChartPanelProps) {
+export const ChartPanel = memo(function ChartPanel({
+  title,
+  icon,
+  option,
+  height = 260,
+  extra,
+}: ChartPanelProps) {
   return (
     <GlassPanel variant="card">
       <StudioHeader title={title} icon={icon} extra={extra} />

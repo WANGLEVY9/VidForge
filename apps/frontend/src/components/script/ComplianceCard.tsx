@@ -58,17 +58,25 @@ export const ComplianceCard: React.FC<Props> = ({ report }) => {
       <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
         <Space>
           <SafetyCertificateOutlined style={{ color, fontSize: 18 }} />
-          <Text strong style={{ color: 'var(--text-primary)' }}>合规审核</Text>
+          <Text strong style={{ color: 'var(--text-primary)' }}>
+            合规审核
+          </Text>
           {passed ? (
-            <Tag color="success" icon={<CheckCircleOutlined />}>已通过</Tag>
+            <Tag color="success" icon={<CheckCircleOutlined />}>
+              已通过
+            </Tag>
           ) : (
-            <Tag color="error" icon={<WarningOutlined />}>需修改</Tag>
+            <Tag color="error" icon={<WarningOutlined />}>
+              需修改
+            </Tag>
           )}
           {llmReviewed && <Tag color="purple">LLM 二次复核</Tag>}
         </Space>
         <Space>
           <Text style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>合规分</Text>
-          <Text strong style={{ color, fontSize: 16 }}>{score}</Text>
+          <Text strong style={{ color, fontSize: 16 }}>
+            {score}
+          </Text>
           <Text style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>/ 100</Text>
         </Space>
       </Space>
@@ -88,8 +96,16 @@ export const ComplianceCard: React.FC<Props> = ({ report }) => {
         />
       ) : (
         <div>
-          <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, display: 'block', marginBottom: 6 }}>
-            命中 {hits.length} 项,严重 {hits.filter((h) => h.severity === 'high').length} / 中等 {hits.filter((h) => h.severity === 'medium').length}:
+          <Text
+            style={{
+              color: 'var(--text-tertiary)',
+              fontSize: 12,
+              display: 'block',
+              marginBottom: 6,
+            }}
+          >
+            命中 {hits.length} 项,严重 {hits.filter((h) => h.severity === 'high').length} / 中等{' '}
+            {hits.filter((h) => h.severity === 'medium').length}:
           </Text>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {hits.map((hit, idx) => (
@@ -113,14 +129,17 @@ export const ComplianceCard: React.FC<Props> = ({ report }) => {
                 </Tag>
                 <div style={{ flex: 1 }}>
                   <Space size={6}>
-                    <Text strong style={{ color: 'var(--text-primary)' }}>"{hit.word}"</Text>
+                    <Text strong style={{ color: 'var(--text-primary)' }}>
+                      "{hit.word}"
+                    </Text>
                     <Tag style={{ fontSize: 11, margin: 0 }}>{CATEGORY_LABEL[hit.category]}</Tag>
                   </Space>
                   <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-secondary)' }}>
                     {hit.reason}
                     {hit.suggestion && (
                       <>
-                        {' '}→ 建议替换为 <Text mark>{hit.suggestion}</Text>
+                        {' '}
+                        → 建议替换为 <Text mark>{hit.suggestion}</Text>
                       </>
                     )}
                   </div>

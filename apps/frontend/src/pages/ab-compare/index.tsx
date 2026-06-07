@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Button, Typography, Space, Tag, Select, Empty, Spin, message, Modal, Input } from 'antd';
-import { PlusOutlined, ReloadOutlined, DownloadOutlined, FileTextOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  DownloadOutlined,
+  FileTextOutlined,
+} from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { ComparePlayer } from './components/ComparePlayer';
 import { CompareMetrics } from './components/CompareMetrics';
@@ -49,10 +54,10 @@ function toVersionConfig(task: CreationTask | null, fallbackLabel: string): Vers
   }
   const result: any = task.result ?? {};
   const compose = result.compose ?? {};
-  const shots = Array.isArray(task.storyboard) ? task.storyboard.length : (result.shots?.length ?? 0);
-  const genElapsedMs = task.createdAt
-    ? Date.now() - new Date(task.createdAt).getTime()
-    : 0;
+  const shots = Array.isArray(task.storyboard)
+    ? task.storyboard.length
+    : (result.shots?.length ?? 0);
+  const genElapsedMs = task.createdAt ? Date.now() - new Date(task.createdAt).getTime() : 0;
   return {
     label: task.title || fallbackLabel,
     model: 'Doubao-Seedance-1.5-pro',
@@ -87,7 +92,7 @@ function buildMetrics(a: CreationTask | null, b: CreationTask | null): MetricRow
 
   const winner = (av: number, bv: number, higherIsBetter = true): 'A' | 'B' | 'TIE' => {
     if (av === bv) return 'TIE';
-    if ((av > bv) === higherIsBetter) return 'A';
+    if (av > bv === higherIsBetter) return 'A';
     return 'B';
   };
 
@@ -183,14 +188,23 @@ function AbComparePage() {
   const [savingTemplate, setSavingTemplate] = useState(false);
 
   const handleAdopt = useCallback((versionLabel: string, videoUrl?: string) => {
-    if (!videoUrl) { message.warning('该版本无可用视频'); return; }
+    if (!videoUrl) {
+      message.warning('该版本无可用视频');
+      return;
+    }
     triggerDownload(videoUrl, `vidforge-${versionLabel}.mp4`);
   }, []);
 
   const handleSaveTemplate = useCallback(async () => {
-    if (!templateName.trim()) { message.warning('请输入模板名称'); return; }
+    if (!templateName.trim()) {
+      message.warning('请输入模板名称');
+      return;
+    }
     const sourceTask = taskA || taskB;
-    if (!sourceTask) { message.warning('请先选择任务'); return; }
+    if (!sourceTask) {
+      message.warning('请先选择任务');
+      return;
+    }
     setSavingTemplate(true);
     try {
       const scriptData = (sourceTask.result as any)?.script ?? {};
@@ -227,7 +241,9 @@ function AbComparePage() {
       `  时长: ${versionB.duration}s | 分镜: ${versionB.shots} | TTS: ${versionB.tts} | BGM: ${versionB.bgm} | 画质: ${versionB.resolution}`,
       '',
       '--- 指标对比 ---',
-      ...metrics.map((m) => `${m.metric}: A=${m.versionA} | B=${m.versionB} | 差异=${m.diff} | 优胜=${m.winner}`),
+      ...metrics.map(
+        (m) => `${m.metric}: A=${m.versionA} | B=${m.versionB} | 差异=${m.diff} | 优胜=${m.winner}`
+      ),
       '',
       '--- 优胜总结 ---',
       `A 赢 ${metrics.filter((m) => m.winner === 'A').length} 项`,
@@ -247,20 +263,42 @@ function AbComparePage() {
 
   return (
     <div className="page-enter" style={{ padding: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 'var(--spacing-lg)',
+        }}
+      >
         <Space>
-          <Title level={4} style={{ color: 'var(--text-primary)', margin: 0 }}>A/B 对比评测</Title>
-          <Tag color="blue" style={{ borderRadius: 20 }}>真实任务对比</Tag>
+          <Title level={4} style={{ color: 'var(--text-primary)', margin: 0 }}>
+            A/B 对比评测
+          </Title>
+          <Tag color="blue" style={{ borderRadius: 20 }}>
+            真实任务对比
+          </Tag>
         </Space>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchTasks} loading={loading}>刷新</Button>
-          <Button type="primary" icon={<PlusOutlined />}>新建对比</Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchTasks} loading={loading}>
+            刷新
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />}>
+            新建对比
+          </Button>
         </Space>
       </div>
 
       {/* 任务选择器 */}
-      <GlassPanel variant="card" style={{ padding: 'var(--spacing-lg)', marginBottom: 'var(--spacing-lg)' }}>
-        <Space size="large" direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: '100%' }}>
+      <GlassPanel
+        variant="card"
+        style={{ padding: 'var(--spacing-lg)', marginBottom: 'var(--spacing-lg)' }}
+      >
+        <Space
+          size="large"
+          direction={isMobile ? 'vertical' : 'horizontal'}
+          style={{ width: '100%' }}
+        >
           <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ flex: 1 }}>
             <Tag color="blue">A</Tag>
             <Select
@@ -295,24 +333,59 @@ function AbComparePage() {
           </GlassPanel>
         ) : taskA && taskB ? (
           <>
-            <GlassPanel variant="card" style={{ padding: 'var(--spacing-lg)', marginBottom: 'var(--spacing-lg)' }}>
+            <GlassPanel
+              variant="card"
+              style={{ padding: 'var(--spacing-lg)', marginBottom: 'var(--spacing-lg)' }}
+            >
               <ComparePlayer versionA={versionA} versionB={versionB} />
             </GlassPanel>
 
             <CompareMetrics metrics={metrics} />
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 'var(--spacing-lg)', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-              <Button type="primary" block={isMobile} icon={<DownloadOutlined />} onClick={() => handleAdopt('A', versionA.videoUrl)}>采用版本 A</Button>
-              <Button block={isMobile} icon={<DownloadOutlined />} onClick={() => handleAdopt('B', versionB.videoUrl)}>采用版本 B</Button>
-              <Button block={isMobile} icon={<FileTextOutlined />} onClick={() => setTemplateModalOpen(true)}>另存为模板</Button>
-              <Button block={isMobile} onClick={handleExportReport}>导出报告</Button>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 12,
+                marginTop: 'var(--spacing-lg)',
+                flexWrap: isMobile ? 'wrap' : 'nowrap',
+              }}
+            >
+              <Button
+                type="primary"
+                block={isMobile}
+                icon={<DownloadOutlined />}
+                onClick={() => handleAdopt('A', versionA.videoUrl)}
+              >
+                采用版本 A
+              </Button>
+              <Button
+                block={isMobile}
+                icon={<DownloadOutlined />}
+                onClick={() => handleAdopt('B', versionB.videoUrl)}
+              >
+                采用版本 B
+              </Button>
+              <Button
+                block={isMobile}
+                icon={<FileTextOutlined />}
+                onClick={() => setTemplateModalOpen(true)}
+              >
+                另存为模板
+              </Button>
+              <Button block={isMobile} onClick={handleExportReport}>
+                导出报告
+              </Button>
             </div>
 
             {/* 另存为模板弹窗 */}
             <Modal
               title="保存为模板"
               open={templateModalOpen}
-              onCancel={() => { setTemplateModalOpen(false); setTemplateName(''); }}
+              onCancel={() => {
+                setTemplateModalOpen(false);
+                setTemplateName('');
+              }}
               onOk={handleSaveTemplate}
               confirmLoading={savingTemplate}
               okText="保存"
@@ -331,7 +404,10 @@ function AbComparePage() {
           </>
         ) : (
           <GlassPanel variant="card" style={{ padding: 60, textAlign: 'center' }}>
-            <Empty description="请在上方选择两个已完成任务进行对比" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty
+              description="请在上方选择两个已完成任务进行对比"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
           </GlassPanel>
         )}
       </Spin>

@@ -1,12 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Form, Input, Button, Typography, message, Alert, Divider } from 'antd';
-import {
-  RocketOutlined,
-  MailOutlined,
-  LockOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { RocketOutlined, MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import { authApi } from '../../services/auth';
 import { useAuthStore } from '../../store/useAuthStore';
 

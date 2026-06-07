@@ -69,7 +69,14 @@ export default function WorkspaceLayout() {
   if (spaceId && !currentSpace) {
     return (
       <div className="page-enter" style={{ textAlign: 'center', padding: 60 }}>
-        <Text style={{ color: 'var(--text-tertiary)', fontSize: 14, display: 'block', marginBottom: 16 }}>
+        <Text
+          style={{
+            color: 'var(--text-tertiary)',
+            fontSize: 14,
+            display: 'block',
+            marginBottom: 16,
+          }}
+        >
           找不到该商品空间，可能已被归档或无权访问
         </Text>
         <Button type="primary" onClick={() => navigate('/workspace')}>
@@ -103,7 +110,11 @@ export default function WorkspaceLayout() {
               label: (
                 <Space>
                   <span>{s.name}</span>
-                  {s.isDefault && <Tag color="cyan" style={{ margin: 0 }}>默认</Tag>}
+                  {s.isDefault && (
+                    <Tag color="cyan" style={{ margin: 0 }}>
+                      默认
+                    </Tag>
+                  )}
                 </Space>
               ),
             }))}

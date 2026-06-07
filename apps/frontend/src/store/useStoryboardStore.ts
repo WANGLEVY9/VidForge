@@ -94,7 +94,7 @@ export const useStoryboardStore = create<StoryboardStore>((set) => ({
       const filtered = state.shots.filter((s) => s.id !== id);
       const newActive =
         state.activeShotId === id
-          ? filtered[Math.min(removedIdx, filtered.length - 1)]?.id ?? null
+          ? (filtered[Math.min(removedIdx, filtered.length - 1)]?.id ?? null)
           : state.activeShotId;
       return {
         shots: filtered.map((s, i) => ({ ...s, order: i + 1 })),
