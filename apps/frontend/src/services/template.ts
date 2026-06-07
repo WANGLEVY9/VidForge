@@ -1,4 +1,4 @@
-import api from './api';
+import apiClient from '../utils/api';
 
 export interface Template {
   id: string;
@@ -30,18 +30,18 @@ export interface CreateTemplateDto {
 
 export const templateApi = {
   getList(params?: { category?: string; style?: string }): Promise<Template[]> {
-    return api.get('/template', { params }).then((r) => r.data);
+    return apiClient.get('/template', { params }).then((r) => r.data);
   },
 
   getById(id: string): Promise<Template> {
-    return api.get(`/template/${id}`).then((r) => r.data);
+    return apiClient.get(`/template/${id}`).then((r) => r.data);
   },
 
   create(dto: CreateTemplateDto): Promise<Template> {
-    return api.post('/template', dto).then((r) => r.data);
+    return apiClient.post('/template', dto).then((r) => r.data);
   },
 
   remove(id: string): Promise<void> {
-    return api.delete(`/template/${id}`).then((r) => r.data);
+    return apiClient.delete(`/template/${id}`).then((r) => r.data);
   },
 };
