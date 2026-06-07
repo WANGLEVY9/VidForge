@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Typography, Statistic, Progress, Tooltip, Tag } from 'antd';
-import { DollarOutlined, ThunderboltOutlined, FieldTimeOutlined, ApiOutlined, CloudServerOutlined } from '@ant-design/icons';
+import {
+  DollarOutlined,
+  ThunderboltOutlined,
+  FieldTimeOutlined,
+  ApiOutlined,
+  CloudServerOutlined,
+} from '@ant-design/icons';
 import { analyticsApi, CostOverview } from '../../services/analytics';
 
 const { Text } = Typography;
@@ -51,7 +57,9 @@ export const CostOverviewCard: React.FC<Props> = ({ refreshIntervalMs = 30000 })
           <DollarOutlined style={{ color: '#10b981', marginRight: 8 }} />
           今日 AI 成本观测
           <Tooltip title="数据来自后端 trace_spans 表,自动统计每次 ARK 调用的 token 与估算成本。包含 prompt cache 命中率,可用于成本优化决策。">
-            <Tag color="green" style={{ marginLeft: 8, borderRadius: 20 }}>实时</Tag>
+            <Tag color="green" style={{ marginLeft: 8, borderRadius: 20 }}>
+              实时
+            </Tag>
           </Tooltip>
         </span>
       }
@@ -62,21 +70,33 @@ export const CostOverviewCard: React.FC<Props> = ({ refreshIntervalMs = 30000 })
         <Row gutter={[16, 16]}>
           <Col xs={12} sm={8}>
             <Statistic
-              title={<span><ApiOutlined /> 总调用</span>}
+              title={
+                <span>
+                  <ApiOutlined /> 总调用
+                </span>
+              }
               value={data.totalCalls}
               valueStyle={{ fontSize: 20, color: 'var(--text-primary)' }}
             />
           </Col>
           <Col xs={12} sm={8}>
             <Statistic
-              title={<span><ThunderboltOutlined /> Token 总数</span>}
+              title={
+                <span>
+                  <ThunderboltOutlined /> Token 总数
+                </span>
+              }
               value={data.totalTokens}
               valueStyle={{ fontSize: 20, color: 'var(--text-primary)' }}
             />
           </Col>
           <Col xs={12} sm={8}>
             <Statistic
-              title={<span><DollarOutlined /> 估算成本</span>}
+              title={
+                <span>
+                  <DollarOutlined /> 估算成本
+                </span>
+              }
               value={costYuan}
               precision={3}
               prefix="¥"
@@ -85,7 +105,11 @@ export const CostOverviewCard: React.FC<Props> = ({ refreshIntervalMs = 30000 })
           </Col>
           <Col xs={12} sm={8}>
             <Statistic
-              title={<span><FieldTimeOutlined /> 平均延迟</span>}
+              title={
+                <span>
+                  <FieldTimeOutlined /> 平均延迟
+                </span>
+              }
               value={data.avgLatencyMs}
               suffix="ms"
               valueStyle={{ fontSize: 20, color: 'var(--text-primary)' }}

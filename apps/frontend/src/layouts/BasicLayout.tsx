@@ -94,7 +94,8 @@ function BasicLayout() {
   })();
 
   // 侧栏菜单的高亮 key（按前缀匹配）
-  const selectedKey = menuItems.find((m) => location.pathname.startsWith(m.key))?.key ?? '/workspace';
+  const selectedKey =
+    menuItems.find((m) => location.pathname.startsWith(m.key))?.key ?? '/workspace';
 
   return (
     <ShellProvider>

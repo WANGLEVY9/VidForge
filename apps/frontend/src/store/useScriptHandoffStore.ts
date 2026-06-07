@@ -27,11 +27,7 @@ interface State {
 }
 
 interface Actions {
-  setPending: (
-    script: ScriptResult,
-    prompt: string,
-    spaceId?: string,
-  ) => void;
+  setPending: (script: ScriptResult, prompt: string, spaceId?: string) => void;
   consume: () => PendingHandoff | null;
   clear: () => void;
 }

@@ -1,6 +1,12 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Badge } from 'antd';
-import { DashboardOutlined, UploadOutlined, FileTextOutlined, VideoCameraOutlined, ExperimentOutlined } from '@ant-design/icons';
+import {
+  DashboardOutlined,
+  UploadOutlined,
+  FileTextOutlined,
+  VideoCameraOutlined,
+  ExperimentOutlined,
+} from '@ant-design/icons';
 
 interface TabConfig {
   key: string;
@@ -15,7 +21,13 @@ const tabs: TabConfig[] = [
   { key: 'material', label: '素材库', icon: <UploadOutlined />, href: '/material' },
   { key: 'script', label: '剧本', icon: <FileTextOutlined />, href: '/script' },
   { key: 'creation', label: '创作', icon: <VideoCameraOutlined />, href: '/creation' },
-  { key: 'ab-compare', label: 'AB对比', icon: <ExperimentOutlined />, href: '/ab-compare', badge: 0 },
+  {
+    key: 'ab-compare',
+    label: 'AB对比',
+    icon: <ExperimentOutlined />,
+    href: '/ab-compare',
+    badge: 0,
+  },
 ];
 
 interface BottomTabBarProps {
@@ -69,7 +81,14 @@ export function BottomTabBar({ visible }: BottomTabBarProps) {
                 <span style={{ fontSize: 20 }}>{tab.icon}</span>
               </Badge>
             ) : (
-              <span style={{ fontSize: 20, transform: active ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.2s', display: 'inline-block' }}>
+              <span
+                style={{
+                  fontSize: 20,
+                  transform: active ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s',
+                  display: 'inline-block',
+                }}
+              >
                 {tab.icon}
               </span>
             )}
@@ -83,7 +102,8 @@ export function BottomTabBar({ visible }: BottomTabBarProps) {
                   width: 20,
                   height: 2,
                   borderRadius: '0 0 2px 2px',
-                  background: 'linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))',
+                  background:
+                    'linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))',
                 }}
               />
             )}

@@ -21,7 +21,15 @@ export function TopBar() {
         zIndex: 90,
       }}
     >
-      <div style={{ fontSize: 18, fontWeight: 700, background: 'linear-gradient(135deg, var(--brand-primary) 0%, #ec4899 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+      <div
+        style={{
+          fontSize: 18,
+          fontWeight: 700,
+          background: 'linear-gradient(135deg, var(--brand-primary) 0%, #ec4899 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}
+      >
         VidForge
       </div>
       <Space size={12}>
@@ -30,7 +38,12 @@ export function TopBar() {
             size="small"
             placeholder="搜索..."
             prefix={<SearchOutlined style={{ color: 'var(--text-tertiary)' }} />}
-            style={{ width: 180, borderRadius: 'var(--radius-md)', background: 'var(--bg-surface-2)', borderColor: 'var(--border-color)' }}
+            style={{
+              width: 180,
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-surface-2)',
+              borderColor: 'var(--border-color)',
+            }}
             onBlur={() => setSearchOpen(false)}
             autoFocus
           />
@@ -40,9 +53,21 @@ export function TopBar() {
           onClick={() => setSearchOpen(!searchOpen)}
         />
         <Badge count={3} size="small">
-          <BellOutlined style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }} />
+          <BellOutlined
+            style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }}
+          />
         </Badge>
-        <Avatar size={28} style={{ background: 'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)', cursor: 'pointer', fontSize: 12 }}>U</Avatar>
+        <Avatar
+          size={28}
+          style={{
+            background:
+              'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
+            cursor: 'pointer',
+            fontSize: 12,
+          }}
+        >
+          U
+        </Avatar>
       </Space>
     </div>
   );

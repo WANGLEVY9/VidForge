@@ -23,8 +23,11 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ creationTaskId, open, 
     setExporting(true);
     try {
       await exportApi.create({
-        creationTaskId, format, resolution,
-        embedSubtitles, keepIndividualShots: keepShots,
+        creationTaskId,
+        format,
+        resolution,
+        embedSubtitles,
+        keepIndividualShots: keepShots,
       });
       message.success('导出任务已创建');
       const list = await exportApi.getList();
@@ -40,7 +43,9 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ creationTaskId, open, 
     { title: '格式', dataIndex: 'format', key: 'format' },
     { title: '分辨率', dataIndex: 'resolution', key: 'resolution' },
     {
-      title: '状态', dataIndex: 'status', key: 'status',
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
       render: (v: string) => {
         if (v === 'completed') return <Tag color="success">完成</Tag>;
         if (v === 'processing') return <Tag color="processing">导出中</Tag>;
@@ -49,10 +54,14 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ creationTaskId, open, 
       },
     },
     {
-      title: '操作', key: 'action',
-      render: (_: any, record: ExportTask) => (
-        record.status === 'completed' ? <Button type="link" size="small"><DownloadOutlined /> 下载</Button> : null
-      ),
+      title: '操作',
+      key: 'action',
+      render: (_: any, record: ExportTask) =>
+        record.status === 'completed' ? (
+          <Button type="link" size="small">
+            <DownloadOutlined /> 下载
+          </Button>
+        ) : null,
     },
   ];
 
@@ -60,7 +69,17 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ creationTaskId, open, 
     <Modal title="导出设置" open={open} onCancel={onClose} width={520} footer={null}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
-          <Text style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 8 }}>导出格式</Text>
+          <Text
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: 12,
+              fontWeight: 600,
+              display: 'block',
+              marginBottom: 8,
+            }}
+          >
+            导出格式
+          </Text>
           <Radio.Group value={format} onChange={(e) => setFormat(e.target.value)}>
             <Radio.Button value="mp4">MP4 H.264</Radio.Button>
             <Radio.Button value="mov">MOV ProRes</Radio.Button>
@@ -70,7 +89,17 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ creationTaskId, open, 
         </div>
 
         <div>
-          <Text style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 8 }}>分辨率</Text>
+          <Text
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: 12,
+              fontWeight: 600,
+              display: 'block',
+              marginBottom: 8,
+            }}
+          >
+            分辨率
+          </Text>
           <Radio.Group value={resolution} onChange={(e) => setResolution(e.target.value)}>
             <Radio.Button value="2160p">4K</Radio.Button>
             <Radio.Button value="1080p">1080p</Radio.Button>
@@ -80,7 +109,17 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ creationTaskId, open, 
         </div>
 
         <div>
-          <Text style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 8 }}>附加选项</Text>
+          <Text
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: 12,
+              fontWeight: 600,
+              display: 'block',
+              marginBottom: 8,
+            }}
+          >
+            附加选项
+          </Text>
           <Space direction="vertical" style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <Text style={{ color: 'var(--text-primary)' }}>嵌入字幕</Text>
@@ -97,12 +136,25 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ creationTaskId, open, 
           预估: {resolution} {format.toUpperCase()} ~ 45MB | 预计耗时: ~30s
         </Text>
 
-        <Button type="primary" block size="large" onClick={handleExport} loading={exporting} icon={<DownloadOutlined />}>
+        <Button
+          type="primary"
+          block
+          size="large"
+          onClick={handleExport}
+          loading={exporting}
+          icon={<DownloadOutlined />}
+        >
           开始导出
         </Button>
 
         {exports.length > 0 && (
-          <Table dataSource={exports} columns={columns} pagination={false} size="small" rowKey="id" />
+          <Table
+            dataSource={exports}
+            columns={columns}
+            pagination={false}
+            size="small"
+            rowKey="id"
+          />
         )}
       </div>
     </Modal>

@@ -18,7 +18,10 @@ export interface StoryboardEditorProps {
   readonly?: boolean;
 }
 
-export const StoryboardEditor: React.FC<StoryboardEditorProps> = ({ onRegenerateShot, readonly = false }) => {
+export const StoryboardEditor: React.FC<StoryboardEditorProps> = ({
+  onRegenerateShot,
+  readonly = false,
+}) => {
   const shots = useStoryboardStore((s) => s.shots);
   const activeShotId = useStoryboardStore((s) => s.activeShotId);
   const playbackState = useStoryboardStore((s) => s.playbackState);
@@ -43,16 +46,28 @@ export const StoryboardEditor: React.FC<StoryboardEditorProps> = ({ onRegenerate
     return {
       ...playPause,
       'Cmd+d': () => {
-        if (activeShotId) { duplicateShot(activeShotId); message.success('已复制分镜'); }
+        if (activeShotId) {
+          duplicateShot(activeShotId);
+          message.success('已复制分镜');
+        }
       },
       'Ctrl+d': () => {
-        if (activeShotId) { duplicateShot(activeShotId); message.success('已复制分镜'); }
+        if (activeShotId) {
+          duplicateShot(activeShotId);
+          message.success('已复制分镜');
+        }
       },
       Delete: () => {
-        if (activeShotId && shots.length > 1) { removeShot(activeShotId); message.success('已删除分镜'); }
+        if (activeShotId && shots.length > 1) {
+          removeShot(activeShotId);
+          message.success('已删除分镜');
+        }
       },
       Backspace: () => {
-        if (activeShotId && shots.length > 1) { removeShot(activeShotId); message.success('已删除分镜'); }
+        if (activeShotId && shots.length > 1) {
+          removeShot(activeShotId);
+          message.success('已删除分镜');
+        }
       },
       'Cmd+Enter': () => {
         if (activeShotId && onRegenerateShot) onRegenerateShot(activeShotId);
@@ -61,7 +76,18 @@ export const StoryboardEditor: React.FC<StoryboardEditorProps> = ({ onRegenerate
         if (activeShotId && onRegenerateShot) onRegenerateShot(activeShotId);
       },
     };
-  }, [activeShotId, activeIndex, shots.length, playbackState, setPlaybackState, setActiveShot, duplicateShot, removeShot, onRegenerateShot, readonly]);
+  }, [
+    activeShotId,
+    activeIndex,
+    shots.length,
+    playbackState,
+    setPlaybackState,
+    setActiveShot,
+    duplicateShot,
+    removeShot,
+    onRegenerateShot,
+    readonly,
+  ]);
 
   useKeyboardShortcuts(shortcuts);
 

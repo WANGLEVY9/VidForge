@@ -1,16 +1,39 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useShell } from '../../components/layout/shell-context';
 import {
-  Row, Col, Button, Upload, Input, Space, Tag, Typography,
-  Dropdown, Modal, message, Empty, Tooltip, Segmented, Skeleton,
+  Row,
+  Col,
+  Button,
+  Upload,
+  Input,
+  Space,
+  Tag,
+  Typography,
+  Dropdown,
+  Modal,
+  message,
+  Empty,
+  Tooltip,
+  Segmented,
+  Skeleton,
 } from 'antd';
 import {
-  SearchOutlined, DeleteOutlined, EyeOutlined,
-  PictureOutlined, VideoCameraOutlined, FileImageOutlined,
-  PlusOutlined, CloudUploadOutlined,
-  DownloadOutlined, CopyOutlined, AppstoreOutlined, UnorderedListOutlined,
-  ExperimentOutlined, SortAscendingOutlined,
-  CheckCircleOutlined, ClockCircleOutlined,
+  SearchOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  PictureOutlined,
+  VideoCameraOutlined,
+  FileImageOutlined,
+  PlusOutlined,
+  CloudUploadOutlined,
+  DownloadOutlined,
+  CopyOutlined,
+  AppstoreOutlined,
+  UnorderedListOutlined,
+  ExperimentOutlined,
+  SortAscendingOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps, MenuProps } from 'antd';
 import { GlassPanel } from '../../components/studio/GlassPanel';
@@ -30,7 +53,16 @@ const typeConfig: Record<string, { icon: React.ReactNode; color: string; label: 
   audio: { icon: <FileImageOutlined />, color: '#10b981', label: '音频' },
 };
 
-const tagColors = ['#6366f1', '#a855f7', '#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
+const tagColors = [
+  '#6366f1',
+  '#a855f7',
+  '#06b6d4',
+  '#8b5cf6',
+  '#ec4899',
+  '#f59e0b',
+  '#10b981',
+  '#3b82f6',
+];
 
 function formatSize(bytes?: number): string {
   if (!bytes || bytes <= 0) return '—';
@@ -45,7 +77,12 @@ function formatDate(iso: string): string {
 }
 
 /** 排序选项 */
-const sortOptions: { key: string; label: string; orderBy: string; orderDirection: 'ASC' | 'DESC' }[] = [
+const sortOptions: {
+  key: string;
+  label: string;
+  orderBy: string;
+  orderDirection: 'ASC' | 'DESC';
+}[] = [
   { key: 'newest', label: '最新上传', orderBy: 'createdAt', orderDirection: 'DESC' },
   { key: 'oldest', label: '最早上传', orderBy: 'createdAt', orderDirection: 'ASC' },
   { key: 'name_asc', label: '按名称 A-Z', orderBy: 'name', orderDirection: 'ASC' },
@@ -239,7 +276,8 @@ function MaterialPage() {
     }
     const pt: any = m.productTags;
     const vt: any = m.videoTags;
-    if (pt?.category && pt.category !== '其他') result.push({ text: pt.category, color: '#6366f1', type: 'ai' });
+    if (pt?.category && pt.category !== '其他')
+      result.push({ text: pt.category, color: '#6366f1', type: 'ai' });
     if (vt?.mood) result.push({ text: vt.mood, color: '#ec4899', type: 'ai' });
     if (vt?.style) result.push({ text: vt.style, color: '#06b6d4', type: 'ai' });
     return result.slice(0, 3);
@@ -259,11 +297,14 @@ function MaterialPage() {
   return (
     <div className="page-enter" style={{ padding: 0 }}>
       {/* ─── 顶部操作栏 ─── */}
-      <GlassPanel variant="card" style={{
-        marginBottom: 'var(--spacing-lg)',
-        padding: 'var(--spacing-md) var(--spacing-xl)',
-        background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(99,102,241,0.03) 100%)',
-      }}>
+      <GlassPanel
+        variant="card"
+        style={{
+          marginBottom: 'var(--spacing-lg)',
+          padding: 'var(--spacing-md) var(--spacing-xl)',
+          background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(99,102,241,0.03) 100%)',
+        }}
+      >
         <Row gutter={[12, 12]} align="middle">
           <Col flex="auto">
             <Space size="middle" wrap>
@@ -286,9 +327,33 @@ function MaterialPage() {
                 size={isMobile ? 'small' : 'middle'}
                 options={[
                   { label: '全部', value: 'all' },
-                  { label: <Space size={4}><PictureOutlined />图片</Space>, value: 'image' },
-                  { label: <Space size={4}><VideoCameraOutlined />视频</Space>, value: 'video' },
-                  { label: <Space size={4}><FileImageOutlined />音频</Space>, value: 'audio' },
+                  {
+                    label: (
+                      <Space size={4}>
+                        <PictureOutlined />
+                        图片
+                      </Space>
+                    ),
+                    value: 'image',
+                  },
+                  {
+                    label: (
+                      <Space size={4}>
+                        <VideoCameraOutlined />
+                        视频
+                      </Space>
+                    ),
+                    value: 'video',
+                  },
+                  {
+                    label: (
+                      <Space size={4}>
+                        <FileImageOutlined />
+                        音频
+                      </Space>
+                    ),
+                    value: 'audio',
+                  },
                 ]}
                 value={activeType}
                 onChange={(v) => setActiveType(v as MaterialType)}
@@ -322,14 +387,16 @@ function MaterialPage() {
       </GlassPanel>
 
       {/* ─── 排序 + 标签过滤栏 ─── */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginBottom: 'var(--spacing-md)',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
+          marginBottom: 'var(--spacing-md)',
+        }}
+      >
         <Space size={8} wrap>
           {/* 排序 */}
           <Dropdown
@@ -409,7 +476,11 @@ function MaterialPage() {
         </Space>
 
         <Text style={{ color: 'var(--text-tertiary)', fontSize: 13, whiteSpace: 'nowrap' }}>
-          共 <Text strong style={{ color: 'var(--text-primary)' }}>{filteredMaterials.length}</Text> 个素材
+          共{' '}
+          <Text strong style={{ color: 'var(--text-primary)' }}>
+            {filteredMaterials.length}
+          </Text>{' '}
+          个素材
         </Text>
       </div>
 
@@ -431,7 +502,10 @@ function MaterialPage() {
           <p className="ant-upload-drag-icon">
             <CloudUploadOutlined style={{ fontSize: 36, color: 'var(--brand-primary)' }} />
           </p>
-          <p className="ant-upload-text" style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 14 }}>
+          <p
+            className="ant-upload-text"
+            style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 14 }}
+          >
             拖拽文件到此处，或 <span style={{ color: 'var(--brand-primary)' }}>点击浏览</span>
           </p>
           <p className="ant-upload-hint" style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
@@ -450,18 +524,37 @@ function MaterialPage() {
           ))}
         </Row>
       ) : filteredMaterials.length === 0 ? (
-        <GlassPanel variant="card" style={{
-          textAlign: 'center',
-          padding: '60px 40px',
-          background: 'linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-surface-2) 100%)',
-        }}>
-          <div style={{ fontSize: 56, color: 'var(--text-tertiary)', marginBottom: 16, opacity: 0.5 }}>
+        <GlassPanel
+          variant="card"
+          style={{
+            textAlign: 'center',
+            padding: '60px 40px',
+            background: 'linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-surface-2) 100%)',
+          }}
+        >
+          <div
+            style={{ fontSize: 56, color: 'var(--text-tertiary)', marginBottom: 16, opacity: 0.5 }}
+          >
             <PictureOutlined />
           </div>
-          <Text style={{ color: 'var(--text-secondary)', fontSize: 16, display: 'block', marginBottom: 8 }}>
+          <Text
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: 16,
+              display: 'block',
+              marginBottom: 8,
+            }}
+          >
             {materials.length === 0 ? '还没有素材，开始上传吧' : '没有匹配的素材'}
           </Text>
-          <Text style={{ color: 'var(--text-tertiary)', fontSize: 13, display: 'block', marginBottom: 24 }}>
+          <Text
+            style={{
+              color: 'var(--text-tertiary)',
+              fontSize: 13,
+              display: 'block',
+              marginBottom: 24,
+            }}
+          >
             {materials.length === 0
               ? '上传商品图片、视频素材，AI 将自动分析并生成标签'
               : '试试调整过滤条件或搜索关键词'}
@@ -495,51 +588,72 @@ function MaterialPage() {
                   onClick={() => handlePreview(item)}
                 >
                   {/* 预览区 */}
-                  <div style={{
-                    height: isMobile ? 100 : 140,
-                    background: 'var(--bg-surface-2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    backgroundImage: item.thumbnailUrl
-                      ? `url(${item.thumbnailUrl})`
-                      : item.type === 'image' && item.url
-                      ? `url(${item.url})`
-                      : undefined,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }}>
+                  <div
+                    style={{
+                      height: isMobile ? 100 : 140,
+                      background: 'var(--bg-surface-2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      backgroundImage: item.thumbnailUrl
+                        ? `url(${item.thumbnailUrl})`
+                        : item.type === 'image' && item.url
+                          ? `url(${item.url})`
+                          : undefined,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  >
                     {!(item.thumbnailUrl || (item.type === 'image' && item.url)) && (
                       <span style={{ fontSize: 36, color: tc.color, opacity: 0.5 }}>{tc.icon}</span>
                     )}
                     {/* 类型角标 */}
-                    <div style={{
-                      position: 'absolute', top: 6, right: 6,
-                      background: `${tc.color}dd`,
-                      borderRadius: 6, padding: '1px 8px',
-                      backdropFilter: 'blur(4px)',
-                    }}>
-                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 600 }}>{item.type.toUpperCase()}</Text>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 6,
+                        right: 6,
+                        background: `${tc.color}dd`,
+                        borderRadius: 6,
+                        padding: '1px 8px',
+                        backdropFilter: 'blur(4px)',
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 600 }}>
+                        {item.type.toUpperCase()}
+                      </Text>
                     </div>
                     {/* AI 分析状态 */}
                     {analyzed && (
-                      <div style={{
-                        position: 'absolute', top: 6, left: 6,
-                        background: 'rgba(16,185,129,0.85)',
-                        borderRadius: 12, padding: '1px 8px',
-                        display: 'flex', alignItems: 'center', gap: 3,
-                      }}>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 6,
+                          left: 6,
+                          background: 'rgba(16,185,129,0.85)',
+                          borderRadius: 12,
+                          padding: '1px 8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3,
+                        }}
+                      >
                         <CheckCircleOutlined style={{ fontSize: 10, color: '#fff' }} />
                         <Text style={{ color: '#fff', fontSize: 10 }}>已分析</Text>
                       </div>
                     )}
                     {/* 底部渐变信息 */}
-                    <div style={{
-                      position: 'absolute', bottom: 0, left: 0, right: 0,
-                      background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
-                      padding: '6px 10px',
-                    }}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
+                        padding: '6px 10px',
+                      }}
+                    >
                       <Text style={{ color: '#fff', fontSize: 11 }}>{formatSize(item.size)}</Text>
                     </div>
                   </div>
@@ -547,12 +661,25 @@ function MaterialPage() {
                   <div style={{ padding: '8px 12px 10px' }}>
                     <Text
                       ellipsis
-                      style={{ display: 'block', fontWeight: 500, fontSize: 13, color: 'var(--text-primary)' }}
+                      style={{
+                        display: 'block',
+                        fontWeight: 500,
+                        fontSize: 13,
+                        color: 'var(--text-primary)',
+                      }}
                       title={item.name}
                     >
                       {item.name}
                     </Text>
-                    <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap', minHeight: 22 }}>
+                    <div
+                      style={{
+                        marginTop: 6,
+                        display: 'flex',
+                        gap: 4,
+                        flexWrap: 'wrap',
+                        minHeight: 22,
+                      }}
+                    >
                       {tags.map((tag, ti) => (
                         <Tag
                           key={ti}
@@ -565,14 +692,23 @@ function MaterialPage() {
                             padding: '0 6px',
                           }}
                         >
-                          {tag.type === 'ai' && <ExperimentOutlined style={{ fontSize: 9, marginRight: 2 }} />}
+                          {tag.type === 'ai' && (
+                            <ExperimentOutlined style={{ fontSize: 9, marginRight: 2 }} />
+                          )}
                           {tag.text}
                         </Tag>
                       ))}
                       {!analyzed && item.type !== 'audio' && (
                         <Tag
                           color="default"
-                          style={{ borderRadius: 20, fontSize: 10, margin: 0, lineHeight: '18px', padding: '0 6px', opacity: 0.6 }}
+                          style={{
+                            borderRadius: 20,
+                            fontSize: 10,
+                            margin: 0,
+                            lineHeight: '18px',
+                            padding: '0 6px',
+                            opacity: 0.6,
+                          }}
                           icon={<ClockCircleOutlined />}
                         >
                           待分析
@@ -583,23 +719,56 @@ function MaterialPage() {
                   {/* 操作栏 */}
                   <div style={{ display: 'flex', borderTop: '1px solid var(--border-color)' }}>
                     <Tooltip title="预览">
-                      <Button type="text" icon={<EyeOutlined />} style={{ flex: 1, color: 'var(--text-secondary)' }} onClick={(e) => { e.stopPropagation(); handlePreview(item); }} />
+                      <Button
+                        type="text"
+                        icon={<EyeOutlined />}
+                        style={{ flex: 1, color: 'var(--text-secondary)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePreview(item);
+                        }}
+                      />
                     </Tooltip>
                     <Tooltip title={analyzed ? '重新分析' : 'AI 智能分析'}>
                       <Button
                         type="text"
                         icon={<ExperimentOutlined spin={analyzingId === item.id} />}
-                        style={{ flex: 1, color: analyzed ? 'var(--text-secondary)' : 'var(--brand-primary)' }}
-                        onClick={(e) => { e.stopPropagation(); handleAnalyze(item); }}
+                        style={{
+                          flex: 1,
+                          color: analyzed ? 'var(--text-secondary)' : 'var(--brand-primary)',
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAnalyze(item);
+                        }}
                         loading={analyzingId === item.id}
                         disabled={item.type === 'audio'}
                       />
                     </Tooltip>
                     <Tooltip title="复制链接">
-                      <Button type="text" icon={<CopyOutlined />} style={{ flex: 1, color: 'var(--text-secondary)' }} onClick={(e) => { e.stopPropagation(); if (item.url) { navigator.clipboard.writeText(item.url); message.success('已复制'); } }} />
+                      <Button
+                        type="text"
+                        icon={<CopyOutlined />}
+                        style={{ flex: 1, color: 'var(--text-secondary)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (item.url) {
+                            navigator.clipboard.writeText(item.url);
+                            message.success('已复制');
+                          }
+                        }}
+                      />
                     </Tooltip>
                     <Tooltip title="删除">
-                      <Button type="text" icon={<DeleteOutlined />} style={{ flex: 1, color: '#ef4444' }} onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} />
+                      <Button
+                        type="text"
+                        icon={<DeleteOutlined />}
+                        style={{ flex: 1, color: '#ef4444' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id);
+                        }}
+                      />
                     </Tooltip>
                   </div>
                 </GlassPanel>
@@ -618,53 +787,121 @@ function MaterialPage() {
               <div
                 key={item.id}
                 style={{
-                  display: 'flex', alignItems: 'center', padding: 'var(--spacing-md) var(--spacing-xl)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 'var(--spacing-md) var(--spacing-xl)',
                   borderBottom: '1px solid var(--border-color)',
-                  cursor: 'pointer', transition: 'background 0.2s',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
                 }}
                 onClick={() => handlePreview(item)}
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <div style={{
-                  width: 48, height: 48, borderRadius: 'var(--radius-md)',
-                  background: `${tc.color}15`, display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', color: tc.color, fontSize: 20, marginRight: 'var(--spacing-lg)',
-                  flexShrink: 0, position: 'relative',
-                }}>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 'var(--radius-md)',
+                    background: `${tc.color}15`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: tc.color,
+                    fontSize: 20,
+                    marginRight: 'var(--spacing-lg)',
+                    flexShrink: 0,
+                    position: 'relative',
+                  }}
+                >
                   {tc.icon}
                   {analyzed && (
-                    <CheckCircleOutlined style={{
-                      position: 'absolute', bottom: -2, right: -2,
-                      fontSize: 12, color: '#10b981',
-                      background: 'var(--bg-surface)',
-                      borderRadius: 10,
-                    }} />
+                    <CheckCircleOutlined
+                      style={{
+                        position: 'absolute',
+                        bottom: -2,
+                        right: -2,
+                        fontSize: 12,
+                        color: '#10b981',
+                        background: 'var(--bg-surface)',
+                        borderRadius: 10,
+                      }}
+                    />
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <Text strong style={{ color: 'var(--text-primary)', display: 'block' }}>{item.name}</Text>
+                  <Text strong style={{ color: 'var(--text-primary)', display: 'block' }}>
+                    {item.name}
+                  </Text>
                   <Space size={8} style={{ marginTop: 2 }}>
-                    <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{formatSize(item.size)}</Text>
-                    <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{formatDate(item.createdAt)}</Text>
+                    <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                      {formatSize(item.size)}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                      {formatDate(item.createdAt)}
+                    </Text>
                     {tags.slice(0, 2).map((tag, ti) => (
-                      <Tag key={ti} color={tag.color} style={{ borderRadius: 20, fontSize: 10, lineHeight: '18px', padding: '0 6px', margin: 0 }}>
-                        {tag.type === 'ai' && <ExperimentOutlined style={{ fontSize: 9, marginRight: 2 }} />}
+                      <Tag
+                        key={ti}
+                        color={tag.color}
+                        style={{
+                          borderRadius: 20,
+                          fontSize: 10,
+                          lineHeight: '18px',
+                          padding: '0 6px',
+                          margin: 0,
+                        }}
+                      >
+                        {tag.type === 'ai' && (
+                          <ExperimentOutlined style={{ fontSize: 9, marginRight: 2 }} />
+                        )}
                         {tag.text}
                       </Tag>
                     ))}
                     {!analyzed && item.type !== 'audio' && (
-                      <Tag style={{ borderRadius: 20, fontSize: 10, margin: 0, opacity: 0.6 }} icon={<ClockCircleOutlined />}>待分析</Tag>
+                      <Tag
+                        style={{ borderRadius: 20, fontSize: 10, margin: 0, opacity: 0.6 }}
+                        icon={<ClockCircleOutlined />}
+                      >
+                        待分析
+                      </Tag>
                     )}
                   </Space>
                 </div>
                 <Space size={4} onClick={(e) => e.stopPropagation()}>
-                  <Tooltip title="预览"><Button type="text" icon={<EyeOutlined />} onClick={() => handlePreview(item)} style={{ color: 'var(--text-secondary)' }} /></Tooltip>
-                  <Tooltip title={analyzed ? '重新分析' : '智能分析'}>
-                    <Button type="text" icon={<ExperimentOutlined />} onClick={() => handleAnalyze(item)} loading={analyzingId === item.id} disabled={item.type === 'audio'} style={{ color: analyzed ? 'var(--text-secondary)' : 'var(--brand-primary)' }} />
+                  <Tooltip title="预览">
+                    <Button
+                      type="text"
+                      icon={<EyeOutlined />}
+                      onClick={() => handlePreview(item)}
+                      style={{ color: 'var(--text-secondary)' }}
+                    />
                   </Tooltip>
-                  <Tooltip title="下载"><Button type="text" icon={<DownloadOutlined />} style={{ color: 'var(--text-secondary)' }} /></Tooltip>
-                  <Tooltip title="删除"><Button type="text" icon={<DeleteOutlined />} style={{ color: '#ef4444' }} onClick={() => handleDelete(item.id)} /></Tooltip>
+                  <Tooltip title={analyzed ? '重新分析' : '智能分析'}>
+                    <Button
+                      type="text"
+                      icon={<ExperimentOutlined />}
+                      onClick={() => handleAnalyze(item)}
+                      loading={analyzingId === item.id}
+                      disabled={item.type === 'audio'}
+                      style={{ color: analyzed ? 'var(--text-secondary)' : 'var(--brand-primary)' }}
+                    />
+                  </Tooltip>
+                  <Tooltip title="下载">
+                    <Button
+                      type="text"
+                      icon={<DownloadOutlined />}
+                      style={{ color: 'var(--text-secondary)' }}
+                    />
+                  </Tooltip>
+                  <Tooltip title="删除">
+                    <Button
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      style={{ color: '#ef4444' }}
+                      onClick={() => handleDelete(item.id)}
+                    />
+                  </Tooltip>
                 </Space>
               </div>
             );
@@ -692,9 +929,17 @@ function MaterialPage() {
       >
         <div style={{ padding: 'var(--spacing-md)' }}>
           {previewItem?.type === 'image' && previewItem.url ? (
-            <img src={previewItem.url} alt={previewItem.name} style={{ width: '100%', borderRadius: 8, maxHeight: 480, objectFit: 'contain' }} />
+            <img
+              src={previewItem.url}
+              alt={previewItem.name}
+              style={{ width: '100%', borderRadius: 8, maxHeight: 480, objectFit: 'contain' }}
+            />
           ) : previewItem?.type === 'video' && previewItem.url ? (
-            <video src={previewItem.url} controls style={{ width: '100%', borderRadius: 8, maxHeight: 480 }} />
+            <video
+              src={previewItem.url}
+              controls
+              style={{ width: '100%', borderRadius: 8, maxHeight: 480 }}
+            />
           ) : previewItem?.type === 'audio' && previewItem.url ? (
             <audio src={previewItem.url} controls style={{ width: '100%' }} />
           ) : (
@@ -704,27 +949,45 @@ function MaterialPage() {
           )}
 
           {/* 元信息 */}
-          <div style={{ marginTop: 'var(--spacing-lg)', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          <div
+            style={{ marginTop: 'var(--spacing-lg)', display: 'flex', gap: 24, flexWrap: 'wrap' }}
+          >
             {previewItem && (
               <>
                 <div>
-                  <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, display: 'block' }}>类型</Text>
-                  <Text style={{ color: 'var(--text-primary)', fontSize: 13 }}>{typeConfig[previewItem.type]?.label}</Text>
+                  <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, display: 'block' }}>
+                    类型
+                  </Text>
+                  <Text style={{ color: 'var(--text-primary)', fontSize: 13 }}>
+                    {typeConfig[previewItem.type]?.label}
+                  </Text>
                 </div>
                 <div>
-                  <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, display: 'block' }}>大小</Text>
-                  <Text style={{ color: 'var(--text-primary)', fontSize: 13 }}>{formatSize(previewItem.size)}</Text>
+                  <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, display: 'block' }}>
+                    大小
+                  </Text>
+                  <Text style={{ color: 'var(--text-primary)', fontSize: 13 }}>
+                    {formatSize(previewItem.size)}
+                  </Text>
                 </div>
                 <div>
-                  <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, display: 'block' }}>上传时间</Text>
-                  <Text style={{ color: 'var(--text-primary)', fontSize: 13 }}>{formatDate(previewItem.createdAt)}</Text>
+                  <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, display: 'block' }}>
+                    上传时间
+                  </Text>
+                  <Text style={{ color: 'var(--text-primary)', fontSize: 13 }}>
+                    {formatDate(previewItem.createdAt)}
+                  </Text>
                 </div>
                 {previewItem.tags && previewItem.tags.length > 0 && (
                   <div>
-                    <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, display: 'block' }}>标签</Text>
+                    <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, display: 'block' }}>
+                      标签
+                    </Text>
                     <Space size={4} style={{ marginTop: 2 }}>
                       {previewItem.tags.map((t, i) => (
-                        <Tag key={i} style={{ borderRadius: 12, fontSize: 11 }}>{t}</Tag>
+                        <Tag key={i} style={{ borderRadius: 12, fontSize: 11 }}>
+                          {t}
+                        </Tag>
                       ))}
                     </Space>
                   </div>
@@ -735,16 +998,20 @@ function MaterialPage() {
 
           {/* AI 三层标签 */}
           {(previewItem?.productTags || previewItem?.videoTags || previewItem?.clipTags) && (
-            <div style={{
-              marginTop: 'var(--spacing-lg)',
-              padding: 'var(--spacing-lg)',
-              background: 'var(--bg-surface-2)',
-              borderRadius: 12,
-              border: '1px solid var(--border-color)',
-            }}>
+            <div
+              style={{
+                marginTop: 'var(--spacing-lg)',
+                padding: 'var(--spacing-lg)',
+                background: 'var(--bg-surface-2)',
+                borderRadius: 12,
+                border: '1px solid var(--border-color)',
+              }}
+            >
               <Space style={{ marginBottom: 12 }}>
                 <ExperimentOutlined style={{ color: 'var(--brand-primary)' }} />
-                <Text strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>AI 智能分析标签</Text>
+                <Text strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>
+                  AI 智能分析标签
+                </Text>
                 {(previewItem?.metadata as any)?.analyzedAt && (
                   <Text style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
                     分析时间: {formatDate((previewItem.metadata as any).analyzedAt)}
@@ -753,9 +1020,15 @@ function MaterialPage() {
               </Space>
 
               {previewItem?.productTags && (
-                <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <Tag color="blue" style={{ borderRadius: 12, flexShrink: 0, margin: 0 }}>商品标签</Tag>
-                  <Text style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: '22px' }}>
+                <div
+                  style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'flex-start' }}
+                >
+                  <Tag color="blue" style={{ borderRadius: 12, flexShrink: 0, margin: 0 }}>
+                    商品标签
+                  </Tag>
+                  <Text
+                    style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: '22px' }}
+                  >
                     {Object.entries(previewItem.productTags)
                       .filter(([, v]) => v !== null && v !== undefined && v !== '')
                       .map(([k, v]) => `${k}: ${Array.isArray(v) ? (v as any[]).join(', ') : v}`)
@@ -764,9 +1037,15 @@ function MaterialPage() {
                 </div>
               )}
               {previewItem?.videoTags && (
-                <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <Tag color="purple" style={{ borderRadius: 12, flexShrink: 0, margin: 0 }}>画面标签</Tag>
-                  <Text style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: '22px' }}>
+                <div
+                  style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'flex-start' }}
+                >
+                  <Tag color="purple" style={{ borderRadius: 12, flexShrink: 0, margin: 0 }}>
+                    画面标签
+                  </Tag>
+                  <Text
+                    style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: '22px' }}
+                  >
                     {Object.entries(previewItem.videoTags)
                       .filter(([, v]) => v !== null && v !== undefined && v !== '')
                       .map(([k, v]) => `${k}: ${Array.isArray(v) ? (v as any[]).join(', ') : v}`)
@@ -775,11 +1054,20 @@ function MaterialPage() {
                 </div>
               )}
               {previewItem?.clipTags && (
-                <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <Tag color="cyan" style={{ borderRadius: 12, flexShrink: 0, margin: 0 }}>剪辑标签</Tag>
-                  <Text style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: '22px' }}>
+                <div
+                  style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'flex-start' }}
+                >
+                  <Tag color="cyan" style={{ borderRadius: 12, flexShrink: 0, margin: 0 }}>
+                    剪辑标签
+                  </Tag>
+                  <Text
+                    style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: '22px' }}
+                  >
                     {Object.entries(previewItem.clipTags)
-                      .filter(([, v]) => v !== null && v !== undefined && (typeof v === 'string' ? v !== '' : true))
+                      .filter(
+                        ([, v]) =>
+                          v !== null && v !== undefined && (typeof v === 'string' ? v !== '' : true)
+                      )
                       .map(([k, v]) => `${k}: ${Array.isArray(v) ? (v as any[]).join(', ') : v}`)
                       .join(' · ')}
                   </Text>
@@ -787,8 +1075,17 @@ function MaterialPage() {
               )}
               {(previewItem?.metadata as any)?.caption && (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <Tag color="gold" style={{ borderRadius: 12, flexShrink: 0, margin: 0 }}>画面描述</Tag>
-                  <Text style={{ color: 'var(--text-primary)', fontSize: 12, lineHeight: '22px', fontStyle: 'italic' }}>
+                  <Tag color="gold" style={{ borderRadius: 12, flexShrink: 0, margin: 0 }}>
+                    画面描述
+                  </Tag>
+                  <Text
+                    style={{
+                      color: 'var(--text-primary)',
+                      fontSize: 12,
+                      lineHeight: '22px',
+                      fontStyle: 'italic',
+                    }}
+                  >
                     "{(previewItem?.metadata as any).caption}"
                   </Text>
                 </div>

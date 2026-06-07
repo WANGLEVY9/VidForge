@@ -1,7 +1,10 @@
 import React from 'react';
 import { Button, Typography, Input, Slider, Select, Space, Divider, Tooltip, Tag } from 'antd';
 import {
-  ReloadOutlined, DeleteOutlined, DownloadOutlined, ExportOutlined,
+  ReloadOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import { useStoryboardStore } from '../../store/useStoryboardStore';
 import { MaterialSelector } from './MaterialSelector';
@@ -20,7 +23,10 @@ interface ShotDetailPanelProps {
   readonly?: boolean;
 }
 
-export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({ onRegenerate, readonly = false }) => {
+export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({
+  onRegenerate,
+  readonly = false,
+}) => {
   const shots = useStoryboardStore((s) => s.shots);
   const activeShotId = useStoryboardStore((s) => s.activeShotId);
   const updateShot = useStoryboardStore((s) => s.updateShot);
@@ -104,9 +110,7 @@ export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({ onRegenerate, 
             </Space>
           ) : (
             <Text type="secondary" style={{ fontSize: 12 }}>
-              {shot.status === 'failed'
-                ? '该分镜生成失败,无可下载内容'
-                : '该分镜尚未生成完毕'}
+              {shot.status === 'failed' ? '该分镜生成失败,无可下载内容' : '该分镜尚未生成完毕'}
             </Text>
           )}
         </div>

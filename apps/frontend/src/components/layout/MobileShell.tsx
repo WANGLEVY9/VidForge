@@ -32,11 +32,21 @@ export function MobileShell({ sidebar, children }: MobileShellProps) {
 
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100vh',
+          background: 'var(--bg-primary)',
+        }}
+      >
         <GlobalShortcuts />
         <TopBar />
         <div className="page-container" style={{ flex: 1 }}>
-          <div className="page-content" style={{ padding: '12px', paddingBottom: 'calc(var(--tab-bar-height-total) + 12px)' }}>
+          <div
+            className="page-content"
+            style={{ padding: '12px', paddingBottom: 'calc(var(--tab-bar-height-total) + 12px)' }}
+          >
             {children}
           </div>
         </div>

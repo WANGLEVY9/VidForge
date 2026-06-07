@@ -14,7 +14,10 @@ import {
   clearAllLocalData,
   getStoredDataSummary,
 } from '../../services/consent';
-import type { ConsentSettings, PrivacySettings as PrivacySettingsType } from '../../services/consent';
+import type {
+  ConsentSettings,
+  PrivacySettings as PrivacySettingsType,
+} from '../../services/consent';
 
 const { Text } = Typography;
 
@@ -52,7 +55,9 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({ visible, onClose }) =
   useEffect(() => {
     if (visible) {
       const record = getConsentRecord();
-      setConsentSettings(record ? record.settings : { analytics: false, drafts: false, logging: false });
+      setConsentSettings(
+        record ? record.settings : { analytics: false, drafts: false, logging: false }
+      );
       setPrivacySettings(getPrivacySettings());
       setDataSummary(getStoredDataSummary());
     }
@@ -128,7 +133,8 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({ visible, onClose }) =
             type="primary"
             onClick={handleSave}
             style={{
-              background: 'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
+              background:
+                'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
               border: 'none',
             }}
           >
@@ -178,26 +184,17 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({ visible, onClose }) =
       >
         <div style={toggleRowStyle}>
           <Text style={{ color: 'var(--text-primary)' }}>草稿自动保存</Text>
-          <Switch
-            checked={consentSettings.drafts}
-            onChange={handleConsentToggle('drafts')}
-          />
+          <Switch checked={consentSettings.drafts} onChange={handleConsentToggle('drafts')} />
         </div>
         <Divider style={{ margin: 0, borderColor: 'var(--border-color)' }} />
         <div style={toggleRowStyle}>
           <Text style={{ color: 'var(--text-primary)' }}>使用统计和分析</Text>
-          <Switch
-            checked={consentSettings.analytics}
-            onChange={handleConsentToggle('analytics')}
-          />
+          <Switch checked={consentSettings.analytics} onChange={handleConsentToggle('analytics')} />
         </div>
         <Divider style={{ margin: 0, borderColor: 'var(--border-color)' }} />
         <div style={toggleRowStyle}>
           <Text style={{ color: 'var(--text-primary)' }}>调试日志</Text>
-          <Switch
-            checked={consentSettings.logging}
-            onChange={handleConsentToggle('logging')}
-          />
+          <Switch checked={consentSettings.logging} onChange={handleConsentToggle('logging')} />
         </div>
       </div>
 

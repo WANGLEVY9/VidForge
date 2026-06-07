@@ -24,9 +24,14 @@ export function GlobalShortcuts() {
     window.dispatchEvent(new CustomEvent('app:command-palette'));
     // Fallback: focus the first input[type="search"] or [contenteditable]
     const searchInput = document.querySelector<HTMLInputElement>('input[type="search"]');
-    if (searchInput) { searchInput.focus(); return; }
+    if (searchInput) {
+      searchInput.focus();
+      return;
+    }
     const anyInput = document.querySelector<HTMLInputElement>('input:not([type="hidden"])');
-    if (anyInput) { anyInput.focus(); }
+    if (anyInput) {
+      anyInput.focus();
+    }
   }, []);
 
   useKeyboardShortcuts({
@@ -38,7 +43,11 @@ export function GlobalShortcuts() {
 
   return (
     <Modal
-      title={<><KeyboardOutlined /> 快捷键</>}
+      title={
+        <>
+          <KeyboardOutlined /> 快捷键
+        </>
+      }
       open={helpOpen}
       onCancel={() => setHelpOpen(false)}
       footer={null}
@@ -46,16 +55,23 @@ export function GlobalShortcuts() {
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
         {SHORTCUTS.map((s) => (
-          <div key={s.keys} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            key={s.keys}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          >
             <span style={{ color: 'var(--text-secondary)' }}>{s.label}</span>
-            <kbd style={{
-              padding: '2px 8px',
-              borderRadius: 4,
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-secondary)',
-              fontFamily: 'monospace',
-              fontSize: 13,
-            }}>{s.keys}</kbd>
+            <kbd
+              style={{
+                padding: '2px 8px',
+                borderRadius: 4,
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-secondary)',
+                fontFamily: 'monospace',
+                fontSize: 13,
+              }}
+            >
+              {s.keys}
+            </kbd>
           </div>
         ))}
       </div>

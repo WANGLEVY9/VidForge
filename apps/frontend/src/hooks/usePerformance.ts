@@ -7,7 +7,8 @@ export function usePageTiming(pageName: string) {
     startRef.current = performance.now();
     return () => {
       const duration = performance.now() - startRef.current;
-      if (duration > 100) { // Only log if > 100ms
+      if (duration > 100) {
+        // Only log if > 100ms
         console.log(`[Perf] ${pageName}: ${Math.round(duration)}ms`);
       }
     };

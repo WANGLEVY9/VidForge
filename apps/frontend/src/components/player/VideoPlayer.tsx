@@ -13,7 +13,10 @@ interface VideoPlayerProps {
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
-  videoUrl, thumbnailUrl, playbackState, onTogglePlay,
+  videoUrl,
+  thumbnailUrl,
+  playbackState,
+  onTogglePlay,
 }) => {
   if (!videoUrl) {
     return (
@@ -22,7 +25,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <img src={thumbnailUrl} alt="preview" className="video-player__thumb" />
         ) : (
           <div className="video-player__placeholder">
-            <PlayCircleOutlined style={{ fontSize: 48, color: 'var(--text-tertiary)', opacity: 0.5 }} />
+            <PlayCircleOutlined
+              style={{ fontSize: 48, color: 'var(--text-tertiary)', opacity: 0.5 }}
+            />
             <Text style={{ color: 'var(--text-tertiary)', marginTop: 8 }}>选择分镜以预览</Text>
           </div>
         )}

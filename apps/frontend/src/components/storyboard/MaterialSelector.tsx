@@ -19,7 +19,8 @@ export const MaterialSelector: React.FC<MaterialSelectorProps> = ({ selectedId, 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    materialApi.getList({ type: 'image', pageSize: 12, search })
+    materialApi
+      .getList({ type: 'image', pageSize: 12, search })
       .then((res) => setMaterials(res.list ?? []))
       .finally(() => setLoading(false));
   }, [open, search]);
@@ -36,27 +37,49 @@ export const MaterialSelector: React.FC<MaterialSelectorProps> = ({ selectedId, 
         style={{ marginBottom: 8, borderRadius: 'var(--radius-md)' }}
       />
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
+        <div style={{ textAlign: 'center', padding: 24 }}>
+          <Spin />
+        </div>
       ) : (
         <List
           size="small"
           dataSource={materials}
           renderItem={(item) => (
             <List.Item
-              onClick={() => { onSelect(item); setOpen(false); }}
+              onClick={() => {
+                onSelect(item);
+                setOpen(false);
+              }}
               style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: 'var(--radius-sm)' }}
               className={selectedId === item.id ? 'ant-list-item-selected' : ''}
             >
               <Space>
-                <div style={{ width: 40, height: 40, borderRadius: 4, background: 'var(--bg-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 4,
+                    background: 'var(--bg-surface-2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                  }}
+                >
                   {item.thumbnailUrl ? (
-                    <img src={item.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img
+                      src={item.thumbnailUrl}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   ) : (
                     <PictureOutlined style={{ color: 'var(--text-tertiary)' }} />
                   )}
                 </div>
                 <div>
-                  <Text style={{ fontSize: 13, color: 'var(--text-primary)', display: 'block' }}>{item.name}</Text>
+                  <Text style={{ fontSize: 13, color: 'var(--text-primary)', display: 'block' }}>
+                    {item.name}
+                  </Text>
                   <Tag style={{ fontSize: 10 }}>{item.category || '未分类'}</Tag>
                 </div>
               </Space>

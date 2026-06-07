@@ -1,15 +1,38 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  Button, Input, Form, Space, Typography, Steps, Progress,
-  Tag, Row, Col, Slider, Switch, message,
-  Timeline, Segmented, Radio, Badge, Empty, Alert,
+  Button,
+  Input,
+  Form,
+  Space,
+  Typography,
+  Steps,
+  Progress,
+  Tag,
+  Row,
+  Col,
+  Slider,
+  Switch,
+  message,
+  Timeline,
+  Segmented,
+  Radio,
+  Badge,
+  Empty,
+  Alert,
 } from 'antd';
 import {
-  PlayCircleOutlined, ReloadOutlined,
-  ThunderboltOutlined, CheckCircleOutlined, ClockCircleOutlined,
-  LoadingOutlined, DownloadOutlined, SettingOutlined,
-  FileTextOutlined, EditOutlined, RobotOutlined,
+  PlayCircleOutlined,
+  ReloadOutlined,
+  ThunderboltOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  LoadingOutlined,
+  DownloadOutlined,
+  SettingOutlined,
+  FileTextOutlined,
+  EditOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { StoryboardEditor } from '../../components/storyboard/StoryboardEditor';
@@ -66,8 +89,14 @@ interface LogEntry {
  * 同时被「视频页 prompt 输入再调 LLM 生成分镜」与「从剧本页 handoff 带入」两条路径复用。
  */
 function mapShotsToStoryboardItems(
-  shots: Array<{ index?: number; description?: string; voiceover?: string; caption?: string; duration?: number }>,
-  fallbackDuration: number,
+  shots: Array<{
+    index?: number;
+    description?: string;
+    voiceover?: string;
+    caption?: string;
+    duration?: number;
+  }>,
+  fallbackDuration: number
 ): StoryboardItem[] {
   const perShot = Math.max(1, Math.round(fallbackDuration / Math.max(1, shots.length)));
   return shots.map((s, i) => ({
@@ -108,7 +137,9 @@ function CreationPage() {
    * 来自剧本页的一次性 handoff 信息(消费即清),用于在顶部展示
    * "已从剧本页带入「xxx」" 的提示。
    */
-  const [handoffBanner, setHandoffBanner] = useState<{ title: string; shotCount: number } | null>(null);
+  const [handoffBanner, setHandoffBanner] = useState<{ title: string; shotCount: number } | null>(
+    null
+  );
   const consumeHandoff = useScriptHandoffStore((s) => s.consume);
   const DRAFT_KEY = 'creation_config';
   const draftRestored = useRef(false);
@@ -122,7 +153,12 @@ function CreationPage() {
   // Restore draft
   useEffect(() => {
     if (draftRestored.current) return;
-    const draft = getDraft<{ prompt?: string; model?: string; aspectRatio?: string; quality?: string }>(DRAFT_KEY);
+    const draft = getDraft<{
+      prompt?: string;
+      model?: string;
+      aspectRatio?: string;
+      quality?: string;
+    }>(DRAFT_KEY);
     if (draft && draft.prompt) {
       form.setFieldsValue({ prompt: draft.prompt });
       if (draft.model) setSelectedModel(draft.model);
@@ -152,9 +188,7 @@ function CreationPage() {
 
     // 时长沿用剧本设定(若有),并以此为基准映射分镜
     const totalDuration =
-      typeof script.duration === 'number' && script.duration > 0
-        ? script.duration
-        : duration;
+      typeof script.duration === 'number' && script.duration > 0 ? script.duration : duration;
     setDuration(totalDuration);
 
     const items = mapShotsToStoryboardItems(script.shots, totalDuration);
@@ -168,7 +202,12 @@ function CreationPage() {
   }, []);
 
   // Autosave
-  const formValuesForSave = { prompt: formValues?.prompt, model: selectedModel, aspectRatio, quality };
+  const formValuesForSave = {
+    prompt: formValues?.prompt,
+    model: selectedModel,
+    aspectRatio,
+    quality,
+  };
   useAutosave({
     key: DRAFT_KEY,
     data: formValuesForSave,
@@ -223,58 +262,64 @@ function CreationPage() {
    *   回退到首个成功分镜的直链,保证至少有可播放/可下载的内容
    * - 切到 complete 步骤
    */
-  const finalizeSuccess = useCallback((result: any) => {
-    if (terminalRef.current) return;
-    terminalRef.current = true;
+  const finalizeSuccess = useCallback(
+    (result: any) => {
+      if (terminalRef.current) return;
+      terminalRef.current = true;
 
-    setOverallProgress(100);
-    setGenerating(false);
-    pushLog('success', '所有分镜处理完成');
+      setOverallProgress(100);
+      setGenerating(false);
+      pushLog('success', '所有分镜处理完成');
 
-    const resultShots: any[] = result?.shots ?? [];
-    if (resultShots.length > 0) {
-      setStoryboard((prev) =>
-        prev.map((s) => {
-          const r = resultShots.find((x: any) => String(x.id) === String(s.id));
-          if (!r) return s;
-          return {
-            ...s,
-            status: r.status ?? s.status,
-            videoUrl: r.videoUrl ?? s.videoUrl,
-            thumbnailUrl: r.thumbnailUrl ?? s.thumbnailUrl,
-            errorMessage: r.errorMessage ?? s.errorMessage,
-          };
-        }),
-      );
-    }
+      const resultShots: any[] = result?.shots ?? [];
+      if (resultShots.length > 0) {
+        setStoryboard((prev) =>
+          prev.map((s) => {
+            const r = resultShots.find((x: any) => String(x.id) === String(s.id));
+            if (!r) return s;
+            return {
+              ...s,
+              status: r.status ?? s.status,
+              videoUrl: r.videoUrl ?? s.videoUrl,
+              thumbnailUrl: r.thumbnailUrl ?? s.thumbnailUrl,
+              errorMessage: r.errorMessage ?? s.errorMessage,
+            };
+          })
+        );
+      }
 
-    const composed: string | undefined = result?.url;
-    const firstShotUrl: string | undefined = resultShots.find(
-      (x: any) => x.status === 'completed' && x.videoUrl,
-    )?.videoUrl;
-    const unreachable = !composed || /localhost|127\.0\.0\.1/i.test(composed);
-    if (unreachable && firstShotUrl) {
-      pushLog('warn', '合成视频地址不可达,已回退到首个分镜直链预览');
-      setResultUrl(firstShotUrl);
-    } else if (composed) {
-      setResultUrl(composed);
-    }
+      const composed: string | undefined = result?.url;
+      const firstShotUrl: string | undefined = resultShots.find(
+        (x: any) => x.status === 'completed' && x.videoUrl
+      )?.videoUrl;
+      const unreachable = !composed || /localhost|127\.0\.0\.1/i.test(composed);
+      if (unreachable && firstShotUrl) {
+        pushLog('warn', '合成视频地址不可达,已回退到首个分镜直链预览');
+        setResultUrl(firstShotUrl);
+      } else if (composed) {
+        setResultUrl(composed);
+      }
 
-    setCurrentStep('complete');
-    stopTaskWatchers();
-    message.success('视频生成完成！');
-  }, [pushLog, stopTaskWatchers]);
+      setCurrentStep('complete');
+      stopTaskWatchers();
+      message.success('视频生成完成！');
+    },
+    [pushLog, stopTaskWatchers]
+  );
 
   /** 任务失败终态的统一处理 */
-  const finalizeFailure = useCallback((msg: string) => {
-    if (terminalRef.current) return;
-    terminalRef.current = true;
-    setGenerating(false);
-    setErrorMsg(msg);
-    pushLog('error', msg);
-    stopTaskWatchers();
-    message.error(msg);
-  }, [pushLog, stopTaskWatchers]);
+  const finalizeFailure = useCallback(
+    (msg: string) => {
+      if (terminalRef.current) return;
+      terminalRef.current = true;
+      setGenerating(false);
+      setErrorMsg(msg);
+      pushLog('error', msg);
+      stopTaskWatchers();
+      message.error(msg);
+    },
+    [pushLog, stopTaskWatchers]
+  );
 
   const completedCount = storyboard.filter((s) => s.status === 'completed').length;
   const failedCount = storyboard.filter((s) => s.status === 'failed').length;
@@ -302,7 +347,9 @@ function CreationPage() {
       const shots = mapShotsToStoryboardItems(result?.shots ?? [], duration);
       setStoryboard(shots);
       setCurrentStep('storyboard');
-      message.success(`已生成 ${shots.length} 个分镜（来源：${result?.source === 'ark' ? 'AI' : '兜底'}）`);
+      message.success(
+        `已生成 ${shots.length} 个分镜（来源：${result?.source === 'ark' ? 'AI' : '兜底'}）`
+      );
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || '分镜生成失败';
       setErrorMsg(msg);
@@ -367,8 +414,8 @@ function CreationPage() {
                           : 'generating',
                     errorMessage: data.status === 'failed' ? data.message : undefined,
                   }
-                : s,
-            ),
+                : s
+            )
           );
         },
         onComplete: (data) => {
@@ -409,16 +456,12 @@ function CreationPage() {
 
   const handleRegenerateShot = useCallback((shotId: string) => {
     setStoryboard((prev) =>
-      prev.map((item) => (item.id === shotId ? { ...item, status: 'generating' as const } : item)),
+      prev.map((item) => (item.id === shotId ? { ...item, status: 'generating' as const } : item))
     );
     // V0 只是更新视觉状态；真实重生在生成阶段才有意义
     setTimeout(() => {
       setStoryboard((prev) =>
-        prev.map((item) =>
-          item.id === shotId
-            ? { ...item, status: 'pending' as const }
-            : item,
-        ),
+        prev.map((item) => (item.id === shotId ? { ...item, status: 'pending' as const } : item))
       );
     }, 600);
   }, []);
@@ -481,7 +524,13 @@ function CreationPage() {
   return (
     <div className="page-enter" style={{ padding: 0 }}>
       {/* 步骤条 */}
-      <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)', padding: 'var(--spacing-lg) var(--spacing-xxxl)' }}>
+      <GlassPanel
+        variant="card"
+        style={{
+          marginBottom: 'var(--spacing-lg)',
+          padding: 'var(--spacing-lg) var(--spacing-xxxl)',
+        }}
+      >
         <Steps
           current={['config', 'storyboard', 'generating', 'complete'].indexOf(currentStep)}
           items={stepItems.map((item) => ({
@@ -533,13 +582,17 @@ function CreationPage() {
             <GlassPanel variant="card" style={{ overflow: 'hidden' }}>
               <div
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                   padding: 'var(--spacing-lg) var(--spacing-xl)',
                   borderBottom: '1px solid var(--border-color)',
                 }}
               >
                 <SettingOutlined style={{ color: 'var(--brand-primary)' }} />
-                <Text strong style={{ color: 'var(--text-primary)' }}>创作配置</Text>
+                <Text strong style={{ color: 'var(--text-primary)' }}>
+                  创作配置
+                </Text>
               </div>
               <div style={{ padding: 'var(--spacing-xl)' }}>
                 <Form
@@ -550,7 +603,11 @@ function CreationPage() {
                 >
                   <Form.Item
                     name="prompt"
-                    label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频主题 / 商品</Text>}
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        视频主题 / 商品
+                      </Text>
+                    }
                     rules={[{ required: true, message: '请输入主题或商品描述' }]}
                   >
                     <TextArea
@@ -560,20 +617,39 @@ function CreationPage() {
                     />
                   </Form.Item>
 
-                  <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频模型</Text>}>
-                    <Radio.Group value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
+                  <Form.Item
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        视频模型
+                      </Text>
+                    }
+                  >
+                    <Radio.Group
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                    >
                       <Space direction="vertical">
                         <Radio value="seedance-1.5-pro">
                           <Space>
-                            <Text style={{ color: 'var(--text-primary)' }}>Doubao-Seedance-1.5-pro</Text>
-                            <Tag color="green" style={{ borderRadius: 20 }}>主力</Tag>
+                            <Text style={{ color: 'var(--text-primary)' }}>
+                              Doubao-Seedance-1.5-pro
+                            </Text>
+                            <Tag color="green" style={{ borderRadius: 20 }}>
+                              主力
+                            </Tag>
                           </Space>
                         </Radio>
                       </Space>
                     </Radio.Group>
                   </Form.Item>
 
-                  <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>画面比例</Text>}>
+                  <Form.Item
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        画面比例
+                      </Text>
+                    }
+                  >
                     <Segmented
                       options={aspectRatios.map((r) => ({ label: r.label, value: r.value }))}
                       value={aspectRatio}
@@ -582,7 +658,11 @@ function CreationPage() {
                     />
                   </Form.Item>
 
-                  <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>画质</Text>}>
+                  <Form.Item
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>画质</Text>
+                    }
+                  >
                     <Segmented
                       options={qualityOptions.map((q) => ({ label: q.label, value: q.value }))}
                       value={quality}
@@ -591,7 +671,13 @@ function CreationPage() {
                     />
                   </Form.Item>
 
-                  <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频总时长</Text>}>
+                  <Form.Item
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        视频总时长
+                      </Text>
+                    }
+                  >
                     <Slider
                       min={10}
                       max={30}
@@ -606,13 +692,31 @@ function CreationPage() {
                     </Text>
                   </Form.Item>
 
-                  <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>附加选项</Text>}>
+                  <Form.Item
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        附加选项
+                      </Text>
+                    }
+                  >
                     <Space direction="vertical" style={{ width: '100%' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
                         <Text style={{ color: 'var(--text-primary)' }}>自动配音（V1）</Text>
                         <Switch disabled />
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
                         <Text style={{ color: 'var(--text-primary)' }}>自动字幕（V1）</Text>
                         <Switch disabled />
                       </div>
@@ -650,7 +754,10 @@ function CreationPage() {
                       onClick={handleAgentRun}
                       loading={agentStatus === 'running'}
                     >
-                      AI 一键成片 {agentStatus === 'running' && <Badge status="processing" style={{ marginLeft: 8 }} />}
+                      AI 一键成片{' '}
+                      {agentStatus === 'running' && (
+                        <Badge status="processing" style={{ marginLeft: 8 }} />
+                      )}
                     </Button>
                   </Space>
                 </Form>
@@ -662,7 +769,14 @@ function CreationPage() {
           <Col xs={24} lg={16}>
             <GlassPanel variant="card" style={{ overflow: 'hidden', padding: 0, minHeight: 480 }}>
               {storyboard.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 480 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: 480,
+                  }}
+                >
                   <Empty
                     description={
                       <Text style={{ color: 'var(--text-tertiary)' }}>
@@ -686,13 +800,17 @@ function CreationPage() {
             <GlassPanel variant="card" style={{ overflow: 'hidden' }}>
               <div
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                   padding: 'var(--spacing-lg) var(--spacing-xl)',
                   borderBottom: '1px solid var(--border-color)',
                 }}
               >
                 <ThunderboltOutlined style={{ color: 'var(--brand-primary)' }} spin={generating} />
-                <Text strong style={{ color: 'var(--text-primary)' }}>视频生成中</Text>
+                <Text strong style={{ color: 'var(--text-primary)' }}>
+                  视频生成中
+                </Text>
                 {taskId && (
                   <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, marginLeft: 'auto' }}>
                     任务 ID：{taskId.slice(0, 8)}…
@@ -709,7 +827,11 @@ function CreationPage() {
                     strokeColor={{ '0%': '#6366f1', '100%': '#a855f7' }}
                     format={(percent) => (
                       <div>
-                        <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)' }}>{percent}%</div>
+                        <div
+                          style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)' }}
+                        >
+                          {percent}%
+                        </div>
                         <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                           {completedCount}/{totalCount} 分镜
                           {failedCount > 0 ? ` · ${failedCount} 失败` : ''}
@@ -742,18 +864,37 @@ function CreationPage() {
                                 ? '#6366f1'
                                 : 'var(--border-color)'
                         }`,
-                        background: item.status === 'generating' ? 'rgba(99,102,241,0.1)' : 'transparent',
+                        background:
+                          item.status === 'generating' ? 'rgba(99,102,241,0.1)' : 'transparent',
                         textAlign: 'center',
                         transition: 'all 0.3s',
                       }}
                     >
                       <div style={{ fontSize: 28, marginBottom: 8 }}>
-                        {item.status === 'completed' && <CheckCircleOutlined style={{ color: '#10b981' }} />}
-                        {item.status === 'generating' && <LoadingOutlined style={{ color: 'var(--brand-primary)' }} spin />}
-                        {item.status === 'pending' && <ClockCircleOutlined style={{ color: 'var(--text-tertiary)' }} />}
-                        {item.status === 'failed' && <Tag color="red" style={{ borderRadius: 20 }}>失败</Tag>}
+                        {item.status === 'completed' && (
+                          <CheckCircleOutlined style={{ color: '#10b981' }} />
+                        )}
+                        {item.status === 'generating' && (
+                          <LoadingOutlined style={{ color: 'var(--brand-primary)' }} spin />
+                        )}
+                        {item.status === 'pending' && (
+                          <ClockCircleOutlined style={{ color: 'var(--text-tertiary)' }} />
+                        )}
+                        {item.status === 'failed' && (
+                          <Tag color="red" style={{ borderRadius: 20 }}>
+                            失败
+                          </Tag>
+                        )}
                       </div>
-                      <Text strong style={{ display: 'block', fontSize: 13, color: 'var(--text-primary)', marginBottom: 4 }}>
+                      <Text
+                        strong
+                        style={{
+                          display: 'block',
+                          fontSize: 13,
+                          color: 'var(--text-primary)',
+                          marginBottom: 4,
+                        }}
+                      >
                         分镜 {item.order}
                       </Text>
                       <Text
@@ -778,12 +919,16 @@ function CreationPage() {
             <GlassPanel variant="card" style={{ overflow: 'hidden' }}>
               <div
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                   padding: 'var(--spacing-lg) var(--spacing-xl)',
                   borderBottom: '1px solid var(--border-color)',
                 }}
               >
-                <Text strong style={{ color: 'var(--text-primary)' }}>实时日志</Text>
+                <Text strong style={{ color: 'var(--text-primary)' }}>
+                  实时日志
+                </Text>
               </div>
               <div style={{ padding: 'var(--spacing-lg)', maxHeight: 500, overflow: 'auto' }}>
                 {logs.length === 0 ? (
@@ -801,7 +946,9 @@ function CreationPage() {
                               : 'blue',
                       children: (
                         <div>
-                          <Text style={{ fontSize: 13, color: 'var(--text-primary)' }}>{l.text}</Text>
+                          <Text style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+                            {l.text}
+                          </Text>
                           <div>
                             <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
                               {new Date(l.ts).toLocaleTimeString()}
@@ -822,7 +969,13 @@ function CreationPage() {
       {currentStep === 'complete' && (
         <div style={{ padding: 'var(--spacing-lg) 0' }}>
           {/* 顶部成功摘要 */}
-          <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)', padding: 'var(--spacing-xl) var(--spacing-xxxl)' }}>
+          <GlassPanel
+            variant="card"
+            style={{
+              marginBottom: 'var(--spacing-lg)',
+              padding: 'var(--spacing-xl) var(--spacing-xxxl)',
+            }}
+          >
             <Row align="middle" gutter={[16, 16]}>
               <Col xs={24} md={16}>
                 <Space size={16} align="center">
@@ -854,10 +1007,7 @@ function CreationPage() {
               </Col>
               <Col xs={24} md={8} style={{ textAlign: 'right' }}>
                 <Space wrap>
-                  <Button
-                    icon={<EditOutlined />}
-                    onClick={() => setCurrentStep('storyboard')}
-                  >
+                  <Button icon={<EditOutlined />} onClick={() => setCurrentStep('storyboard')}>
                     编辑分镜
                   </Button>
                   <Button
@@ -884,14 +1034,17 @@ function CreationPage() {
               <GlassPanel variant="card" style={{ padding: 'var(--spacing-xl)' }}>
                 <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <PlayCircleOutlined style={{ color: 'var(--brand-primary)' }} />
-                  <Text strong style={{ color: 'var(--text-primary)' }}>合成视频</Text>
+                  <Text strong style={{ color: 'var(--text-primary)' }}>
+                    合成视频
+                  </Text>
                   <Tag color="cyan" style={{ marginLeft: 'auto' }}>
                     {aspectRatio} · {quality}
                   </Tag>
                 </div>
                 <div
                   style={{
-                    aspectRatio: aspectRatio === '9:16' ? '9/16' : aspectRatio === '16:9' ? '16/9' : '1/1',
+                    aspectRatio:
+                      aspectRatio === '9:16' ? '9/16' : aspectRatio === '16:9' ? '16/9' : '1/1',
                     maxWidth: aspectRatio === '9:16' ? 320 : 560,
                     margin: '0 auto',
                     background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
@@ -907,7 +1060,12 @@ function CreationPage() {
                       src={resultUrl}
                       controls
                       autoPlay={false}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        background: '#000',
+                      }}
                     />
                   ) : (
                     <div style={{ textAlign: 'center', color: '#fff', opacity: 0.6 }}>
@@ -919,7 +1077,13 @@ function CreationPage() {
                 {resultUrl && (
                   <Text
                     copyable={{ text: resultUrl }}
-                    style={{ display: 'block', marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center' }}
+                    style={{
+                      display: 'block',
+                      marginTop: 12,
+                      fontSize: 12,
+                      color: 'var(--text-tertiary)',
+                      textAlign: 'center',
+                    }}
                   >
                     视频地址(24h 内有效):{resultUrl.slice(0, 60)}…
                   </Text>
@@ -931,7 +1095,9 @@ function CreationPage() {
               <GlassPanel variant="card" style={{ padding: 'var(--spacing-xl)', height: '100%' }}>
                 <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <DownloadOutlined style={{ color: 'var(--brand-primary)' }} />
-                  <Text strong style={{ color: 'var(--text-primary)' }}>导出与下载</Text>
+                  <Text strong style={{ color: 'var(--text-primary)' }}>
+                    导出与下载
+                  </Text>
                 </div>
                 <Paragraph type="secondary" style={{ fontSize: 13 }}>
                   ✅ 合成视频已生成,可直接下载或导出为 MP4 / MOV / WebM / GIF。
@@ -957,7 +1123,7 @@ function CreationPage() {
                       onClick={() => {
                         // 直接下载合成版 mp4
                         import('../../utils/download').then((m) =>
-                          m.triggerDownload(resultUrl, '合成视频.mp4'),
+                          m.triggerDownload(resultUrl, '合成视频.mp4')
                         );
                       }}
                       style={{ borderRadius: 'var(--radius-md)', height: 44 }}
@@ -974,13 +1140,17 @@ function CreationPage() {
           <GlassPanel variant="card" style={{ overflow: 'hidden' }}>
             <div
               style={{
-                display: 'flex', alignItems: 'center', gap: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
                 padding: 'var(--spacing-lg) var(--spacing-xl)',
                 borderBottom: '1px solid var(--border-color)',
               }}
             >
               <FileTextOutlined style={{ color: 'var(--brand-primary)' }} />
-              <Text strong style={{ color: 'var(--text-primary)' }}>分镜结果浏览</Text>
+              <Text strong style={{ color: 'var(--text-primary)' }}>
+                分镜结果浏览
+              </Text>
               <Text style={{ color: 'var(--text-tertiary)', fontSize: 12, marginLeft: 'auto' }}>
                 点击列表项切换预览,或点击「下载」单独保存某个分镜
               </Text>
@@ -988,7 +1158,11 @@ function CreationPage() {
             <StoryboardEditor readonly />
           </GlassPanel>
 
-          <ExportPanel creationTaskId={taskId ?? 'current'} open={exportOpen} onClose={() => setExportOpen(false)} />
+          <ExportPanel
+            creationTaskId={taskId ?? 'current'}
+            open={exportOpen}
+            onClose={() => setExportOpen(false)}
+          />
         </div>
       )}
     </div>
