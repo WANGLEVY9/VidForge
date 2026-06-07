@@ -4,6 +4,7 @@
   "description": "电商场景AIGC带货视频生成系统",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@8.15.4",
   "scripts": {
     "dev": "pnpm --filter=@vidforge/frontend dev & pnpm --filter=@vidforge/backend start:dev",
     "build": "npm run build:backend",
