@@ -68,7 +68,9 @@ export const analyticsApi = {
     return apiClient.get<any, TrendPoint[]>('/analytics/trends', { params: { period, spaceId } });
   },
   getDistribution(spaceId?: string) {
-    return apiClient.get<any, DistributionItem[]>('/analytics/distribution', { params: { spaceId } });
+    return apiClient.get<any, DistributionItem[]>('/analytics/distribution', {
+      params: { spaceId },
+    });
   },
   getQueueStatus() {
     return apiClient.get<any, QueueStatus>('/analytics/queue');

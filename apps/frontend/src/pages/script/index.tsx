@@ -2,23 +2,59 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useShell } from '../../components/layout/shell-context';
 import {
-  Button, Input, Form, Select, Slider, Switch, Space, Typography,
-  Tag, Divider, message, Row, Col, Steps, Tooltip, Spin, Alert, Modal, Drawer,
+  Button,
+  Input,
+  Form,
+  Select,
+  Slider,
+  Switch,
+  Space,
+  Typography,
+  Tag,
+  Divider,
+  message,
+  Row,
+  Col,
+  Steps,
+  Tooltip,
+  Spin,
+  Alert,
+  Modal,
+  Drawer,
   Card,
 } from 'antd';
 import {
-  RocketOutlined, BulbOutlined, CopyOutlined, SaveOutlined,
-  FileTextOutlined, ThunderboltOutlined,
-  ExperimentOutlined, CustomerServiceOutlined, ShoppingCartOutlined,
-  VideoCameraOutlined, SoundOutlined, AimOutlined,
-  ApiOutlined, ArrowRightOutlined, FireOutlined, EditOutlined, UndoOutlined,
+  RocketOutlined,
+  BulbOutlined,
+  CopyOutlined,
+  SaveOutlined,
+  FileTextOutlined,
+  ThunderboltOutlined,
+  ExperimentOutlined,
+  CustomerServiceOutlined,
+  ShoppingCartOutlined,
+  VideoCameraOutlined,
+  SoundOutlined,
+  AimOutlined,
+  ApiOutlined,
+  ArrowRightOutlined,
+  FireOutlined,
+  EditOutlined,
+  UndoOutlined,
 } from '@ant-design/icons';
 import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor,
-  useSensor, useSensors, DragEndEvent,
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  SortableContext, sortableKeyboardCoordinates, useSortable,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -33,19 +69,24 @@ import { ComplianceCard } from '../../components/script/ComplianceCard';
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
-type ScriptStyle =
-  | 'professional'
-  | 'realistic'
-  | 'fresh'
-  | 'dynamic'
-  | 'luxury';
+type ScriptStyle = 'professional' | 'realistic' | 'fresh' | 'dynamic' | 'luxury';
 
 const styleOptions: { value: ScriptStyle; label: string; icon: React.ReactNode; desc: string }[] = [
-  { value: 'professional', label: '专业评测', icon: <ExperimentOutlined />, desc: '客观分析产品优缺点' },
-  { value: 'realistic',    label: '真实纪录', icon: <BulbOutlined />,        desc: '生活化场景的自然演绎' },
-  { value: 'fresh',        label: '清新简约', icon: <CustomerServiceOutlined />, desc: '清爽柔和的视觉风格' },
-  { value: 'dynamic',      label: '动感活力', icon: <VideoCameraOutlined />, desc: '快剪奏感强的种草' },
-  { value: 'luxury',       label: '奢华高级', icon: <ShoppingCartOutlined />, desc: '高质感商品大片' },
+  {
+    value: 'professional',
+    label: '专业评测',
+    icon: <ExperimentOutlined />,
+    desc: '客观分析产品优缺点',
+  },
+  { value: 'realistic', label: '真实纪录', icon: <BulbOutlined />, desc: '生活化场景的自然演绎' },
+  {
+    value: 'fresh',
+    label: '清新简约',
+    icon: <CustomerServiceOutlined />,
+    desc: '清爽柔和的视觉风格',
+  },
+  { value: 'dynamic', label: '动感活力', icon: <VideoCameraOutlined />, desc: '快剪奏感强的种草' },
+  { value: 'luxury', label: '奢华高级', icon: <ShoppingCartOutlined />, desc: '高质感商品大片' },
 ];
 
 const shotTypeColors: Record<string, string> = {
@@ -68,8 +109,15 @@ const shotTypeLabels: Record<string, string> = {
 // 注:剧本结果 / 分镜 类型从 services/script 导入,本页不再重复定义
 
 function SortableShot({
-  shot, shotTypeColors, shotTypeLabels,
-  editingCell, onEditCell, onCellChange, onCopy, onRegenerate, regenerating,
+  shot,
+  shotTypeColors,
+  shotTypeLabels,
+  editingCell,
+  onEditCell,
+  onCellChange,
+  onCopy,
+  onRegenerate,
+  regenerating,
 }: {
   shot: ScriptResult['shots'][0];
   shotTypeColors: Record<string, string>;
@@ -81,7 +129,9 @@ function SortableShot({
   onRegenerate: (index: number) => void;
   regenerating: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: shot.index });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: shot.index,
+  });
   const style: React.CSSProperties = {
     display: 'flex',
     gap: 12,
@@ -94,7 +144,8 @@ function SortableShot({
     cursor: 'grab',
     background: 'transparent',
   };
-  const isEditing = (field: string) => editingCell?.index === shot.index && editingCell?.field === field;
+  const isEditing = (field: string) =>
+    editingCell?.index === shot.index && editingCell?.field === field;
 
   const editableField = (field: keyof typeof shot, value: string | undefined) => {
     if (isEditing(field as string)) {
@@ -113,7 +164,11 @@ function SortableShot({
     return (
       <span
         onClick={() => onEditCell(shot.index, field as string)}
-        style={{ cursor: 'pointer', borderBottom: '1px dashed var(--border-color)', padding: '0 2px' }}
+        style={{
+          cursor: 'pointer',
+          borderBottom: '1px dashed var(--border-color)',
+          padding: '0 2px',
+        }}
         title="点击编辑"
       >
         {value || <Text type="secondary">(空)</Text>}
@@ -167,7 +222,11 @@ function SortableShot({
             type="text"
             size="small"
             icon={<CopyOutlined />}
-            onClick={() => onCopy(`[${shot.index}] ${shot.description}\n口播：${shot.voiceover}\n字幕：${shot.caption}`)}
+            onClick={() =>
+              onCopy(
+                `[${shot.index}] ${shot.description}\n口播：${shot.voiceover}\n字幕：${shot.caption}`
+              )
+            }
           />
         </Tooltip>
         <Tooltip title="重新生成此分镜">
@@ -208,7 +267,7 @@ function ScriptPage() {
   // ── @dnd-kit 传感器 ───────────────────────────────────
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -227,7 +286,9 @@ function ScriptPage() {
   }, []);
 
   const handleEditCell = (index: number, field: string) => {
-    setEditingCell(editingCell?.index === index && editingCell?.field === field ? null : { index, field });
+    setEditingCell(
+      editingCell?.index === index && editingCell?.field === field ? null : { index, field }
+    );
   };
 
   const handleCellChange = (index: number, field: string, value: string) => {
@@ -241,7 +302,9 @@ function ScriptPage() {
     const scriptId = regenerateResultId || 'current';
     try {
       const data = await scriptApi.regenerateShot(scriptId, index);
-      setEditingShots((prev) => prev.map((s) => (s.index === index ? { ...s, ...data, _regenerated: true } : s)));
+      setEditingShots((prev) =>
+        prev.map((s) => (s.index === index ? { ...s, ...data, _regenerated: true } : s))
+      );
       message.success('分镜已重新生成');
     } catch (err: any) {
       message.error(err?.message || '重生成失败');
@@ -261,7 +324,9 @@ function ScriptPage() {
         productName: values.productName,
         category: values.category,
         sellingPoints: values.sellingPoints,
-        targetAudience: Array.isArray(values.targetAudience) ? values.targetAudience.join('、') : values.targetAudience,
+        targetAudience: Array.isArray(values.targetAudience)
+          ? values.targetAudience.join('、')
+          : values.targetAudience,
         style: scriptStyle,
         storyboard: editingShots as any,
         voiceover: result.voiceover,
@@ -291,7 +356,12 @@ function ScriptPage() {
 
   useEffect(() => {
     if (draftRestored.current) return;
-    const draft = getDraft<{ productName?: string; category?: string; sellingPoints?: string; targetAudience?: string[] }>(DRAFT_KEY);
+    const draft = getDraft<{
+      productName?: string;
+      category?: string;
+      sellingPoints?: string;
+      targetAudience?: string[];
+    }>(DRAFT_KEY);
     if (draft && draft.productName) {
       form.setFieldsValue(draft);
       setFormValues(draft);
@@ -327,7 +397,7 @@ function ScriptPage() {
       const audience = Array.isArray(values.targetAudience)
         ? values.targetAudience.join('、')
         : values.targetAudience;
-      const data = await scriptApi.generate({
+      const data = (await scriptApi.generate({
         productName: values.productName,
         category: values.category,
         sellingPoints: values.sellingPoints,
@@ -335,7 +405,7 @@ function ScriptPage() {
         style: scriptStyle,
         duration,
         productSpaceId: spaceId,
-      }) as ScriptResult;
+      })) as ScriptResult;
       setResult(data);
       if (data?.source === 'fallback') {
         const reason = (data as any)?.fallbackReason || '原因未知';
@@ -354,10 +424,9 @@ function ScriptPage() {
                 </Text>
               </Paragraph>
               <Paragraph style={{ marginBottom: 0 }}>
-                可点击页面右上角「诊断 AI 模型」按钮查看详细自检结果，
-                或检查 Railway 后端是否正确配置了
-                <Text code>ARK_TEXT_PRIMARY_ENDPOINT_ID</Text>
-                /
+                可点击页面右上角「诊断 AI 模型」按钮查看详细自检结果， 或检查 Railway
+                后端是否正确配置了
+                <Text code>ARK_TEXT_PRIMARY_ENDPOINT_ID</Text>/
                 <Text code>ARK_TEXT_PRIMARY_API_KEY</Text>。
               </Paragraph>
             </div>
@@ -367,9 +436,7 @@ function ScriptPage() {
         message.success('剧本生成成功');
       }
     } catch (err: any) {
-      const isTimeout =
-        err?.code === 'ECONNABORTED' ||
-        /timeout/i.test(err?.message ?? '');
+      const isTimeout = err?.code === 'ECONNABORTED' || /timeout/i.test(err?.message ?? '');
       const msg = isTimeout
         ? 'AI 创作耗时较长（已超过 150 秒），请稍后重试或简化卖点描述'
         : err?.response?.data?.message || err?.message || '剧本生成失败';
@@ -418,7 +485,9 @@ function ScriptPage() {
               </Paragraph>
               <Paragraph style={{ marginBottom: 0 }}>
                 <Text type="secondary">样例返回：</Text>
-                <Text code copyable>{result.sample}</Text>
+                <Text code copyable>
+                  {result.sample}
+                </Text>
               </Paragraph>
             </div>
           ),
@@ -507,10 +576,7 @@ function ScriptPage() {
     if (!result) return;
     const values = form.getFieldsValue();
     const prompt =
-      values.productName ??
-      result.title ??
-      result.shots?.[0]?.description ??
-      '带货短视频';
+      values.productName ?? result.title ?? result.shots?.[0]?.description ?? '带货短视频';
     setPendingHandoff(result, String(prompt), spaceId);
     if (spaceId) {
       navigate(`/workspace/${spaceId}/video`);
@@ -528,7 +594,9 @@ function ScriptPage() {
         productName: values.productName,
         category: values.category,
         sellingPoints: values.sellingPoints,
-        targetAudience: Array.isArray(values.targetAudience) ? values.targetAudience.join('、') : values.targetAudience,
+        targetAudience: Array.isArray(values.targetAudience)
+          ? values.targetAudience.join('、')
+          : values.targetAudience,
         style: scriptStyle,
         storyboard: result.shots as any,
         voiceover: result.voiceover,
@@ -552,178 +620,281 @@ function ScriptPage() {
             {isMobile && (
               <div
                 onClick={() => setConfigExpanded(!configExpanded)}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--spacing-md) var(--spacing-xl)', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--spacing-md) var(--spacing-xl)',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid var(--border-color)',
+                }}
               >
-                <Text strong style={{ color: 'var(--text-primary)' }}>剧本配置</Text>
-                <Text style={{ color: 'var(--brand-primary)', fontSize: 13 }}>{configExpanded ? '收起' : '展开'}</Text>
+                <Text strong style={{ color: 'var(--text-primary)' }}>
+                  剧本配置
+                </Text>
+                <Text style={{ color: 'var(--brand-primary)', fontSize: 13 }}>
+                  {configExpanded ? '收起' : '展开'}
+                </Text>
               </div>
             )}
             {configExpanded && (
-            <div style={{ padding: 'var(--spacing-xl)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 'var(--spacing-xl)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <ThunderboltOutlined style={{ color: 'var(--brand-primary)', fontSize: 18 }} />
-                  <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>剧本配置</Text>
+              <div style={{ padding: 'var(--spacing-xl)' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    marginBottom: 'var(--spacing-xl)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <ThunderboltOutlined style={{ color: 'var(--brand-primary)', fontSize: 18 }} />
+                    <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>
+                      剧本配置
+                    </Text>
+                  </div>
+                  <Tooltip title="查看同品类爆款参考视频脚本">
+                    <Button size="small" icon={<FireOutlined />} onClick={handleOpenInspire}>
+                      爆款参考
+                    </Button>
+                  </Tooltip>
+                  <Tooltip title="一键自检后端 ARK 文本模型是否可用">
+                    <Button
+                      size="small"
+                      icon={<ApiOutlined />}
+                      loading={diagnosing}
+                      onClick={handleDiagnose}
+                    >
+                      诊断 AI 模型
+                    </Button>
+                  </Tooltip>
                 </div>
-                <Tooltip title="查看同品类爆款参考视频脚本">
-                  <Button
-                    size="small"
-                    icon={<FireOutlined />}
-                    onClick={handleOpenInspire}
+                <Form
+                  form={form}
+                  layout="vertical"
+                  size="large"
+                  onValuesChange={(_, all) => setFormValues(all)}
+                >
+                  <Form.Item
+                    name="productName"
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        商品名称
+                      </Text>
+                    }
+                    rules={[{ required: true, message: '请输入商品名称' }]}
                   >
-                    爆款参考
-                  </Button>
-                </Tooltip>
-                <Tooltip title="一键自检后端 ARK 文本模型是否可用">
-                  <Button
-                    size="small"
-                    icon={<ApiOutlined />}
-                    loading={diagnosing}
-                    onClick={handleDiagnose}
+                    <Input
+                      placeholder="例如：清爽防晒霜 SPF50+"
+                      style={{ borderRadius: 'var(--radius-md)' }}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="category"
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        商品品类
+                      </Text>
+                    }
+                    rules={[{ required: true, message: '请选择品类' }]}
                   >
-                    诊断 AI 模型
-                  </Button>
-                </Tooltip>
-              </div>
-              <Form
-                form={form}
-                layout="vertical"
-                size="large"
-                onValuesChange={(_, all) => setFormValues(all)}
-              >
-                <Form.Item
-                  name="productName"
-                  label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>商品名称</Text>}
-                  rules={[{ required: true, message: '请输入商品名称' }]}
-                >
-                  <Input placeholder="例如：清爽防晒霜 SPF50+" style={{ borderRadius: 'var(--radius-md)' }} />
-                </Form.Item>
+                    <Select
+                      placeholder="选择品类"
+                      style={{ borderRadius: 'var(--radius-md)' }}
+                      options={[
+                        { value: 'clothing', label: '服饰鞋包' },
+                        { value: 'beauty', label: '美妆护肤' },
+                        { value: 'digital', label: '数码 3C' },
+                        { value: 'food', label: '食品饮料' },
+                        { value: 'home', label: '家居生活' },
+                        { value: 'mother', label: '母婴用品' },
+                      ]}
+                    />
+                  </Form.Item>
 
-                <Form.Item
-                  name="category"
-                  label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>商品品类</Text>}
-                  rules={[{ required: true, message: '请选择品类' }]}
-                >
-                  <Select
-                    placeholder="选择品类"
-                    style={{ borderRadius: 'var(--radius-md)' }}
-                    options={[
-                      { value: 'clothing', label: '服饰鞋包' },
-                      { value: 'beauty', label: '美妆护肤' },
-                      { value: 'digital', label: '数码 3C' },
-                      { value: 'food', label: '食品饮料' },
-                      { value: 'home', label: '家居生活' },
-                      { value: 'mother', label: '母婴用品' },
-                    ]}
+                  <Form.Item
+                    name="sellingPoints"
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        核心卖点
+                      </Text>
+                    }
+                    rules={[{ required: true, message: '请输入至少一个卖点' }]}
+                    extra={
+                      <Text style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
+                        多个卖点用逗号分隔
+                      </Text>
+                    }
+                  >
+                    <TextArea
+                      placeholder="例如：轻薄不油腻, 3秒成膜, 不假白, 防水防汗"
+                      rows={3}
+                      style={{ borderRadius: 'var(--radius-md)' }}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="targetAudience"
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        目标人群
+                      </Text>
+                    }
+                  >
+                    <Select
+                      mode="tags"
+                      placeholder="输入或选择目标人群"
+                      style={{ borderRadius: 'var(--radius-md)' }}
+                      options={[
+                        { value: '年轻女性', label: '年轻女性' },
+                        { value: '学生党', label: '学生党' },
+                        { value: '宝妈', label: '宝妈' },
+                        { value: '上班族', label: '上班族' },
+                        { value: '健身人群', label: '健身人群' },
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Divider
+                    style={{ margin: 'var(--spacing-lg) 0', borderColor: 'var(--border-color)' }}
                   />
-                </Form.Item>
 
-                <Form.Item
-                  name="sellingPoints"
-                  label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>核心卖点</Text>}
-                  rules={[{ required: true, message: '请输入至少一个卖点' }]}
-                  extra={<Text style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>多个卖点用逗号分隔</Text>}
-                >
-                  <TextArea
-                    placeholder="例如：轻薄不油腻, 3秒成膜, 不假白, 防水防汗"
-                    rows={3}
-                    style={{ borderRadius: 'var(--radius-md)' }}
-                  />
-                </Form.Item>
+                  <Form.Item
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        视频风格
+                      </Text>
+                    }
+                  >
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: isMobile ? 'repeat(5, 120px)' : '1fr 1fr',
+                        gap: 8,
+                        overflowX: isMobile ? 'auto' : 'visible',
+                      }}
+                    >
+                      {styleOptions.map((opt) => (
+                        <div
+                          key={opt.value}
+                          onClick={() => setScriptStyle(opt.value)}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: 'var(--radius-md)',
+                            border: `2px solid ${scriptStyle === opt.value ? '#6366f1' : 'var(--border-color)'}`,
+                            background:
+                              scriptStyle === opt.value ? 'rgba(99,102,241,0.1)' : 'transparent',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <Space>
+                            <span
+                              style={{
+                                color:
+                                  scriptStyle === opt.value ? '#6366f1' : 'var(--text-secondary)',
+                              }}
+                            >
+                              {opt.icon}
+                            </span>
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                color:
+                                  scriptStyle === opt.value ? '#6366f1' : 'var(--text-primary)',
+                              }}
+                            >
+                              {opt.label}
+                            </Text>
+                          </Space>
+                          <div
+                            style={{ marginTop: 4, fontSize: 11, color: 'var(--text-tertiary)' }}
+                          >
+                            {opt.desc}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Form.Item>
 
-                <Form.Item
-                  name="targetAudience"
-                  label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>目标人群</Text>}
-                >
-                  <Select
-                    mode="tags"
-                    placeholder="输入或选择目标人群"
-                    style={{ borderRadius: 'var(--radius-md)' }}
-                    options={[
-                      { value: '年轻女性', label: '年轻女性' },
-                      { value: '学生党', label: '学生党' },
-                      { value: '宝妈', label: '宝妈' },
-                      { value: '上班族', label: '上班族' },
-                      { value: '健身人群', label: '健身人群' },
-                    ]}
-                  />
-                </Form.Item>
+                  <Form.Item
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        视频时长（秒）
+                      </Text>
+                    }
+                  >
+                    <Slider
+                      min={10}
+                      max={30}
+                      step={5}
+                      marks={{ 10: '10s', 15: '15s', 20: '20s', 25: '25s', 30: '30s' }}
+                      value={duration}
+                      onChange={(v) => setDuration(v as number)}
+                      tooltip={{ formatter: (v) => `${v}秒` }}
+                    />
+                    <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                      系统将生成 3 个分镜，平均分配时长。当前阶段单条视频建议 ≤ 30 秒。
+                    </Text>
+                  </Form.Item>
 
-                <Divider style={{ margin: 'var(--spacing-lg) 0', borderColor: 'var(--border-color)' }} />
-
-                <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频风格</Text>}>
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(5, 120px)' : '1fr 1fr', gap: 8, overflowX: isMobile ? 'auto' : 'visible' }}>
-                    {styleOptions.map((opt) => (
+                  <Form.Item
+                    label={
+                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        附加选项
+                      </Text>
+                    }
+                  >
+                    <Space direction="vertical" style={{ width: '100%' }}>
                       <div
-                        key={opt.value}
-                        onClick={() => setScriptStyle(opt.value)}
                         style={{
-                          padding: '10px 12px',
-                          borderRadius: 'var(--radius-md)',
-                          border: `2px solid ${scriptStyle === opt.value ? '#6366f1' : 'var(--border-color)'}`,
-                          background: scriptStyle === opt.value ? 'rgba(99,102,241,0.1)' : 'transparent',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
                         }}
                       >
-                        <Space>
-                          <span style={{ color: scriptStyle === opt.value ? '#6366f1' : 'var(--text-secondary)' }}>{opt.icon}</span>
-                          <Text style={{ fontSize: 13, color: scriptStyle === opt.value ? '#6366f1' : 'var(--text-primary)' }}>{opt.label}</Text>
-                        </Space>
-                        <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-tertiary)' }}>
-                          {opt.desc}
-                        </div>
+                        <Text style={{ color: 'var(--text-primary)' }}>自动添加字幕</Text>
+                        <Switch defaultChecked />
                       </div>
-                    ))}
-                  </div>
-                </Form.Item>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Text style={{ color: 'var(--text-primary)' }}>推荐 BGM</Text>
+                        <Switch defaultChecked />
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Text style={{ color: 'var(--text-primary)' }}>生成配音脚本</Text>
+                        <Switch defaultChecked />
+                      </div>
+                    </Space>
+                  </Form.Item>
 
-                <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>视频时长（秒）</Text>}>
-                  <Slider
-                    min={10}
-                    max={30}
-                    step={5}
-                    marks={{ 10: '10s', 15: '15s', 20: '20s', 25: '25s', 30: '30s' }}
-                    value={duration}
-                    onChange={(v) => setDuration(v as number)}
-                    tooltip={{ formatter: (v) => `${v}秒` }}
-                  />
-                  <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                    系统将生成 3 个分镜，平均分配时长。当前阶段单条视频建议 ≤ 30 秒。
-                  </Text>
-                </Form.Item>
-
-                <Form.Item label={<Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>附加选项</Text>}>
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ color: 'var(--text-primary)' }}>自动添加字幕</Text>
-                      <Switch defaultChecked />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ color: 'var(--text-primary)' }}>推荐 BGM</Text>
-                      <Switch defaultChecked />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ color: 'var(--text-primary)' }}>生成配音脚本</Text>
-                      <Switch defaultChecked />
-                    </div>
-                  </Space>
-                </Form.Item>
-
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  icon={<RocketOutlined />}
-                  loading={loading}
-                  onClick={handleGenerate}
-                  block
-                  size="large"
-                  style={{ borderRadius: 'var(--radius-md)', height: 48, fontSize: 16 }}
-                >
-                  {loading ? 'AI 创作中...' : '生成剧本'}
-                </Button>
-              </Form>
-            </div>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    icon={<RocketOutlined />}
+                    loading={loading}
+                    onClick={handleGenerate}
+                    block
+                    size="large"
+                    style={{ borderRadius: 'var(--radius-md)', height: 48, fontSize: 16 }}
+                  >
+                    {loading ? 'AI 创作中...' : '生成剧本'}
+                  </Button>
+                </Form>
+              </div>
             )}
           </GlassPanel>
         </Col>
@@ -772,9 +943,12 @@ function ScriptPage() {
               <div style={{ fontSize: 64, color: 'var(--text-tertiary)', marginBottom: 16 }}>
                 <FileTextOutlined />
               </div>
-              <Title level={4} style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>等待创作</Title>
+              <Title level={4} style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>
+                等待创作
+              </Title>
               <Paragraph type="secondary" style={{ maxWidth: 360, margin: '0 auto' }}>
-                填写左侧商品信息，AI 将基于火山方舟模型生成专业带货剧本，包含分镜脚本、配音文案和 BGM 推荐
+                填写左侧商品信息，AI 将基于火山方舟模型生成专业带货剧本，包含分镜脚本、配音文案和
+                BGM 推荐
               </Paragraph>
             </GlassPanel>
           )}
@@ -788,13 +962,19 @@ function ScriptPage() {
                 icon={<BulbOutlined />}
                 message={
                   <Space wrap>
-                    <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>{result.title}</Text>
+                    <Text strong style={{ fontSize: 16, color: 'var(--text-primary)' }}>
+                      {result.title}
+                    </Text>
                     <Tag color="blue">⏱ {result.totalDuration}</Tag>
                     {result.source === 'fallback' && <Tag color="orange">兜底剧本</Tag>}
                     {result.source === 'ark' && <Tag color="cyan">AI 生成</Tag>}
                   </Space>
                 }
-                style={{ borderRadius: 'var(--radius-lg)', marginBottom: 'var(--spacing-lg)', padding: '12px 16px' }}
+                style={{
+                  borderRadius: 'var(--radius-lg)',
+                  marginBottom: 'var(--spacing-lg)',
+                  padding: '12px 16px',
+                }}
               />
 
               {/* CTA: 一键流转到视频生成 */}
@@ -831,7 +1011,10 @@ function ScriptPage() {
                         <ThunderboltOutlined />
                       </div>
                       <div>
-                        <Text strong style={{ color: 'var(--text-primary)', fontSize: 15, display: 'block' }}>
+                        <Text
+                          strong
+                          style={{ color: 'var(--text-primary)', fontSize: 15, display: 'block' }}
+                        >
                           剧本已就绪 · 一键合成视频
                         </Text>
                         <Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
@@ -844,11 +1027,7 @@ function ScriptPage() {
                   </Col>
                   <Col xs={24} md={8} style={{ textAlign: 'right' }}>
                     <Space wrap>
-                      <Button
-                        icon={<SaveOutlined />}
-                        onClick={handleSave}
-                        size="large"
-                      >
+                      <Button icon={<SaveOutlined />} onClick={handleSave} size="large">
                         保存剧本
                       </Button>
                       <Button
@@ -872,16 +1051,27 @@ function ScriptPage() {
               <ComplianceCard report={result.compliance} />
 
               {/* 分镜脚本 */}
-              <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)', overflow: 'hidden' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: 'var(--spacing-lg) var(--spacing-xl)',
-                  borderBottom: '1px solid var(--border-color)',
-                }}>
+              <GlassPanel
+                variant="card"
+                style={{ marginBottom: 'var(--spacing-lg)', overflow: 'hidden' }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: 'var(--spacing-lg) var(--spacing-xl)',
+                    borderBottom: '1px solid var(--border-color)',
+                  }}
+                >
                   <Space>
                     <VideoCameraOutlined style={{ color: 'var(--brand-primary)' }} />
-                    <Text strong style={{ color: 'var(--text-primary)' }}>分镜脚本（{editingShots.length}）</Text>
-                    <Tag style={{ borderRadius: 10, fontSize: 10 }}>拖拽可排序 · 点击文字可编辑</Tag>
+                    <Text strong style={{ color: 'var(--text-primary)' }}>
+                      分镜脚本（{editingShots.length}）
+                    </Text>
+                    <Tag style={{ borderRadius: 10, fontSize: 10 }}>
+                      拖拽可排序 · 点击文字可编辑
+                    </Tag>
                   </Space>
                   <Space>
                     <Button
@@ -891,19 +1081,28 @@ function ScriptPage() {
                           editingShots
                             .map(
                               (s) =>
-                                `[${s.index}] ${s.description}\n口播：${s.voiceover}\n字幕：${s.caption}`,
+                                `[${s.index}] ${s.description}\n口播：${s.voiceover}\n字幕：${s.caption}`
                             )
-                            .join('\n\n'),
+                            .join('\n\n')
                         )
                       }
                     >
                       复制全部
                     </Button>
-                    <Button icon={<SaveOutlined />} type="primary" onClick={handleSave}>保存剧本</Button>
+                    <Button icon={<SaveOutlined />} type="primary" onClick={handleSave}>
+                      保存剧本
+                    </Button>
                   </Space>
                 </div>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={editingShots.map((s) => s.index)} strategy={verticalListSortingStrategy}>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={editingShots.map((s) => s.index)}
+                    strategy={verticalListSortingStrategy}
+                  >
                     {editingShots.map((shot) => (
                       <SortableShot
                         key={shot.index}
@@ -921,7 +1120,13 @@ function ScriptPage() {
                   </SortableContext>
                 </DndContext>
                 {editingShots.length > 0 && (
-                  <div style={{ padding: 'var(--spacing-md) var(--spacing-xl)', borderTop: '1px solid var(--border-color)', textAlign: 'right' }}>
+                  <div
+                    style={{
+                      padding: 'var(--spacing-md) var(--spacing-xl)',
+                      borderTop: '1px solid var(--border-color)',
+                      textAlign: 'right',
+                    }}
+                  >
                     <Space>
                       <Button
                         icon={<UndoOutlined />}
@@ -945,16 +1150,24 @@ function ScriptPage() {
               {/* 配音建议 */}
               {result.voiceover && (
                 <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: 'var(--spacing-lg) var(--spacing-xl)',
-                    borderBottom: '1px solid var(--border-color)',
-                  }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: 'var(--spacing-lg) var(--spacing-xl)',
+                      borderBottom: '1px solid var(--border-color)',
+                    }}
+                  >
                     <SoundOutlined style={{ color: '#ec4899' }} />
-                    <Text strong style={{ color: 'var(--text-primary)' }}>配音建议</Text>
+                    <Text strong style={{ color: 'var(--text-primary)' }}>
+                      配音建议
+                    </Text>
                   </div>
                   <div style={{ padding: 'var(--spacing-xl)' }}>
-                    <Paragraph style={{ color: 'var(--text-primary)', margin: 0 }}>{result.voiceover}</Paragraph>
+                    <Paragraph style={{ color: 'var(--text-primary)', margin: 0 }}>
+                      {result.voiceover}
+                    </Paragraph>
                   </div>
                 </GlassPanel>
               )}
@@ -962,16 +1175,24 @@ function ScriptPage() {
               {/* BGM 推荐 */}
               {result.bgmSuggestion && (
                 <GlassPanel variant="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: 'var(--spacing-lg) var(--spacing-xl)',
-                    borderBottom: '1px solid var(--border-color)',
-                  }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: 'var(--spacing-lg) var(--spacing-xl)',
+                      borderBottom: '1px solid var(--border-color)',
+                    }}
+                  >
                     <CustomerServiceOutlined style={{ color: '#10b981' }} />
-                    <Text strong style={{ color: 'var(--text-primary)' }}>BGM 推荐</Text>
+                    <Text strong style={{ color: 'var(--text-primary)' }}>
+                      BGM 推荐
+                    </Text>
                   </div>
                   <div style={{ padding: 'var(--spacing-xl)' }}>
-                    <Paragraph style={{ color: 'var(--text-primary)', margin: 0 }}>{result.bgmSuggestion}</Paragraph>
+                    <Paragraph style={{ color: 'var(--text-primary)', margin: 0 }}>
+                      {result.bgmSuggestion}
+                    </Paragraph>
                   </div>
                 </GlassPanel>
               )}
@@ -979,18 +1200,30 @@ function ScriptPage() {
               {/* 标签 */}
               {result.tags && result.tags.length > 0 && (
                 <GlassPanel variant="card">
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: 'var(--spacing-lg) var(--spacing-xl)',
-                    borderBottom: '1px solid var(--border-color)',
-                  }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: 'var(--spacing-lg) var(--spacing-xl)',
+                      borderBottom: '1px solid var(--border-color)',
+                    }}
+                  >
                     <AimOutlined style={{ color: '#f59e0b' }} />
-                    <Text strong style={{ color: 'var(--text-primary)' }}>推荐标签</Text>
+                    <Text strong style={{ color: 'var(--text-primary)' }}>
+                      推荐标签
+                    </Text>
                   </div>
                   <div style={{ padding: 'var(--spacing-xl)' }}>
                     <Space size={8} wrap>
                       {result.tags.map((tag, i) => (
-                        <Tag key={i} color="blue" style={{ borderRadius: 20, padding: '4px 12px', fontSize: 13 }}>#{tag}</Tag>
+                        <Tag
+                          key={i}
+                          color="blue"
+                          style={{ borderRadius: 20, padding: '4px 12px', fontSize: 13 }}
+                        >
+                          #{tag}
+                        </Tag>
                       ))}
                     </Space>
                   </div>
@@ -1007,9 +1240,7 @@ function ScriptPage() {
           <Space>
             <FireOutlined style={{ color: '#f59e0b' }} />
             <span>爆款参考脚本</span>
-            <Tag style={{ borderRadius: 12, fontSize: 11 }}>
-              {inspireData.length} 条
-            </Tag>
+            <Tag style={{ borderRadius: 12, fontSize: 11 }}>{inspireData.length} 条</Tag>
           </Space>
         }
         placement="right"
@@ -1031,7 +1262,14 @@ function ScriptPage() {
           </div>
         ) : inspireData.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <div style={{ fontSize: 40, color: 'var(--text-tertiary)', marginBottom: 12, opacity: 0.5 }}>
+            <div
+              style={{
+                fontSize: 40,
+                color: 'var(--text-tertiary)',
+                marginBottom: 12,
+                opacity: 0.5,
+              }}
+            >
               <FireOutlined />
             </div>
             <Text style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>
@@ -1055,10 +1293,21 @@ function ScriptPage() {
                 bodyStyle={{ padding: 16 }}
               >
                 {/* 头部:品类+风格+效果 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 10,
+                  }}
+                >
                   <Space size={6}>
-                    <Tag color="blue" style={{ borderRadius: 10, fontSize: 10, margin: 0 }}>{seed.category}</Tag>
-                    <Tag color="cyan" style={{ borderRadius: 10, fontSize: 10, margin: 0 }}>{seed.style}</Tag>
+                    <Tag color="blue" style={{ borderRadius: 10, fontSize: 10, margin: 0 }}>
+                      {seed.category}
+                    </Tag>
+                    <Tag color="cyan" style={{ borderRadius: 10, fontSize: 10, margin: 0 }}>
+                      {seed.style}
+                    </Tag>
                   </Space>
                   <Tag color="gold" style={{ borderRadius: 10, fontSize: 10 }}>
                     {seed.performance}
@@ -1068,21 +1317,50 @@ function ScriptPage() {
                 {/* 分镜概要 */}
                 <div style={{ marginBottom: 10 }}>
                   {seed.shots?.hook && (
-                    <div style={{ marginBottom: 4, padding: '4px 8px', background: 'var(--bg-surface-2)', borderRadius: 6, borderLeft: '3px solid #ef4444' }}>
+                    <div
+                      style={{
+                        marginBottom: 4,
+                        padding: '4px 8px',
+                        background: 'var(--bg-surface-2)',
+                        borderRadius: 6,
+                        borderLeft: '3px solid #ef4444',
+                      }}
+                    >
                       <Text style={{ fontSize: 11, color: '#ef4444', fontWeight: 600 }}>HOOK </Text>
-                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>{seed.shots.hook}</Text>
+                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                        {seed.shots.hook}
+                      </Text>
                     </div>
                   )}
                   {seed.shots?.demo && (
-                    <div style={{ marginBottom: 4, padding: '4px 8px', background: 'var(--bg-surface-2)', borderRadius: 6, borderLeft: '3px solid #10b981' }}>
+                    <div
+                      style={{
+                        marginBottom: 4,
+                        padding: '4px 8px',
+                        background: 'var(--bg-surface-2)',
+                        borderRadius: 6,
+                        borderLeft: '3px solid #10b981',
+                      }}
+                    >
                       <Text style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>DEMO </Text>
-                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>{seed.shots.demo}</Text>
+                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                        {seed.shots.demo}
+                      </Text>
                     </div>
                   )}
                   {seed.shots?.cta && (
-                    <div style={{ padding: '4px 8px', background: 'var(--bg-surface-2)', borderRadius: 6, borderLeft: '3px solid #ec4899' }}>
+                    <div
+                      style={{
+                        padding: '4px 8px',
+                        background: 'var(--bg-surface-2)',
+                        borderRadius: 6,
+                        borderLeft: '3px solid #ec4899',
+                      }}
+                    >
                       <Text style={{ fontSize: 11, color: '#ec4899', fontWeight: 600 }}>CTA </Text>
-                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>{seed.shots.cta}</Text>
+                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                        {seed.shots.cta}
+                      </Text>
                     </div>
                   )}
                 </div>
@@ -1090,10 +1368,23 @@ function ScriptPage() {
                 {/* 关键信息 */}
                 {seed.keyMessages && seed.keyMessages.length > 0 && (
                   <div style={{ marginBottom: 6 }}>
-                    <Text style={{ fontSize: 11, color: 'var(--text-tertiary)', display: 'block', marginBottom: 2 }}>核心信息</Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--text-tertiary)',
+                        display: 'block',
+                        marginBottom: 2,
+                      }}
+                    >
+                      核心信息
+                    </Text>
                     <Space size={4} wrap>
                       {seed.keyMessages.map((msg, i) => (
-                        <Tag key={i} style={{ borderRadius: 10, fontSize: 10, margin: 0 }} color="default">
+                        <Tag
+                          key={i}
+                          style={{ borderRadius: 10, fontSize: 10, margin: 0 }}
+                          color="default"
+                        >
                           {msg}
                         </Tag>
                       ))}

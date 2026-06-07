@@ -22,7 +22,9 @@ class Logger {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) this.logs = JSON.parse(saved);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   private save() {
@@ -31,7 +33,9 @@ class Logger {
         this.logs = this.logs.slice(-MAX_LOG_ENTRIES);
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.logs));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   private log(level: LogLevel, module: string, message: string, data?: any) {
@@ -45,17 +49,29 @@ class Logger {
     this.logs.push(entry);
     this.save();
 
-    const fn = level === 'error' ? console.error
-      : level === 'warn' ? console.warn
-      : level === 'debug' ? console.debug
-      : console.log;
+    const fn =
+      level === 'error'
+        ? console.error
+        : level === 'warn'
+          ? console.warn
+          : level === 'debug'
+            ? console.debug
+            : console.log;
     fn(`[${module}] ${message}`, data ?? '');
   }
 
-  debug(module: string, message: string, data?: any) { this.log('debug', module, message, data); }
-  info(module: string, message: string, data?: any) { this.log('info', module, message, data); }
-  warn(module: string, message: string, data?: any) { this.log('warn', module, message, data); }
-  error(module: string, message: string, data?: any) { this.log('error', module, message, data); }
+  debug(module: string, message: string, data?: any) {
+    this.log('debug', module, message, data);
+  }
+  info(module: string, message: string, data?: any) {
+    this.log('info', module, message, data);
+  }
+  warn(module: string, message: string, data?: any) {
+    this.log('warn', module, message, data);
+  }
+  error(module: string, message: string, data?: any) {
+    this.log('error', module, message, data);
+  }
 
   getLogs(level?: LogLevel, module?: string): LogEntry[] {
     let filtered = this.logs;

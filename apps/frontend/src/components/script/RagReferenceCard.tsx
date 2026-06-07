@@ -34,16 +34,21 @@ export const RagReferenceCard: React.FC<Props> = ({ references, source }) => {
       size="small"
       style={{
         marginBottom: 'var(--spacing-md)',
-        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.06) 0%, rgba(99, 102, 241, 0.06) 100%)',
+        background:
+          'linear-gradient(135deg, rgba(168, 85, 247, 0.06) 0%, rgba(99, 102, 241, 0.06) 100%)',
         border: '1px solid rgba(168, 85, 247, 0.2)',
       }}
       styles={{ body: { padding: 'var(--spacing-md) var(--spacing-lg)' } }}
     >
       <Space size={8} style={{ marginBottom: 8 }}>
         <BulbOutlined style={{ color: '#a855f7' }} />
-        <Text strong style={{ color: 'var(--text-primary)' }}>本次生成参考了以下爆款脚本</Text>
+        <Text strong style={{ color: 'var(--text-primary)' }}>
+          本次生成参考了以下爆款脚本
+        </Text>
         <Tooltip title="VidForge 内置 25+ 条人工标注电商爆款,按品类×风格 Top-K 检索作为 few-shot 注入 prompt,提升生成质量">
-          <Tag color="purple" style={{ borderRadius: 20 }}>RAG · {references.length} 条</Tag>
+          <Tag color="purple" style={{ borderRadius: 20 }}>
+            RAG · {references.length} 条
+          </Tag>
         </Tooltip>
       </Space>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

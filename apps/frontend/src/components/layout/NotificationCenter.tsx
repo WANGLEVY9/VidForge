@@ -22,24 +22,19 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationStore } from '../../store/useNotificationStore';
-import {
-  NotificationItem,
-  NotificationType,
-} from '../../services/notification';
+import { NotificationItem, NotificationType } from '../../services/notification';
 
 const { Text } = Typography;
 
 const POLL_INTERVAL_MS = 60_000;
 
-const TYPE_META: Record<
-  NotificationType,
-  { color: string; icon: React.ReactNode; label: string }
-> = {
-  system: { color: '#3b82f6', icon: <RocketOutlined />, label: '系统' },
-  task: { color: '#10b981', icon: <CheckOutlined />, label: '任务' },
-  compliance: { color: '#f59e0b', icon: <SafetyOutlined />, label: '合规' },
-  tip: { color: '#a855f7', icon: <BulbOutlined />, label: '提示' },
-};
+const TYPE_META: Record<NotificationType, { color: string; icon: React.ReactNode; label: string }> =
+  {
+    system: { color: '#3b82f6', icon: <RocketOutlined />, label: '系统' },
+    task: { color: '#10b981', icon: <CheckOutlined />, label: '任务' },
+    compliance: { color: '#f59e0b', icon: <SafetyOutlined />, label: '合规' },
+    tip: { color: '#a855f7', icon: <BulbOutlined />, label: '提示' },
+  };
 
 function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
@@ -86,9 +81,7 @@ function NotificationRow({ item, onClick, onRemove }: NotificationRowProps) {
         e.currentTarget.style.background = 'var(--bg-surface-2)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = unread
-          ? 'rgba(99, 102, 241, 0.06)'
-          : 'transparent';
+        e.currentTarget.style.background = unread ? 'rgba(99, 102, 241, 0.06)' : 'transparent';
       }}
     >
       <div
@@ -266,12 +259,7 @@ export default function NotificationCenter() {
           通知中心
         </Text>
         <Space size={4}>
-          <Button
-            type="text"
-            size="small"
-            disabled={unreadCount === 0}
-            onClick={handleMarkAllRead}
-          >
+          <Button type="text" size="small" disabled={unreadCount === 0} onClick={handleMarkAllRead}>
             全部已读
           </Button>
         </Space>

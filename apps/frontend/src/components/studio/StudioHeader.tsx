@@ -64,11 +64,7 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
           )}
         </div>
       </div>
-      {extra && (
-        <Space size="small">
-          {extra}
-        </Space>
-      )}
+      {extra && <Space size="small">{extra}</Space>}
     </div>
   );
 };

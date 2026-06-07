@@ -42,9 +42,22 @@ export function FabButton({ actions = defaultActions, hidden = false }: FabButto
   if (hidden) return null;
 
   return (
-    <div ref={fabRef} style={{ position: 'fixed', bottom: 'var(--fab-bottom)', right: 16, zIndex: 101 }}>
+    <div
+      ref={fabRef}
+      style={{ position: 'fixed', bottom: 'var(--fab-bottom)', right: 16, zIndex: 101 }}
+    >
       {open && (
-        <div style={{ position: 'absolute', bottom: 64, right: 0, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 64,
+            right: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            alignItems: 'flex-end',
+          }}
+        >
           {actions.map((action, i) => (
             <div
               key={action.key}
@@ -61,21 +74,34 @@ export function FabButton({ actions = defaultActions, hidden = false }: FabButto
                 setOpen(false);
               }}
             >
-              <span style={{
-                padding: '4px 8px', borderRadius: 'var(--radius-sm)',
-                background: 'var(--bg-elevated)', color: 'var(--text-primary)',
-                border: '1px solid var(--border-color)',
-                fontSize: 12, whiteSpace: 'nowrap',
-              }}>
+              <span
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--bg-elevated)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-color)',
+                  fontSize: 12,
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {action.label}
               </span>
-              <div style={{
-                width: 44, height: 44, borderRadius: '50%',
-                background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: 18,
-                boxShadow: '0 4px 16px rgba(99,102,241,0.4)',
-              }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background:
+                    'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontSize: 18,
+                  boxShadow: '0 4px 16px rgba(99,102,241,0.4)',
+                }}
+              >
                 {action.icon}
               </div>
             </div>

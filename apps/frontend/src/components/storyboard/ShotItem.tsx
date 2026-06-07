@@ -3,8 +3,12 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Button, Tag, Tooltip, Typography, Space } from 'antd';
 import {
-  MenuOutlined, PlayCircleOutlined, LoadingOutlined,
-  ReloadOutlined, DeleteOutlined, DownloadOutlined,
+  MenuOutlined,
+  PlayCircleOutlined,
+  LoadingOutlined,
+  ReloadOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { Shot } from '../../store/useStoryboardStore';
 import { triggerDownload } from '../../utils/download';
@@ -25,11 +29,17 @@ interface ShotItemProps {
 }
 
 export const ShotItem: React.FC<ShotItemProps> = ({
-  shot, isActive, onSelect, onDelete, onRegenerate, readonly = false,
+  shot,
+  isActive,
+  onSelect,
+  onDelete,
+  onRegenerate,
+  readonly = false,
 }) => {
-  const {
-    attributes, listeners, setNodeRef, transform, transition, isDragging,
-  } = useSortable({ id: shot.id, disabled: readonly });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: shot.id,
+    disabled: readonly,
+  });
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const style: React.CSSProperties = {
@@ -40,7 +50,10 @@ export const ShotItem: React.FC<ShotItemProps> = ({
   };
 
   const statusColor: Record<string, string> = {
-    pending: 'default', generating: 'processing', completed: 'success', failed: 'error',
+    pending: 'default',
+    generating: 'processing',
+    completed: 'success',
+    failed: 'error',
   };
 
   const hasVideo = shot.status === 'completed' && !!shot.videoUrl;
@@ -75,7 +88,11 @@ export const ShotItem: React.FC<ShotItemProps> = ({
     >
       {/* Drag handle (readonly 时隐藏) */}
       {!readonly && (
-        <div {...attributes} {...listeners} style={{ padding: '0 4px', display: 'flex', alignItems: 'center', cursor: 'grab' }}>
+        <div
+          {...attributes}
+          {...listeners}
+          style={{ padding: '0 4px', display: 'flex', alignItems: 'center', cursor: 'grab' }}
+        >
           <MenuOutlined style={{ color: 'var(--text-tertiary)', fontSize: 14 }} />
         </div>
       )}
@@ -141,8 +158,17 @@ export const ShotItem: React.FC<ShotItemProps> = ({
         </Text>
         <Space size={4} style={{ marginTop: 2 }}>
           <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{shot.duration}s</Text>
-          <Tag color={statusColor[shot.status]} style={{ fontSize: 10, lineHeight: '16px', borderRadius: 10 }}>
-            {shot.status === 'pending' ? '等待' : shot.status === 'generating' ? '生成中' : shot.status === 'completed' ? '完成' : '失败'}
+          <Tag
+            color={statusColor[shot.status]}
+            style={{ fontSize: 10, lineHeight: '16px', borderRadius: 10 }}
+          >
+            {shot.status === 'pending'
+              ? '等待'
+              : shot.status === 'generating'
+                ? '生成中'
+                : shot.status === 'completed'
+                  ? '完成'
+                  : '失败'}
           </Tag>
         </Space>
       </div>
@@ -156,12 +182,23 @@ export const ShotItem: React.FC<ShotItemProps> = ({
         )}
         {!readonly && shot.status === 'completed' && onRegenerate && (
           <Tooltip title="重新生成">
-            <Button type="text" size="small" icon={<ReloadOutlined />} onClick={() => onRegenerate(shot.id)} />
+            <Button
+              type="text"
+              size="small"
+              icon={<ReloadOutlined />}
+              onClick={() => onRegenerate(shot.id)}
+            />
           </Tooltip>
         )}
         {!readonly && (
           <Tooltip title="删除">
-            <Button type="text" size="small" icon={<DeleteOutlined />} style={{ color: '#ef4444' }} onClick={() => onDelete(shot.id)} />
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined />}
+              style={{ color: '#ef4444' }}
+              onClick={() => onDelete(shot.id)}
+            />
           </Tooltip>
         )}
       </div>

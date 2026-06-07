@@ -64,24 +64,47 @@ export const ComparePlayer: React.FC<ComparePlayerProps> = ({ versionA, versionB
     return () => a.removeEventListener('timeupdate', onTime);
   }, [versionA.videoUrl]);
 
-  const renderPlayer = (version: VersionConfig, side: 'A' | 'B', refVideo: React.RefObject<HTMLVideoElement>) => (
-    <div style={{ flex: 1, borderRight: side === 'A' ? (isMobile ? 'none' : '1px solid var(--border-color)') : 'none' }}>
-      <div style={{
-        padding: '8px 12px', borderBottom: '1px solid var(--border-color)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+  const renderPlayer = (
+    version: VersionConfig,
+    side: 'A' | 'B',
+    refVideo: React.RefObject<HTMLVideoElement>
+  ) => (
+    <div
+      style={{
+        flex: 1,
+        borderRight: side === 'A' ? (isMobile ? 'none' : '1px solid var(--border-color)') : 'none',
+      }}
+    >
+      <div
+        style={{
+          padding: '8px 12px',
+          borderBottom: '1px solid var(--border-color)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
         <Space>
           <Tag color={side === 'A' ? 'blue' : 'green'}>{side}</Tag>
-          <Text strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>{version.label}</Text>
+          <Text strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>
+            {version.label}
+          </Text>
         </Space>
       </div>
 
-      <div style={{
-        aspectRatio: '9/16', maxHeight: 300, margin: 12,
-        background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-        borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden',
-      }}>
+      <div
+        style={{
+          aspectRatio: '9/16',
+          maxHeight: 300,
+          margin: 12,
+          background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+          borderRadius: 'var(--radius-md)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
         {version.videoUrl ? (
           <video
             ref={refVideo}
@@ -101,7 +124,8 @@ export const ComparePlayer: React.FC<ComparePlayerProps> = ({ versionA, versionB
         <Slider
           value={progress}
           onChange={handleProgressChange}
-          min={0} max={100}
+          min={0}
+          max={100}
           trackStyle={{ background: 'var(--brand-primary)' }}
         />
       </div>
@@ -112,20 +136,24 @@ export const ComparePlayer: React.FC<ComparePlayerProps> = ({ versionA, versionB
         <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{version.duration}s</Text>
         <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{version.shots} 分镜</Text>
         <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>TTS: {version.tts}</Text>
-        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>生成: {version.genTime}s</Text>
+        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+          生成: {version.genTime}s
+        </Text>
       </div>
     </div>
   );
 
   return (
     <div>
-      <div style={{
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'hidden',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+        }}
+      >
         {renderPlayer(versionA, 'A', refA)}
         {renderPlayer(versionB, 'B', refB)}
       </div>

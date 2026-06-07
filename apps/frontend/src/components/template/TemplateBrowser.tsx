@@ -13,7 +13,13 @@ interface TemplateBrowserProps {
   filterStyle?: string;
 }
 
-export function TemplateBrowser({ open, onClose, onSelect, filterCategory, filterStyle }: TemplateBrowserProps) {
+export function TemplateBrowser({
+  open,
+  onClose,
+  onSelect,
+  filterCategory,
+  filterStyle,
+}: TemplateBrowserProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -46,18 +52,33 @@ export function TemplateBrowser({ open, onClose, onSelect, filterCategory, filte
 
   return (
     <Modal
-      title={<><AppstoreOutlined /> 我的模板</>}
+      title={
+        <>
+          <AppstoreOutlined /> 我的模板
+        </>
+      }
       open={open}
       onCancel={onClose}
       footer={null}
       width={640}
     >
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 48 }}><Spin /></div>
+        <div style={{ textAlign: 'center', padding: 48 }}>
+          <Spin />
+        </div>
       ) : templates.length === 0 ? (
         <Empty description="暂无模板，可在 A/B 对比页面保存" />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16, maxHeight: 480, overflowY: 'auto' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            marginTop: 16,
+            maxHeight: 480,
+            overflowY: 'auto',
+          }}
+        >
           {templates.map((t) => (
             <Card
               key={t.id}
@@ -71,7 +92,13 @@ export function TemplateBrowser({ open, onClose, onSelect, filterCategory, filte
                 />
               }
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                }}
+              >
                 <div>
                   <Text strong>{t.name}</Text>
                   <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -81,7 +108,9 @@ export function TemplateBrowser({ open, onClose, onSelect, filterCategory, filte
                   </div>
                 </div>
                 <Space direction="vertical" align="end" size={2}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>{t.duration}s</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {t.duration}s
+                  </Text>
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     {new Date(t.createdAt).toLocaleDateString()}
                   </Text>

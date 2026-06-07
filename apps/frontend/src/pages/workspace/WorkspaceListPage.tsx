@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Typography, Space, Tag, Row, Col, Modal, Form, Input, message, Spin, Empty } from 'antd';
+import {
+  Button,
+  Typography,
+  Space,
+  Tag,
+  Row,
+  Col,
+  Modal,
+  Form,
+  Input,
+  message,
+  Spin,
+  Empty,
+} from 'antd';
 import { PlusOutlined, FolderOpenOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { GlassPanel } from '../../components/studio/GlassPanel';
 import { useSpaceStore } from '../../store/useSpaceStore';
@@ -137,7 +150,14 @@ export default function WorkspaceListPage() {
                 style={{ padding: 24, cursor: 'pointer', height: '100%' }}
                 onClick={() => handleEnter(space.id)}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: 12,
+                  }}
+                >
                   <div
                     style={{
                       width: 48,

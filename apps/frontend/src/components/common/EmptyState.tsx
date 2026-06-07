@@ -80,7 +80,13 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         </Text>
       )}
       {actionText && onAction && (
-        <Button type="primary" icon={<PlusOutlined />} size="large" onClick={onAction} loading={loading}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          size="large"
+          onClick={onAction}
+          loading={loading}
+        >
           {actionText}
         </Button>
       )}

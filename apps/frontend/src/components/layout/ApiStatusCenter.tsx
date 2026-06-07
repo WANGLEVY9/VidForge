@@ -192,9 +192,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
     <Tooltip
       title={
         <div style={{ minWidth: 200 }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>
-            ARK 模型连接状态
-          </div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>ARK 模型连接状态</div>
           {text && (
             <div style={{ fontSize: 12 }}>
               · 文本:{text.name} ({SOURCE_META[text.apiKeySource ?? 'builtin'].label})
@@ -205,9 +203,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
               · 视频:{video.name} ({SOURCE_META[video.apiKeySource ?? 'builtin'].label})
             </div>
           )}
-          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.7 }}>
-            点击打开 API 配置中心
-          </div>
+          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.7 }}>点击打开 API 配置中心</div>
         </div>
       }
     >
@@ -244,11 +240,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
         onClose={() => setOpen(false)}
         extra={
           <Space>
-            <Button
-              icon={<ReloadOutlined />}
-              loading={loading}
-              onClick={loadConfigs}
-            >
+            <Button icon={<ReloadOutlined />} loading={loading} onClick={loadConfigs}>
               刷新
             </Button>
           </Space>
@@ -256,7 +248,8 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
       >
         <Paragraph style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
           管理 VidForge 调用的火山方舟 ARK 模型。修改后会写入数据库 (
-          <code>ark_model_overrides</code>),立即对所有用户生效;清除则回落到环境变量 / 代码内置默认值。
+          <code>ark_model_overrides</code>),立即对所有用户生效;清除则回落到环境变量 /
+          代码内置默认值。
         </Paragraph>
 
         {pingState.result && (
@@ -271,9 +264,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
             }
             description={
               <div style={{ fontSize: 12 }}>
-                {pingState.result.sample && (
-                  <div>响应样例:{pingState.result.sample}</div>
-                )}
+                {pingState.result.sample && <div>响应样例:{pingState.result.sample}</div>}
                 {pingState.result.hint && <div>{pingState.result.hint}</div>}
               </div>
             }
@@ -333,11 +324,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
                     </Button>
                     {cfg.apiKeySource === 'db' && (
                       <Tooltip title="清除 DB override,回落到 env/builtin">
-                        <Button
-                          size="small"
-                          danger
-                          onClick={() => handleClearOverride(cfg.key)}
-                        >
+                        <Button size="small" danger onClick={() => handleClearOverride(cfg.key)}>
                           清除
                         </Button>
                       </Tooltip>
@@ -388,8 +375,9 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
                     message="env 上的 key 已被屏蔽"
                     description={
                       <span style={{ fontSize: 12 }}>
-                        检测到环境变量上的 key{' '}
-                        <Text code>{cfg.blockedEnvKey}</Text> 命中失效黑名单,已自动回落到内置默认值。建议从部署平台删除该条 env 以彻底清理。
+                        检测到环境变量上的 key <Text code>{cfg.blockedEnvKey}</Text>{' '}
+                        命中失效黑名单,已自动回落到内置默认值。建议从部署平台删除该条 env
+                        以彻底清理。
                       </span>
                     }
                   />
@@ -435,9 +423,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
             >
               <Input
                 value={editing.endpointId}
-                onChange={(e) =>
-                  setEditing({ ...editing, endpointId: e.target.value })
-                }
+                onChange={(e) => setEditing({ ...editing, endpointId: e.target.value })}
                 placeholder="ep-..."
               />
             </Form.Item>
@@ -447,9 +433,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
             >
               <Input.Password
                 value={editing.apiKey}
-                onChange={(e) =>
-                  setEditing({ ...editing, apiKey: e.target.value })
-                }
+                onChange={(e) => setEditing({ ...editing, apiKey: e.target.value })}
                 placeholder="ark-..."
               />
             </Form.Item>
