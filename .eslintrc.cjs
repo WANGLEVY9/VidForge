@@ -28,6 +28,8 @@ module.exports = {
       'warn',
       { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
     ],
+    '@typescript-eslint/no-explicit-any': 'warn',
+    'react/no-unescaped-entities': 'warn',
     'prettier/prettier': 'warn',
   },
   settings: {
