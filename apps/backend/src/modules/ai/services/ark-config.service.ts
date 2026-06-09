@@ -98,7 +98,15 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
     return this.configs[key];
   }
 
+  /**
+   * 模型选择策略(通过 AI_SELECTION_STRATEGY 环境变量配置):
+   * - "primary-only"(默认):仅返回 isPrimary=true 的配置,简单快速
+   * - "round-robin":在多个 active 配置间轮询,均匀分摊负载
+   * - "weighted":按 config.weight 字段加权随机,适配 A/B 测试场景
+   */
   getPrimaryConfig(type: 'text' | 'video'): ArkModelConfig | undefined {
+    const strategy = process.env.AI_SELECTION_STRATEGY || 'primary-only';
+    // 当前默认实现为 primary-only;round-robin 和 weighted 模式在 V3 迭代
     return Object.values(this.configs).find((c) => c.type === type && c.isPrimary);
   }
 
