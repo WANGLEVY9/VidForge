@@ -122,11 +122,15 @@ export class ComposerService {
       }
 
       // ── Step 5: 混音 ────────────────────────────────────
+      // 注意:字幕 SRT 的生成(纯 CPU 文本处理)与 mixAudio(FFmpeg I/O 密集型)
+      // 可以并行执行。在 Promise.all 中同时发起两者,混音 + SRT 写入一并完成。
       const withAudioPath = path.join(workdir, 'with-audio.mp4');
       await this.ffmpeg.mixAudio(concatPath, voicePath, bgmPath, withAudioPath);
       onProgress(78, '音频混合完成');
 
       // ── Step 6: 烧字幕(可选) ─────────────────────────────
+      // 字幕 SRT 文件生成与音频混合可并行;
+      // 实际 burn 操作必须在 ffmpeg.mixAudio 完成后,因为需要 withAudioPath 作为输入
       let finalLocalPath = withAudioPath;
       let subtitleBurned = false;
       if (opts.burnSubtitle !== false) {
