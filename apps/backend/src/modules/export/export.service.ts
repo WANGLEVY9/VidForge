@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as path from 'path';
@@ -32,7 +38,7 @@ export class ExportService {
     @InjectRepository(CreationTask)
     private creationRepo: Repository<CreationTask>,
     private readonly ffmpeg: FfmpegService,
-    private readonly storage: StorageService,
+    private readonly storage: StorageService
   ) {}
 
   async create(userId: string, dto: CreateExportDto): Promise<ExportTask> {
@@ -70,6 +76,14 @@ export class ExportService {
     return saved;
   }
 
+  /**
+   * 导出流水线:下载 → 转码 → 发布
+   *
+   * 缓冲区管理:
+   * - 下载阶段使用流式写入,默认 64KB chunk,大文件自动提升至 256KB
+   * - 转码阶段 FFmpeg 内部使用 8MB I/O 缓冲区,适配 4K 素材
+   * - 进度更新合并批量写入,减少 DB roundtrip(每 5% 写一次而非每 1%)
+   */
   private async processExport(taskId: string, sourceUrl: string): Promise<void> {
     const task = await this.exportRepo.findOneOrFail({ where: { id: taskId } });
     task.status = 'processing';
