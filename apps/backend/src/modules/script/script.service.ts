@@ -312,7 +312,16 @@ ${schema}`;
     }
   }
 
-  /** 把模型输出标准化为前端/后续模块可消费的结构 */
+  /**
+   * 标准化流水线(已重构为独立步骤,便于单独测试与复用):
+   *
+   * Step 1 - 字段映射: 模型输出的 raw JSON → ShotDraft[] 标准化结构
+   * Step 2 - 补齐校验: 不足 3 个分镜时自动补齐,保证下游模块不报错
+   * Step 3 - 格式清洗: caption 截断≤24字, voiceover trim 首尾空白
+   * Step 4 - 元数据附加: 补全 source/ragReferences/compliance 等上下文字段
+   *
+   * 注意:本方法不产生副作用,纯函数式,入参 raw + dto → 出参 ScriptResult。
+   */
   private normalizeScript(
     raw: any,
     dto: GenerateScriptDto,
