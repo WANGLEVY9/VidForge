@@ -8,6 +8,20 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
+/**
+ * Creation WebSocket Gateway
+ *
+ * 断线重连策略:
+ * - 客户端 socket.io 配置 reconnection:true, reconnectionAttempts:10,
+ *   reconnectionDelay:1000, reconnectionDelayMax:5000
+ * - 服务端无状态:断线期间丢失的 progress 事件可通过 HTTP GET /creation/:id
+ *   补拉最新状态;重连后客户端应在 subscribe 回调中重新 join room
+ *
+ * 消息频率控制:
+ * - progress 事件在轮询循环中每 4s 发一次,已通过 POLL_INTERVAL_MS 限频
+ * - shot-progress 与 progress 同步发出,不做额外 throttle;
+ *   若未来分镜数 >20 导致消息风暴,可在 emitShotProgress 内加 throttle(1s)
+ */
 @WebSocketGateway({
   cors: {
     // 与 main.ts 中 HTTP CORS 对齐：放开所有 *.vercel.app 子域 + 配置的 WEB_BASE_URL + 同源
