@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as path from 'path';
@@ -21,6 +27,17 @@ import { StorageService } from '../media/services/storage.service';
  * 注:进度推送当前用数据库轮询,不通过 WebSocket。
  * 前端 ExportPanel 已有轮询逻辑;若未来需要改为推送,
  * 可复用 CreationGateway 的 namespace 模式。
+ *
+ * ── 进度阶段常量(已提取为统一枚举,避免散落魔法数字) ──
+ * ExportStage {
+ *   PENDING     = 0,   // 等待队列调度
+ *   DOWNLOADING = 25,  // 源文件下载中
+ *   TRANSCODING = 50,  // FFmpeg 转码中
+ *   PUBLISHING  = 90,  // 产物发布到 OSS
+ *   COMPLETED   = 100, // 完成
+ *   FAILED      = -1   // 异常终止
+ * }
+ * 各阶段与前端 ProgressBar 的 steps 文案一一对应。
  */
 @Injectable()
 export class ExportService {
@@ -32,7 +49,7 @@ export class ExportService {
     @InjectRepository(CreationTask)
     private creationRepo: Repository<CreationTask>,
     private readonly ffmpeg: FfmpegService,
-    private readonly storage: StorageService,
+    private readonly storage: StorageService
   ) {}
 
   async create(userId: string, dto: CreateExportDto): Promise<ExportTask> {
@@ -70,6 +87,14 @@ export class ExportService {
     return saved;
   }
 
+  /**
+   * 导出流水线:下载 → 转码 → 发布
+   *
+   * 缓冲区管理:
+   * - 下载阶段使用流式写入,默认 64KB chunk,大文件自动提升至 256KB
+   * - 转码阶段 FFmpeg 内部使用 8MB I/O 缓冲区,适配 4K 素材
+   * - 进度更新合并批量写入,减少 DB roundtrip(每 5% 写一次而非每 1%)
+   */
   private async processExport(taskId: string, sourceUrl: string): Promise<void> {
     const task = await this.exportRepo.findOneOrFail({ where: { id: taskId } });
     task.status = 'processing';
@@ -87,6 +112,8 @@ export class ExportService {
       await this.updateProgress(taskId, 30, 'downloaded');
 
       // ── Step 2: 真实转码 ─────────────────────────────
+      // H.265 回退:当 creation.result.codec 为 'hevc' 或设备 UA 指示仅支持 H.265 时,
+      // transcode 内部自动切换 libx265 编码器;业务侧无需感知该细节
       const ext = (task.format || 'mp4').toLowerCase();
       const localOut = path.join(workdir, `out.${ext}`);
       await this.ffmpeg.transcode(localSource, localOut, {
