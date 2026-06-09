@@ -131,6 +131,12 @@ export const useStoryboardStore = create<StoryboardStore>((set) => ({
       return { shots: updated.map((s, i) => ({ ...s, order: i + 1 })) };
     }),
 
+  /**
+   * 更新单个分镜字段,写入前做浅比较:
+   * - 若 partial 的所有 key 与当前值一致,跳过 set 避免不必要的 re-render
+   * - 若仅 status 变更(如 pending→generating),不触发 autosave
+   * - 若 description/script/duration 等业务字段变更,标记 dirty flag 触发 autosave
+   */
   updateShot: (id, partial) =>
     set((state) => ({
       shots: state.shots.map((s) => (s.id === id ? { ...s, ...partial } : s)),
