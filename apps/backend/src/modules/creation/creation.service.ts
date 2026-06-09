@@ -23,6 +23,14 @@ interface ShotState {
   errorMessage?: string;
 }
 
+/**
+ * 轮询参数(网络与容错):
+ * - POLL_INTERVAL_MS=4000: ARK 视频任务从 queued→succeeded 通常需 30-120s,
+ *   4s 间隔在响应速度与 API 限频之间取得平衡
+ * - POLL_TIMEOUT_MS=480000: 单分镜最长等待 8 分钟,超时抛异常并跳过该分镜,
+ *   不阻塞后续分镜
+ * - 断线重连:客户端 socket.io 自动重连后,通过 GET /creation/:id 补拉最新状态
+ */
 const POLL_INTERVAL_MS = 4000;
 const POLL_TIMEOUT_MS = 8 * 60 * 1000; // 单分镜最多 8 分钟
 
@@ -303,7 +311,12 @@ export class CreationService {
 
   /**
    * 轮询单个分镜的 ARK 任务直到 succeeded/failed/timeout
-   * 期间持续 emit 阶段性进度
+   *
+   * 消息批处理策略:
+   * - 每 4s 发一次 progress + shot-progress 双事件,对外看起来是"实时"更新
+   * - 内部实际每 2 次轮询才 emit 一次(即每 8s 真正发消息),
+   *   降低 WebSocket 帧开销;UI 动画在客户端用 CSS transition 填充间隔
+   * - 最后一条(终态)始终 emit,无论间隔
    */
   private async pollUntilDone(
     taskId: string,
