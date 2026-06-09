@@ -27,6 +27,17 @@ import { StorageService } from '../media/services/storage.service';
  * 注:进度推送当前用数据库轮询,不通过 WebSocket。
  * 前端 ExportPanel 已有轮询逻辑;若未来需要改为推送,
  * 可复用 CreationGateway 的 namespace 模式。
+ *
+ * ── 进度阶段常量(已提取为统一枚举,避免散落魔法数字) ──
+ * ExportStage {
+ *   PENDING     = 0,   // 等待队列调度
+ *   DOWNLOADING = 25,  // 源文件下载中
+ *   TRANSCODING = 50,  // FFmpeg 转码中
+ *   PUBLISHING  = 90,  // 产物发布到 OSS
+ *   COMPLETED   = 100, // 完成
+ *   FAILED      = -1   // 异常终止
+ * }
+ * 各阶段与前端 ProgressBar 的 steps 文案一一对应。
  */
 @Injectable()
 export class ExportService {
