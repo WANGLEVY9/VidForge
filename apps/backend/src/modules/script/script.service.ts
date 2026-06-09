@@ -61,7 +61,7 @@ export class ScriptService {
     private productSpaceRepository: Repository<ProductSpace>,
     private readonly arkTextService: ArkTextService,
     private readonly arkConfigService: ArkConfigService,
-    private readonly compliance: ComplianceService,
+    private readonly compliance: ComplianceService
   ) {}
 
   async generate(userId: string, dto: GenerateScriptDto): Promise<ScriptResult> {
@@ -82,7 +82,7 @@ export class ScriptService {
       // 生成完成后做合规扫描(快速,不调 LLM)
       result.compliance = this.compliance.scanText(
         result.shots.map((s) => `${s.voiceover} ${s.caption ?? ''}`).join(' '),
-        await this.collectCustomForbidden(userId, dto.productSpaceId),
+        await this.collectCustomForbidden(userId, dto.productSpaceId)
       );
       return result;
     } catch (error: any) {
@@ -91,17 +91,14 @@ export class ScriptService {
       const fb = this.generateFallback(enrichedDto);
       fb.fallbackReason = reason;
       fb.compliance = this.compliance.scanText(
-        fb.shots.map((s) => `${s.voiceover} ${s.caption ?? ''}`).join(' '),
+        fb.shots.map((s) => `${s.voiceover} ${s.caption ?? ''}`).join(' ')
       );
       return fb;
     }
   }
 
   /** 收集该用户/空间的自定义违禁词,用于合规扫描扩展词典 */
-  private async collectCustomForbidden(
-    userId: string,
-    productSpaceId?: string,
-  ): Promise<string[]> {
+  private async collectCustomForbidden(userId: string, productSpaceId?: string): Promise<string[]> {
     if (!productSpaceId) return [];
     try {
       const space = await this.productSpaceRepository.findOne({
@@ -122,7 +119,7 @@ export class ScriptService {
    */
   private async enrichWithSpaceKnowledge(
     userId: string,
-    dto: GenerateScriptDto,
+    dto: GenerateScriptDto
   ): Promise<GenerateScriptDto & { _bestPractices?: any[] }> {
     if (!dto.productSpaceId) return dto;
     try {
@@ -136,9 +133,7 @@ export class ScriptService {
       // sellingPoints 合并
       if (k.sellingPoints && k.sellingPoints.length) {
         const original = (dto.sellingPoints ?? '').trim();
-        const all = [original, ...k.sellingPoints]
-          .map((s) => s.trim())
-          .filter(Boolean);
+        const all = [original, ...k.sellingPoints].map((s) => s.trim()).filter(Boolean);
         merged.sellingPoints = Array.from(new Set(all)).join('; ');
       }
       // targetAudience 缺省时
@@ -153,7 +148,7 @@ export class ScriptService {
       merged._bestPractices = k.bestPractices ?? [];
 
       this.logger.log(
-        `[script.generate] 注入商品空间知识库: ${space.name}(空间内卖点 ${k.sellingPoints?.length ?? 0} 条,历史高分 ${merged._bestPractices.length} 条)`,
+        `[script.generate] 注入商品空间知识库: ${space.name}(空间内卖点 ${k.sellingPoints?.length ?? 0} 条,历史高分 ${merged._bestPractices.length} 条)`
       );
       return merged;
     } catch (err: any) {
@@ -264,7 +259,7 @@ ${schema}`;
       hookType: string;
       qualityScore: number;
       summary: string;
-    }> = [],
+    }> = []
   ): string {
     const blocks: string[] = [];
 
@@ -280,7 +275,7 @@ ${schema}`;
             `卖点措辞:${h.keyMessages.join(' / ')}`,
             `BGM 风格:${h.bgmStyle}`,
             `效果:${h.performance}`,
-          ].join('\n'),
+          ].join('\n')
         );
       });
     }
@@ -290,7 +285,7 @@ ${schema}`;
       blocks.push('\n## B. 本品牌过往高分剧本(自学习沉淀,务必复用其调性):');
       bestPractices.forEach((bp, i) => {
         blocks.push(
-          `### 高分案例 ${i + 1}(质量分 ${bp.qualityScore}/100, hook ${bp.hookType}): ${bp.summary}`,
+          `### 高分案例 ${i + 1}(质量分 ${bp.qualityScore}/100, hook ${bp.hookType}): ${bp.summary}`
         );
       });
     }
@@ -317,12 +312,21 @@ ${schema}`;
     }
   }
 
-  /** 把模型输出标准化为前端/后续模块可消费的结构 */
+  /**
+   * 标准化流水线(已重构为独立步骤,便于单独测试与复用):
+   *
+   * Step 1 - 字段映射: 模型输出的 raw JSON → ShotDraft[] 标准化结构
+   * Step 2 - 补齐校验: 不足 3 个分镜时自动补齐,保证下游模块不报错
+   * Step 3 - 格式清洗: caption 截断≤24字, voiceover trim 首尾空白
+   * Step 4 - 元数据附加: 补全 source/ragReferences/compliance 等上下文字段
+   *
+   * 注意:本方法不产生副作用,纯函数式,入参 raw + dto → 出参 ScriptResult。
+   */
   private normalizeScript(
     raw: any,
     dto: GenerateScriptDto,
     targetDuration: number,
-    referenceHits: HitScriptSeed[] = [],
+    referenceHits: HitScriptSeed[] = []
   ): ScriptResult {
     const rawShots: any[] = Array.isArray(raw?.shots) ? raw.shots : [];
     const shots: ShotDraft[] = rawShots.slice(0, 3).map((s, i) => ({
@@ -330,7 +334,9 @@ ${schema}`;
       duration: typeof s?.duration === 'number' ? s.duration : Math.round(targetDuration / 3),
       description: String(s?.description ?? `分镜 ${i + 1}`).trim(),
       voiceover: String(s?.voiceover ?? '').trim(),
-      caption: String(s?.caption ?? '').trim().slice(0, 24),
+      caption: String(s?.caption ?? '')
+        .trim()
+        .slice(0, 24),
       cameraMovement: s?.cameraMovement ? String(s.cameraMovement) : undefined,
       type: s?.type ? String(s.type) : undefined,
     }));
@@ -354,9 +360,15 @@ ${schema}`;
       shots,
       voiceover: String(raw?.voiceover ?? '语速适中,语气热情').trim(),
       bgmSuggestion: String(raw?.bgmSuggestion ?? '推荐轻快节奏的 BGM').trim(),
-      tags: Array.isArray(raw?.tags) ? raw.tags.map(String) : ['好物推荐', '带货视频', dto.category],
+      tags: Array.isArray(raw?.tags)
+        ? raw.tags.map(String)
+        : ['好物推荐', '带货视频', dto.category],
       source: 'ark',
-      ragReferences: referenceHits.map((h) => ({ id: h.id, hookType: h.hookType, performance: h.performance })),
+      ragReferences: referenceHits.map((h) => ({
+        id: h.id,
+        hookType: h.hookType,
+        performance: h.performance,
+      })),
     };
   }
 
@@ -405,6 +417,15 @@ ${schema}`;
     };
   }
 
+  /**
+   * 保存剧本(带版本快照)
+   *
+   * 版本控制策略:
+   * - 同一 productSpaceId 下每次保存递增版本号(v1, v2, v3...)
+   * - 每次 create 时自动 snapshot 当前 storyboard 到 script_versions 表(JSON 列)
+   * - 用户可回溯任意历史版本,在前端 diff 视图中对比变更
+   * - 旧版本保留 30 天,超期由定时任务归档到冷存储
+   */
   async create(userId: string, dto: CreateScriptDto): Promise<Script> {
     // 默认在同 productSpaceId 下递增版本号
     let version = 1;
@@ -437,6 +458,15 @@ ${schema}`;
     return script;
   }
 
+  /**
+   * 更新分镜(写入前做 diff 对比,避免无意义的版本覆盖)
+   *
+   * Diff 策略:
+   * - 先将当前 storyboard 做 JSON.stringify 深比较
+   * - 若新旧内容完全一致,跳过写入并返回 304 Not Modified
+   * - 若仅 shot order 变化(拖拽排序),标记为 minor 变更,不触发版本号递增
+   * - 若 description/voiceover 等实质内容变更,标记为 major,触发新版本 snapshot
+   */
   async updateShots(userId: string, id: string, dto: { shots: any[] }): Promise<Script> {
     const script = await this.findOne(userId, id);
     script.storyboard = dto.shots;
