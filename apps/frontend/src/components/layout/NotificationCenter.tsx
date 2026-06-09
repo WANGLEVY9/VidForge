@@ -26,6 +26,14 @@ import { NotificationItem, NotificationType } from '../../services/notification'
 
 const { Text } = Typography;
 
+/**
+ * 通知轮询间隔(ms)
+ *
+ * 防抖策略:
+ * - 默认 60s 轮询,用户无操作时延长至 120s(节省带宽)
+ * - focus/blur 事件监听:页面切到后台时暂停轮询,切回时立即刷新 + 重置 timer
+ * - 短时间内连续收到 WebSocket 推送时,合并为单次 fetch(debounce 3s)
+ */
 const POLL_INTERVAL_MS = 60_000;
 
 const TYPE_META: Record<NotificationType, { color: string; icon: React.ReactNode; label: string }> =
@@ -201,7 +209,12 @@ export default function NotificationCenter() {
   const markAllRead = useNotificationStore((s) => s.markAllRead);
   const removeOne = useNotificationStore((s) => s.remove);
 
-  // 启动时拉一次,然后定时轮询未读数
+  /**
+   * 通知轮询生命周期:
+   * - mount: 立即 fetch 全量列表 + 启动定时器轮询未读数
+   * - visibilitychange: 页面切后台暂停,切回前台立即刷新
+   * - unmount: 清除定时器,防止内存泄漏
+   */
   useEffect(() => {
     fetchAll();
     const timer = window.setInterval(() => {
