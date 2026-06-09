@@ -28,6 +28,14 @@ export class OrchestratorService {
   private readonly logger = new Logger(OrchestratorService.name);
   private activeRuns = new Map<string, { abort: () => void }>();
 
+  // 重试策略配置(通过环境变量注入,便于运维调参):
+  // AGENT_MAX_RETRIES: 单个节点最大重试次数,默认 3
+  // AGENT_RETRY_BASE_DELAY_MS: 首次重试等待毫秒,默认 2000,后续翻倍
+  // AGENT_QC_MAX_RETRIES: quality_control 允许回退到 video_composition 的最大次数,默认 2
+  private readonly maxRetries = Number(process.env.AGENT_MAX_RETRIES) || 3;
+  private readonly retryBaseDelayMs = Number(process.env.AGENT_RETRY_BASE_DELAY_MS) || 2000;
+  private readonly qcMaxRetries = Number(process.env.AGENT_QC_MAX_RETRIES) || 2;
+
   constructor(
     private readonly materialAgent: MaterialAgentService,
     private readonly scriptAgent: ScriptAgentService,
