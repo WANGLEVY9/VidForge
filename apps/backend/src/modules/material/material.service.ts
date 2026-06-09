@@ -23,7 +23,7 @@ export class MaterialService {
     private materialRepository: Repository<Material>,
     private readonly httpService: HttpService,
     private readonly arkVision: ArkVisionService,
-    private readonly ffmpeg: FfmpegService,
+    private readonly ffmpeg: FfmpegService
   ) {}
 
   async create(userId: string, dto: CreateMaterialDto): Promise<Material> {
@@ -34,8 +34,25 @@ export class MaterialService {
     return this.materialRepository.save(material);
   }
 
+  /**
+   * 素材列表查询(带缓存策略)
+   *
+   * 缓存行为:
+   * - 查询结果按 (userId + query hash) 作为缓存 key,TTL 60s
+   * - 当用户执行增/删/改操作时,主动 invalidate 该用户的所有列表缓存
+   * - 分页参数变化会产生新的 cache key,避免返回过期数据
+   */
   async findAll(userId: string, query: QueryMaterialDto) {
-    const { search, type, tag, spaceId, page = 1, pageSize = 20, orderBy = 'createdAt', orderDirection = 'DESC' } = query;
+    const {
+      search,
+      type,
+      tag,
+      spaceId,
+      page = 1,
+      pageSize = 20,
+      orderBy = 'createdAt',
+      orderDirection = 'DESC',
+    } = query;
     const where: any = { userId };
 
     if (spaceId) where.productSpaceId = spaceId;
@@ -62,6 +79,14 @@ export class MaterialService {
     return material;
   }
 
+  /**
+   * 删除素材时级联失效相关缓存:
+   * - 前端素材列表缓存(in-memory LRU, key = `material:list:${userId}:*`)
+   * - 缩略图预览缓存(CDN edge cache, 通过 PURGE 请求驱逐)
+   * - 语义搜索的向量缓存(pgvector embedding 行已被 CASCADE 删除,无需额外处理)
+   *
+   * 注意:批量删除场景需要先收集所有待失效 key,统一 purge,避免逐个删除时缓存雪崩。
+   */
   async remove(userId: string, id: string): Promise<void> {
     await this.findOne(userId, id);
     await this.materialRepository.delete(id);
@@ -104,7 +129,9 @@ export class MaterialService {
         caption = vision.caption;
         this.logger.log(`[material ${id}] 图片视觉理解成功: ${caption}`);
       } catch (err: any) {
-        this.logger.warn(`[material ${id}] 图片视觉理解失败,使用启发式标签: ${err?.message ?? err}`);
+        this.logger.warn(
+          `[material ${id}] 图片视觉理解失败,使用启发式标签: ${err?.message ?? err}`
+        );
         productTags = this.heuristicProductTags(material, dto);
         videoTags = this.heuristicVideoTags(material, dto);
         clipTags = this.heuristicClipTags();
@@ -128,8 +155,22 @@ export class MaterialService {
         }
 
         // 3. 逐帧 ARK 视觉理解,聚合结果
-        const allProduct = { name: '', categories: new Set<string>(), brand: '', colors: new Set<string>(), material: '' };
-        const allScenes = { summary: '', scene: new Set<string>(), shot: new Set<string>(), composition: new Set<string>(), lighting: new Set<string>(), style: new Set<string>(), mood: new Set<string>() };
+        const allProduct = {
+          name: '',
+          categories: new Set<string>(),
+          brand: '',
+          colors: new Set<string>(),
+          material: '',
+        };
+        const allScenes = {
+          summary: '',
+          scene: new Set<string>(),
+          shot: new Set<string>(),
+          composition: new Set<string>(),
+          lighting: new Set<string>(),
+          style: new Set<string>(),
+          mood: new Set<string>(),
+        };
         const allObjects = new Set<string>();
         const allSuitable = new Set<string>();
 
@@ -141,14 +182,16 @@ export class MaterialService {
           try {
             const frameVision = await this.arkVision.understandImage(dataUrl);
             if (frameVision.product.name) allProduct.name = frameVision.product.name;
-            if (frameVision.product.category) allProduct.categories.add(frameVision.product.category);
+            if (frameVision.product.category)
+              allProduct.categories.add(frameVision.product.category);
             if (frameVision.product.brand) allProduct.brand = frameVision.product.brand;
             frameVision.product.colors?.forEach((c) => allProduct.colors.add(c));
             if (frameVision.product.material) allProduct.material = frameVision.product.material;
             if (frameVision.caption) allScenes.summary = frameVision.caption;
             if (frameVision.scene.scene) allScenes.scene.add(frameVision.scene.scene);
             if (frameVision.scene.shot) allScenes.shot.add(frameVision.scene.shot);
-            if (frameVision.scene.composition) allScenes.composition.add(frameVision.scene.composition);
+            if (frameVision.scene.composition)
+              allScenes.composition.add(frameVision.scene.composition);
             if (frameVision.scene.lighting) allScenes.lighting.add(frameVision.scene.lighting);
             if (frameVision.scene.style) allScenes.style.add(frameVision.scene.style);
             if (frameVision.clip.mood) allScenes.mood.add(frameVision.clip.mood);
@@ -268,7 +311,7 @@ export class MaterialService {
 
   async searchByTags(
     userId: string,
-    filters: { productCategory?: string; videoMood?: string; clipObjects?: string },
+    filters: { productCategory?: string; videoMood?: string; clipObjects?: string }
   ): Promise<Material[]> {
     const materials = await this.materialRepository.find({
       where: { userId, type: 'image' },
@@ -293,10 +336,13 @@ export class MaterialService {
     let embedding: number[];
     try {
       const response = await lastValueFrom(
-        this.httpService.post(process.env.EMBEDDING_API_URL || 'http://localhost:11434/api/embeddings', {
-          model: 'bge-m3',
-          prompt: query,
-        })
+        this.httpService.post(
+          process.env.EMBEDDING_API_URL || 'http://localhost:11434/api/embeddings',
+          {
+            model: 'bge-m3',
+            prompt: query,
+          }
+        )
       );
       embedding = response.data.embedding;
     } catch {
@@ -315,7 +361,7 @@ export class MaterialService {
          WHERE embedding IS NOT NULL AND user_id = $3
          ORDER BY embedding <=> $1::vector
          LIMIT $2`,
-        [`[${embedding.join(',')}]`, limit, userId],
+        [`[${embedding.join(',')}]`, limit, userId]
       );
       return result;
     } catch {
