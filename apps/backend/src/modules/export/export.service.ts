@@ -101,6 +101,8 @@ export class ExportService {
       await this.updateProgress(taskId, 30, 'downloaded');
 
       // ── Step 2: 真实转码 ─────────────────────────────
+      // H.265 回退:当 creation.result.codec 为 'hevc' 或设备 UA 指示仅支持 H.265 时,
+      // transcode 内部自动切换 libx265 编码器;业务侧无需感知该细节
       const ext = (task.format || 'mp4').toLowerCase();
       const localOut = path.join(workdir, `out.${ext}`);
       await this.ffmpeg.transcode(localSource, localOut, {
