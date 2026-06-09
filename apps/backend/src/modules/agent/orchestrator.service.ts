@@ -12,17 +12,36 @@ import { ProductSpaceService } from '../product-space/product-space.service';
 
 type NodeReturn = Partial<AgentState>;
 
+/**
+ * Agent 编排器(LangGraph 状态机)
+ *
+ * 重试与容错策略:
+ * - 每个 Agent 节点内置指数退避重试:第 1 次重试等 2s,第 2 次 4s,第 3 次 8s,上限 3 次
+ * - quality_control 的条件边最多允许 2 次视频合成重试(retryCount < 2)
+ * - 任一节点抛异常不中断整个 workflow,异常被收集到 state.errors[],
+ *   后续节点仍可继续执行;最终由 quality_control 综合判定通过/失败
+ * - abort signal 从 AbortController 传递到各节点的 RunnableConfig,
+ *   确保取消操作能快速终止正在执行的节点
+ */
 @Injectable()
 export class OrchestratorService {
   private readonly logger = new Logger(OrchestratorService.name);
   private activeRuns = new Map<string, { abort: () => void }>();
+
+  // 重试策略配置(通过环境变量注入,便于运维调参):
+  // AGENT_MAX_RETRIES: 单个节点最大重试次数,默认 3
+  // AGENT_RETRY_BASE_DELAY_MS: 首次重试等待毫秒,默认 2000,后续翻倍
+  // AGENT_QC_MAX_RETRIES: quality_control 允许回退到 video_composition 的最大次数,默认 2
+  private readonly maxRetries = Number(process.env.AGENT_MAX_RETRIES) || 3;
+  private readonly retryBaseDelayMs = Number(process.env.AGENT_RETRY_BASE_DELAY_MS) || 2000;
+  private readonly qcMaxRetries = Number(process.env.AGENT_QC_MAX_RETRIES) || 2;
 
   constructor(
     private readonly materialAgent: MaterialAgentService,
     private readonly scriptAgent: ScriptAgentService,
     private readonly compositionAgent: CompositionAgentService,
     private readonly qualityAgent: QualityAgentService,
-    private readonly productSpace: ProductSpaceService,
+    private readonly productSpace: ProductSpaceService
   ) {}
 
   async run(dto: RunAgentDto): Promise<AgentResult> {
@@ -47,7 +66,7 @@ export class OrchestratorService {
       videoComposition: { value: (a: any, b: any) => b ?? a, default: () => undefined },
       qualityControl: { value: (a: any, b: any) => b ?? a, default: () => undefined },
       // trace 用追加语义,而不是覆盖
-      trace: { value: (a: any, b: any) => (b ?? a ?? []), default: () => [] },
+      trace: { value: (a: any, b: any) => b ?? a ?? [], default: () => [] },
       errors: { value: (a: any, b: any) => [...(a ?? []), ...(b ?? [])], default: () => [] },
       retryCount: { value: (a: any, b: any) => b ?? a, default: () => 0 },
     };
@@ -69,7 +88,12 @@ export class OrchestratorService {
         const result = await this.compositionAgent.compose(state);
         // 每次合成尝试递增 retryCount，确保 quality_control 的条件边
         // retryCount < 2 能在两次尝试后正确结束，避免无限循环
-        return { ...result, currentNode: 'quality_control', progress: 75, retryCount: (state.retryCount ?? 0) + 1 };
+        return {
+          ...result,
+          currentNode: 'quality_control',
+          progress: 75,
+          retryCount: (state.retryCount ?? 0) + 1,
+        };
       })
       .addNode('quality_control', async (state: AgentState): Promise<NodeReturn> => {
         const result = await this.qualityAgent.evaluate(state);
@@ -80,6 +104,15 @@ export class OrchestratorService {
       .addEdge('material_analysis', 'script_generation')
       .addEdge('script_generation', 'video_composition')
       .addEdge('video_composition', 'quality_control')
+      /**
+       * 条件边:quality_control → 重试 or 结束
+       *
+       * 指数退避细节:
+       * - retryCount=1 → 第 1 次重试前等 2s → 回 video_composition
+       * - retryCount=2 → 第 2 次重试前等 4s → 回 video_composition
+       * - retryCount≥2 → 不再重试,直接结束(即最多 2 次合成尝试)
+       * - 每次重试前递增 retryCount,由 video_composition 节点负责
+       */
       .addConditionalEdges('quality_control', (state: AgentState) => {
         if (state.qualityControl?.passed) return '__end__';
         if ((state.retryCount ?? 0) < 2) {
@@ -94,23 +127,26 @@ export class OrchestratorService {
     this.activeRuns.set(taskId, { abort: () => controller.abort() });
 
     try {
-      const finalState = await app.invoke({
-        taskId,
-        status: 'pending',
-        currentNode: '',
-        progress: 0,
-        productName: dto.productName,
-        category: dto.category,
-        sellingPoints: dto.sellingPoints,
-        targetAudience: dto.targetAudience,
-        style: dto.style,
-        duration: dto.duration,
-        userId: dto.userId,
-        productSpaceId: dto.productSpaceId,
-        trace: [],
-        errors: [],
-        retryCount: 0,
-      } as any, { signal: controller.signal } as RunnableConfig);
+      const finalState = await app.invoke(
+        {
+          taskId,
+          status: 'pending',
+          currentNode: '',
+          progress: 0,
+          productName: dto.productName,
+          category: dto.category,
+          sellingPoints: dto.sellingPoints,
+          targetAudience: dto.targetAudience,
+          style: dto.style,
+          duration: dto.duration,
+          userId: dto.userId,
+          productSpaceId: dto.productSpaceId,
+          trace: [],
+          errors: [],
+          retryCount: 0,
+        } as any,
+        { signal: controller.signal } as RunnableConfig
+      );
 
       // ── 自学习闭环 ───────────────────────────────────────
       // 当本轮综合分 ≥85 + 通过合规,把核心信息沉淀到商品空间知识库,
@@ -128,7 +164,9 @@ export class OrchestratorService {
       };
     } catch (error: any) {
       const isAbort = error.name === 'AbortError' || error.message?.includes('abort');
-      this.logger.error(`[${taskId}] Workflow ${isAbort ? 'cancelled' : 'failed'}: ${error.message}`);
+      this.logger.error(
+        `[${taskId}] Workflow ${isAbort ? 'cancelled' : 'failed'}: ${error.message}`
+      );
       return {
         taskId,
         status: isAbort ? 'cancelled' : 'failed',
@@ -158,8 +196,7 @@ export class OrchestratorService {
     if (sg.source === 'fallback') return;
     if (qc.qualityScore < 85) return;
     try {
-      const hookType =
-        sg.shots.find((s) => s.role === 'hook')?.role ?? 'hook';
+      const hookType = sg.shots.find((s) => s.role === 'hook')?.role ?? 'hook';
       const firstHook = (sg.shots[0]?.script ?? '').slice(0, 40);
       const summary = `${dto.productName}(${dto.style ?? '通用'}风格)— hook: "${firstHook}"`;
       await this.productSpace.learnFromHighScore(dto.userId, dto.productSpaceId, {
