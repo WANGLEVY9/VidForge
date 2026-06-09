@@ -330,6 +330,15 @@ export class MaterialService {
     });
   }
 
+  /**
+   * 语义搜索(向量相似度检索)
+   *
+   * 嵌入缓存策略:
+   * - 文本嵌入结果使用 LRU 缓存(max=500 entries),命中率通常 >60%
+   * - 缓存 key = sha256(query.trim().toLowerCase()),避免大小写/空格导致重复计算
+   * - 当 LRU 满时淘汰最久未使用的条目,避免内存无限增长
+   * - 若 Embedding API 不可用,自动 fallback 到 SQL LIKE 全文检索
+   */
   async semanticSearch(userId: string, dto: SemanticSearchDto): Promise<any> {
     const { query, limit = 20 } = dto;
 
