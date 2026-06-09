@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useShell } from '../../components/layout/shell-context';
 import {
   Row,
@@ -16,6 +16,7 @@ import {
   Tooltip,
   Segmented,
   Skeleton,
+  List,
 } from 'antd';
 import {
   SearchOutlined,
@@ -34,6 +35,9 @@ import {
   SortAscendingOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  CloseOutlined,
+  FileOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps, MenuProps } from 'antd';
 import { GlassPanel } from '../../components/studio/GlassPanel';
@@ -43,6 +47,17 @@ import { useSpaceStore } from '../../store/useSpaceStore';
 
 const { Text } = Typography;
 const { Dragger } = Upload;
+
+/** 上传队列中的单个条目 */
+interface UploadQueueItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+  progress: number;
+  status: 'uploading' | 'done' | 'error';
+  material?: MaterialItem;
+  errorMsg?: string;
+}
 
 type ViewMode = 'grid' | 'list';
 type MaterialType = 'all' | 'image' | 'video' | 'audio';
@@ -136,6 +151,9 @@ function MaterialPage() {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewItem, setPreviewItem] = useState<MaterialItem | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
+  const [queueExpanded, setQueueExpanded] = useState(true);
+  const queueIdCounter = useRef(0);
 
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -210,18 +228,79 @@ function MaterialPage() {
     fileList,
     onChange: ({ fileList: newFileList }) => setFileList(newFileList),
     customRequest: async ({ file, onSuccess, onError }) => {
+      const f = file as File;
+      const queueId = `upload_${++queueIdCounter.current}`;
+      // 生成预览 URL
+      const previewUrl = f.type.startsWith('image/')
+        ? URL.createObjectURL(f)
+        : f.type.startsWith('video/')
+          ? URL.createObjectURL(f)
+          : '';
+
+      const queueItem: UploadQueueItem = {
+        id: queueId,
+        file: f,
+        previewUrl,
+        progress: 0,
+        status: 'uploading',
+      };
+      setUploadQueue((prev) => [queueItem, ...prev]);
+      setQueueExpanded(true);
+
       try {
-        const f = file as File;
-        await materialApi.upload(f, { productSpaceId: activeSpaceId ?? undefined });
+        const result = await materialApi.upload(f, { productSpaceId: activeSpaceId ?? undefined });
         onSuccess?.('ok');
+        // 更新队列条目为完成状态
+        setUploadQueue((prev) =>
+          prev.map((q) =>
+            q.id === queueId
+              ? { ...q, status: 'done' as const, progress: 100, material: result }
+              : q
+          )
+        );
         message.success(`${f.name} 上传成功`);
         fetchList();
       } catch (err: any) {
         onError?.(err);
         const detail = err?.response?.data?.message ?? err?.message ?? '未知错误';
+        setUploadQueue((prev) =>
+          prev.map((q) =>
+            q.id === queueId ? { ...q, status: 'error' as const, errorMsg: detail } : q
+          )
+        );
         message.error(`上传失败:${detail}`);
       }
     },
+  };
+
+  /** 从队列中移除条目 */
+  const removeQueueItem = (id: string) => {
+    const item = uploadQueue.find((q) => q.id === id);
+    if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    setUploadQueue((prev) => prev.filter((q) => q.id !== id));
+  };
+
+  /** 清除所有已完成的队列条目 */
+  const clearDoneQueue = () => {
+    uploadQueue.forEach((q) => {
+      if (q.previewUrl) URL.revokeObjectURL(q.previewUrl);
+    });
+    setUploadQueue((prev) => prev.filter((q) => q.status === 'uploading'));
+  };
+
+  /** 在队列中预览素材 */
+  const handleQueuePreview = (item: UploadQueueItem) => {
+    if (item.material) {
+      handlePreview(item.material);
+    }
+  };
+
+  /** 图标：根据文件类型返回对应图标 */
+  const getFileTypeIcon = (file: File) => {
+    if (file.type.startsWith('image/')) return <PictureOutlined />;
+    if (file.type.startsWith('video/')) return <VideoCameraOutlined />;
+    if (file.type.startsWith('audio/')) return <FileImageOutlined />;
+    return <FileOutlined />;
   };
 
   const handleDelete = (id: string) => {
@@ -376,11 +455,16 @@ function MaterialPage() {
                   批量删除 ({selectedIds.length})
                 </Button>
               )}
-              <Upload {...uploadProps} showUploadList={false}>
-                <Button type="primary" icon={<CloudUploadOutlined />}>
-                  上传素材
+              {uploadQueue.length > 0 && (
+                <Button
+                  icon={<CloudUploadOutlined />}
+                  onClick={() => setQueueExpanded(!queueExpanded)}
+                  type={queueExpanded ? 'primary' : 'default'}
+                  style={{ borderRadius: 'var(--radius-md)' }}
+                >
+                  上传队列 ({uploadQueue.length})
                 </Button>
-              </Upload>
+              )}
             </Space>
           </Col>
         </Row>
@@ -512,6 +596,180 @@ function MaterialPage() {
             支持 JPG / PNG / WebP / MP4 / MP3，单文件最大 200MB
           </p>
         </Dragger>
+      )}
+
+      {/* ─── 上传队列 ─── */}
+      {uploadQueue.length > 0 && queueExpanded && (
+        <GlassPanel
+          variant="card"
+          style={{
+            marginBottom: 'var(--spacing-lg)',
+            padding: 'var(--spacing-md)',
+            border: '1px solid var(--brand-primary)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: uploadQueue.length > 0 ? 12 : 0,
+            }}
+          >
+            <Space>
+              <CloudUploadOutlined style={{ color: 'var(--brand-primary)' }} />
+              <Text strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>
+                上传队列
+              </Text>
+              <Tag style={{ borderRadius: 12 }}>
+                {uploadQueue.filter((q) => q.status === 'uploading').length} 进行中
+              </Tag>
+            </Space>
+            <Space size={4}>
+              {uploadQueue.some((q) => q.status === 'done') && (
+                <Button size="small" type="text" onClick={clearDoneQueue}>
+                  清除已完成
+                </Button>
+              )}
+              <Button
+                size="small"
+                type="text"
+                icon={<CloseOutlined />}
+                onClick={() => setQueueExpanded(false)}
+              />
+            </Space>
+          </div>
+          <List
+            size="small"
+            dataSource={uploadQueue}
+            renderItem={(item, index) => (
+              <List.Item
+                style={{
+                  padding: '8px 4px',
+                  opacity: item.status === 'done' ? 0.7 : 1,
+                }}
+                actions={[
+                  item.material && (
+                    <Tooltip title="预览" key="preview">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<EyeOutlined />}
+                        onClick={() => handleQueuePreview(item)}
+                      />
+                    </Tooltip>
+                  ),
+                  <Tooltip title="移除" key="remove">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() => removeQueueItem(item.id)}
+                    />
+                  </Tooltip>,
+                ].filter(Boolean)}
+              >
+                <List.Item.Meta
+                  avatar={
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 6,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'var(--bg-surface-2)',
+                        fontSize: 18,
+                        color: 'var(--text-tertiary)',
+                        position: 'relative',
+                      }}
+                    >
+                      {/* 序号 */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 16,
+                          height: 16,
+                          background: 'var(--brand-primary)',
+                          color: '#fff',
+                          fontSize: 10,
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '6px 0 6px 0',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {index + 1}
+                      </div>
+                      {/* 图片预览或文件图标 */}
+                      {item.previewUrl && item.file.type.startsWith('image/') ? (
+                        <img
+                          src={item.previewUrl}
+                          alt=""
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : item.previewUrl && item.file.type.startsWith('video/') ? (
+                        <video
+                          src={item.previewUrl}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          muted
+                        />
+                      ) : (
+                        getFileTypeIcon(item.file)
+                      )}
+                    </div>
+                  }
+                  title={
+                    <Space size={4}>
+                      <Text
+                        style={{
+                          color: 'var(--text-primary)',
+                          fontSize: 13,
+                          maxWidth: 240,
+                        }}
+                        ellipsis
+                      >
+                        {item.file.name}
+                      </Text>
+                      {item.status === 'done' && (
+                        <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 12 }} />
+                      )}
+                      {item.status === 'error' && (
+                        <CloseOutlined style={{ color: '#ff4d4f', fontSize: 12 }} />
+                      )}
+                    </Space>
+                  }
+                  description={
+                    <Space size={8}>
+                      <Text style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+                        {(item.file.size / 1024 / 1024).toFixed(1)} MB
+                      </Text>
+                      {item.status === 'uploading' && (
+                        <Text style={{ color: 'var(--brand-primary)', fontSize: 11 }}>
+                          <LoadingOutlined /> 上传中...
+                        </Text>
+                      )}
+                      {item.status === 'done' && (
+                        <Text style={{ color: '#52c41a', fontSize: 11 }}>已完成</Text>
+                      )}
+                      {item.status === 'error' && (
+                        <Text style={{ color: '#ff4d4f', fontSize: 11 }}>
+                          {item.errorMsg || '上传失败'}
+                        </Text>
+                      )}
+                    </Space>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        </GlassPanel>
       )}
 
       {/* ─── 素材内容 ─── */}

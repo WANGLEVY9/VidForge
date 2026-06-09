@@ -1,28 +1,31 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { OssService } from './oss.service';
 
 /**
  * 文件存储服务
  *
- * - 短期方案:落本地 storage/ 目录,通过静态文件托管对外提供 URL
- * - 长期方案:实现 putObject 时检测 OSS_* 配置,有配置则上传到对象存储
+ * 统一存储抽象层：
+ * - 上传文件优先走 OSS（若 OssService 已激活）
+ * - 否则落本地 storage/ 目录，通过 Express 静态文件托管对外提供 URL
  *
- * 这一层的核心价值是把"产物 URL"与"具体存储后端"解耦,
- * 业务侧只关心 URL,不关心是落本地还是 OSS。
+ * 业务侧只关心 URL，不关心是落本地还是 OSS。
  */
 @Injectable()
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
   private readonly storageRoot: string;
   private readonly tmpRoot: string;
+  private readonly uploadsRoot: string;
   private readonly outputsRoot: string;
   private readonly publicBaseUrl: string;
 
-  constructor() {
+  constructor(private readonly ossService: OssService) {
     // backend 进程的 process.cwd() 在 dev/start:dev 都是 apps/backend
     this.storageRoot = path.resolve(process.cwd(), 'storage');
     this.tmpRoot = path.join(this.storageRoot, 'tmp');
+    this.uploadsRoot = path.join(this.storageRoot, 'uploads');
     this.outputsRoot = path.join(this.storageRoot, 'outputs');
     // 统一通过 /static 路径暴露。
     // 公网前缀推导优先级:
@@ -49,16 +52,72 @@ export class StorageService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
+    await fs.mkdir(this.uploadsRoot, { recursive: true });
     await fs.mkdir(this.tmpRoot, { recursive: true });
     await fs.mkdir(this.outputsRoot, { recursive: true });
     this.logger.log(`存储根目录: ${this.storageRoot}`);
+    this.logger.log(`上传目录: ${this.uploadsRoot}`);
     this.logger.log(`产物公网 URL 前缀: ${this.publicBaseUrl}`);
+    this.logger.log(`存储模式: ${this.ossService.enabled ? '阿里云 OSS' : '本地磁盘'}`);
     // 生产环境若仍指向 localhost,前端将无法访问合成产物,显式告警提示运维补 env
-    if (process.env.NODE_ENV === 'production' && /localhost|127\.0\.0\.1/.test(this.publicBaseUrl)) {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      /localhost|127\.0\.0\.1/.test(this.publicBaseUrl)
+    ) {
       this.logger.warn(
-        '产物公网 URL 前缀指向 localhost!请在部署平台配置 API_BASE_URL=后端公网地址(如 https://xxx.up.railway.app),否则前端无法播放/下载合成视频。',
+        '产物公网 URL 前缀指向 localhost!请在部署平台配置 API_BASE_URL=后端公网地址(如 https://xxx.up.railway.app),否则前端无法播放/下载合成视频。'
       );
     }
+  }
+
+  /**
+   * 存储上传的文件
+   *
+   * - OSS 模式：上传到阿里云 OSS，返回 OSS 公开 URL
+   * - 本地模式：文件已在 storage/uploads/ 中，返回 /static/uploads/xxx 相对路径
+   *
+   * @param localPath 本地文件绝对路径（multer 写入的位置）
+   * @param filename  文件名（如 uuid.ext）
+   * @param mimeType  文件 MIME 类型
+   * @returns 可公开访问的文件 URL
+   */
+  async storeUpload(localPath: string, filename: string, mimeType?: string): Promise<string> {
+    if (this.ossService.enabled) {
+      const ossKey = `uploads/${filename}`;
+      const ossUrl = await this.ossService.upload(localPath, ossKey, mimeType);
+      if (ossUrl) {
+        // 清理本地临时文件
+        await fs.unlink(localPath).catch(() => {});
+        return ossUrl;
+      }
+      this.logger.warn('OSS 上传失败，回退到本地存储');
+    }
+
+    // 本地模式：文件已在 storage/uploads/ 中（被 multer 写入）
+    return `/static/uploads/${filename}`;
+  }
+
+  /**
+   * 获取文件的完整公开 URL
+   * 处理相对路径（/static/...）和绝对路径（http/https）两种格式
+   */
+  resolveUrl(url: string): string {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // 相对路径：补全公网前缀
+    return `${this.publicBaseUrl}${url.replace(/^\/static/, '')}`;
+  }
+
+  /**
+   * 删除文件（OSS 或本地）
+   */
+  async delete(url: string): Promise<void> {
+    if (this.ossService.enabled) {
+      // 从 URL 中提取 OSS key
+      const ossKey = url.replace(/^https?:\/\/[^/]+\//, '');
+      await this.ossService.delete(ossKey);
+    }
+    // 本地删除：由 MaterialService.remove 处理
   }
 
   /** 给某个任务分配一个临时工作目录 */
@@ -84,7 +143,11 @@ export class StorageService implements OnModuleInit {
    * @param targetSubdir 例如 'creation' / 'export'
    * @param targetName 目标文件名(包含扩展名)
    */
-  async publish(localPath: string, targetSubdir: string, targetName: string): Promise<{
+  async publish(
+    localPath: string,
+    targetSubdir: string,
+    targetName: string
+  ): Promise<{
     url: string;
     absPath: string;
     size: number;
