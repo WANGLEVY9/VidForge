@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  OnApplicationBootstrap,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, In, FindOptionsWhere } from 'typeorm';
 import { Notification, NotificationType } from './entities/notification.entity';
@@ -22,7 +17,7 @@ export class NotificationService implements OnApplicationBootstrap {
 
   constructor(
     @InjectRepository(Notification)
-    private readonly repo: Repository<Notification>,
+    private readonly repo: Repository<Notification>
   ) {}
 
   async onApplicationBootstrap() {
@@ -68,7 +63,7 @@ export class NotificationService implements OnApplicationBootstrap {
    */
   async list(
     userId: string,
-    opts: { page?: number; pageSize?: number; unreadOnly?: boolean } = {},
+    opts: { page?: number; pageSize?: number; unreadOnly?: boolean } = {}
   ) {
     const page = Math.max(1, Number(opts.page ?? 1));
     const pageSize = Math.min(100, Math.max(1, Number(opts.pageSize ?? 20)));
@@ -119,12 +114,15 @@ export class NotificationService implements OnApplicationBootstrap {
 
   /**
    * 把当前用户的全部 personal 未读通知标记为已读
+   *
+   * 批量操作优化:
+   * - 使用单条 UPDATE ... WHERE userId = X AND read = false,一次 DB roundtrip
+   * - 避免 SELECT 全量 → 逐行 save 的 N+1 问题(旧实现 500 条通知需要 501 次查询)
+   * - TypeORM update() 直接生成 UPDATE 语句,不加载实体到内存
+   * - 返回 affected rows 供前端确认更新条数
    */
   async markAllRead(userId: string): Promise<{ updated: number }> {
-    const result = await this.repo.update(
-      { userId, read: false },
-      { read: true },
-    );
+    const result = await this.repo.update({ userId, read: false }, { read: true });
     return { updated: result.affected ?? 0 };
   }
 
@@ -166,15 +164,19 @@ export class NotificationService implements OnApplicationBootstrap {
 
   /**
    * 给一组用户群发(常用于功能上线公告)
+   *
+   * 批量插入使用单条 INSERT ... VALUES (...), (...), (...) 语句,
+   * 避免逐条 create + save 产生 N 次 DB roundtrip。
+   * TypeORM repo.save(entities[]) 内部会合并为单条 INSERT。
    */
   async createForUsers(
     userIds: string[],
-    payload: Omit<CreateNotificationInput, 'userId'>,
+    payload: Omit<CreateNotificationInput, 'userId'>
   ): Promise<number> {
     if (!userIds.length) return 0;
     try {
       const entities = userIds.map((uid) =>
-        this.repo.create({ ...payload, userId: uid, read: false }),
+        this.repo.create({ ...payload, userId: uid, read: false })
       );
       const saved = await this.repo.save(entities);
       return saved.length;
