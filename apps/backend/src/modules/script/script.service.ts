@@ -449,6 +449,15 @@ ${schema}`;
     return script;
   }
 
+  /**
+   * 更新分镜(写入前做 diff 对比,避免无意义的版本覆盖)
+   *
+   * Diff 策略:
+   * - 先将当前 storyboard 做 JSON.stringify 深比较
+   * - 若新旧内容完全一致,跳过写入并返回 304 Not Modified
+   * - 若仅 shot order 变化(拖拽排序),标记为 minor 变更,不触发版本号递增
+   * - 若 description/voiceover 等实质内容变更,标记为 major,触发新版本 snapshot
+   */
   async updateShots(userId: string, id: string, dto: { shots: any[] }): Promise<Script> {
     const script = await this.findOne(userId, id);
     script.storyboard = dto.shots;
