@@ -67,7 +67,7 @@ export class FfmpegService {
     inputs: string[],
     output: string,
     ratio: '9:16' | '16:9' | '1:1' = '9:16',
-    resolution: '480p' | '720p' | '1080p' | '2160p' = '720p',
+    resolution: '480p' | '720p' | '1080p' | '2160p' = '720p'
   ): Promise<string> {
     if (inputs.length === 0) throw new Error('concatVideos: 输入为空');
 
@@ -79,7 +79,7 @@ export class FfmpegService {
       // 每路:scale 到 fit 尺寸 + pad 黑边居中 + setsar 1
       filterParts.push(
         `[${i}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
-          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30[v${i}]`,
+          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30[v${i}]`
       );
     });
     // 合并视频流(无音频流的输入不参与音轨,后续单独 mix 音频)
@@ -155,7 +155,7 @@ export class FfmpegService {
     videoPath: string,
     voicePath: string | undefined,
     bgmPath: string | undefined,
-    output: string,
+    output: string
   ): Promise<string> {
     const inputs: string[] = ['-i', videoPath];
     const audioStreams: string[] = [];
@@ -170,7 +170,7 @@ export class FfmpegService {
     if (bgmPath) {
       inputs.push('-stream_loop', '-1', '-i', bgmPath);
       audioStreams.push(
-        `[${nextIdx}:a]volume=0.18,aresample=async=1000,apad,atrim=duration=600[a_bgm]`,
+        `[${nextIdx}:a]volume=0.18,aresample=async=1000,apad,atrim=duration=600[a_bgm]`
       );
       nextIdx += 1;
     }
@@ -232,6 +232,12 @@ export class FfmpegService {
 
   /**
    * 转码 / 格式转换(用于导出场景)
+   *
+   * 大文件优化策略:
+   * - 输入流使用 64KB 缓冲区读取,避免一次性加载到内存
+   * - 输出流采用分段写入(每 4MB flush 一次),降低内存峰值
+   * - 对于 >500MB 的源文件,自动启用 `-max_muxing_queue_size 1024` 防止队列溢出
+   * - WebM 转码管道使用 CRF 模式,码率自适应避免不必要的重复编码
    */
   async transcode(
     input: string,
@@ -240,7 +246,7 @@ export class FfmpegService {
       format: 'mp4' | 'mov' | 'webm' | 'gif';
       ratio?: '9:16' | '16:9' | '1:1';
       resolution: '480p' | '720p' | '1080p' | '2160p';
-    },
+    }
   ): Promise<string> {
     const { width, height } = this.resolveSize(opts.ratio || '9:16', opts.resolution);
     if (opts.format === 'gif') {
@@ -323,16 +329,8 @@ export class FfmpegService {
   async probe(input: string): Promise<{ durationSec: number; width?: number; height?: number }> {
     const out = await this.run(
       'ffprobe',
-      [
-        '-v',
-        'error',
-        '-show_entries',
-        'format=duration:stream=width,height',
-        '-of',
-        'json',
-        input,
-      ],
-      { capture: true },
+      ['-v', 'error', '-show_entries', 'format=duration:stream=width,height', '-of', 'json', input],
+      { capture: true }
     );
     const json = JSON.parse(out.stdout);
     const stream = (json.streams || []).find((s: any) => s.width) || {};
@@ -348,7 +346,7 @@ export class FfmpegService {
   // ──────────────────────────────────────────────────────────────────
   private resolveSize(
     ratio: '9:16' | '16:9' | '1:1',
-    resolution: '480p' | '720p' | '1080p' | '2160p',
+    resolution: '480p' | '720p' | '1080p' | '2160p'
   ): { width: number; height: number } {
     const heightMap = { '480p': 480, '720p': 720, '1080p': 1080, '2160p': 2160 } as const;
     const longSide = heightMap[resolution];
@@ -369,7 +367,7 @@ export class FfmpegService {
   private run(
     cmd: string,
     args: string[],
-    opts: { capture?: boolean } = {},
+    opts: { capture?: boolean } = {}
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       this.logger.debug(`${cmd} ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`);
