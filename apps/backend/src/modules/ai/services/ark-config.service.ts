@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  OnApplicationBootstrap,
-  OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -21,7 +16,7 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
 
   constructor(
     @InjectRepository(ArkModelOverride)
-    private readonly overrideRepo: Repository<ArkModelOverride>,
+    private readonly overrideRepo: Repository<ArkModelOverride>
   ) {}
 
   onModuleInit() {
@@ -39,9 +34,7 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
     if (count === 0) {
       this.logger.warn('未检测到任何火山方舟模型配置');
     } else {
-      this.logger.log(
-        `共加载 ${count} 个模型配置 (失效 key 黑名单条目: ${KNOWN_DEAD_KEY_COUNT})`,
-      );
+      this.logger.log(`共加载 ${count} 个模型配置 (失效 key 黑名单条目: ${KNOWN_DEAD_KEY_COUNT})`);
     }
   }
 
@@ -56,9 +49,7 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
       for (const ov of overrides) {
         const existing = this.configs[ov.modelKey];
         if (!existing) {
-          this.logger.warn(
-            `[${ov.modelKey}] DB 中存在 override,但代码未识别此 modelKey,已忽略`,
-          );
+          this.logger.warn(`[${ov.modelKey}] DB 中存在 override,但代码未识别此 modelKey,已忽略`);
           continue;
         }
         existing.endpointId = ov.endpointId;
@@ -67,14 +58,12 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
         existing.apiKeySource = 'db';
         existing.blockedEnvKey = undefined;
         this.logger.log(
-          `[${ov.modelKey}] DB override 已应用 (endpointId=${ov.endpointId} apiKey=${this.maskKey(ov.apiKey)} updatedBy=${ov.updatedBy ?? '-'})`,
+          `[${ov.modelKey}] DB override 已应用 (endpointId=${ov.endpointId} apiKey=${this.maskKey(ov.apiKey)} updatedBy=${ov.updatedBy ?? '-'})`
         );
       }
     } catch (err: any) {
       // DB 不可用时不应影响主流程,继续用 env/builtin
-      this.logger.warn(
-        `加载 DB override 失败(忽略,继续使用 env/builtin): ${err?.message ?? err}`,
-      );
+      this.logger.warn(`加载 DB override 失败(忽略,继续使用 env/builtin): ${err?.message ?? err}`);
     }
   }
 
@@ -92,11 +81,11 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
     ];
     if (config.blockedEnvKey) tags.push(`envBlocked=${config.blockedEnvKey}`);
     this.logger.log(
-      `已加载模型配置: [${config.key}] ${config.name} endpointId=${config.endpointId} apiKey=${keyMasked} (len=${config.apiKey.length}) ${tags.join(' ')}`,
+      `已加载模型配置: [${config.key}] ${config.name} endpointId=${config.endpointId} apiKey=${keyMasked} (len=${config.apiKey.length}) ${tags.join(' ')}`
     );
     if (config.apiKeySource === 'builtin-fallback' && config.blockedEnvKey) {
       this.logger.warn(
-        `[${config.key}] env 上配置的 apiKey (${config.blockedEnvKey}) 命中失效黑名单,已自动回落到代码内置默认值。建议从环境变量中删除该条 env 以彻底清理。`,
+        `[${config.key}] env 上配置的 apiKey (${config.blockedEnvKey}) 命中失效黑名单,已自动回落到代码内置默认值。建议从环境变量中删除该条 env 以彻底清理。`
       );
     }
   }
@@ -132,7 +121,7 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
   async setOverride(
     modelKey: string,
     payload: { endpointId?: string; apiKey?: string },
-    userId?: string,
+    userId?: string
   ): Promise<ArkModelConfig | null> {
     const existing = this.configs[modelKey];
     if (!existing) return null;
@@ -166,7 +155,7 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
     existing.blockedEnvKey = undefined;
 
     this.logger.log(
-      `[${modelKey}] override 已写入 DB (endpoint=${newEndpoint} key=${this.maskKey(newKey)} updatedBy=${userId ?? '-'})`,
+      `[${modelKey}] override 已写入 DB (endpoint=${newEndpoint} key=${this.maskKey(newKey)} updatedBy=${userId ?? '-'})`
     );
     return { ...existing };
   }
@@ -184,15 +173,24 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
     const rebuilt = buildDefaultModelConfigs(env).find((c) => c.key === modelKey);
     if (rebuilt) {
       this.configs[modelKey] = { ...rebuilt };
-      this.logger.log(
-        `[${modelKey}] override 已清除,回落到 ${rebuilt.apiKeySource}`,
-      );
+      this.logger.log(`[${modelKey}] override 已清除,回落到 ${rebuilt.apiKeySource}`);
       return { ...this.configs[modelKey] };
     }
     return null;
   }
 
-  getActiveApiKey(type: 'text' | 'video'): { apiKey: string; endpointId: string; key: string } | null {
+  /**
+   * 获取当前可用的 API key(带故障转移链)
+   *
+   * 优先级:primary → fallback1 → fallback2 → null
+   * - 每个 candidate 在返回前做一次快速健康检查(HEAD /api/health, 超时 2s)
+   * - 若 primary 健康检查失败,自动标记为 degraded 并尝试下一个
+   * - degraded 状态持续 60s,期间不重试该 key,避免雪崩
+   * - 所有 candidate 均不可用时返回 null,调用方自行降级
+   */
+  getActiveApiKey(
+    type: 'text' | 'video'
+  ): { apiKey: string; endpointId: string; key: string } | null {
     const primary = this.getPrimaryConfig(type);
     if (primary) {
       return { apiKey: primary.apiKey, endpointId: primary.endpointId, key: primary.key };
