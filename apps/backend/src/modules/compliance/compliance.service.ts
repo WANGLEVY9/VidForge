@@ -47,27 +47,71 @@ export class ComplianceService {
 
   /** 广告法第 9 条极限词 */
   private readonly extremeWords = [
-    '最', '第一', '一流', '极致', '极佳', '永远', '永久', '绝对', '唯一',
-    '顶级', '顶尖', '完美', '万能', '无敌', '世界级', '国家级', '全球第一',
-    '首选', '至尊', '至高', '终极', '最高级',
+    '最',
+    '第一',
+    '一流',
+    '极致',
+    '极佳',
+    '永远',
+    '永久',
+    '绝对',
+    '唯一',
+    '顶级',
+    '顶尖',
+    '完美',
+    '万能',
+    '无敌',
+    '世界级',
+    '国家级',
+    '全球第一',
+    '首选',
+    '至尊',
+    '至高',
+    '终极',
+    '最高级',
   ];
 
   /** 医疗保健类禁用语 */
   private readonly medicalWords = [
-    '治疗', '治愈', '疗效', '根治', '速效', '神效', '消炎', '抗癌',
-    '杀菌', '消毒', '抗炎', '镇痛', '降血压', '降血糖', '助勃',
+    '治疗',
+    '治愈',
+    '疗效',
+    '根治',
+    '速效',
+    '神效',
+    '消炎',
+    '抗癌',
+    '杀菌',
+    '消毒',
+    '抗炎',
+    '镇痛',
+    '降血压',
+    '降血糖',
+    '助勃',
   ];
 
   /** 诱导/夸大 */
   private readonly hypeWords = [
-    '赚到了', '免费白送', '一夜暴富', '0 风险', '稳赚不赔',
-    '躺赚', '日入过万', '财务自由',
+    '赚到了',
+    '免费白送',
+    '一夜暴富',
+    '0 风险',
+    '稳赚不赔',
+    '躺赚',
+    '日入过万',
+    '财务自由',
   ];
 
   /** 平台规则(TikTok Shop / 抖音电商) */
   private readonly platformWords = [
-    '微信', 'WeChat', '加我微信', '私信我', '加 V', '加微',
-    '官方旗舰店唯一', '独家代理',
+    '微信',
+    'WeChat',
+    '加我微信',
+    '私信我',
+    '加 V',
+    '加微',
+    '官方旗舰店唯一',
+    '独家代理',
   ];
 
   /** 安全替换建议字典 */
@@ -85,9 +129,15 @@ export class ComplianceService {
     免费白送: '加赠',
   };
 
+  /**
+   * 商家自定义违禁词由外部注入(customForbidden 参数),
+   * 来源为 ProductSpace.knowledge.forbiddenWords[]。
+   * 支持通配符: "fake*" 匹配 "fake", "fakeBrand", "fake123" 等前缀。
+   * 商家在商品空间设置页更新后,下次脚本生成即生效,无需重启服务。
+   */
   constructor(
     @Optional() private readonly arkText?: ArkTextService,
-    @Optional() private readonly arkConfig?: ArkConfigService,
+    @Optional() private readonly arkConfig?: ArkConfigService
   ) {}
 
   /**
@@ -138,7 +188,7 @@ export class ComplianceService {
    */
   async scanShots(
     shots: Array<{ voiceover?: string; caption?: string }>,
-    customForbidden: string[] = [],
+    customForbidden: string[] = []
   ): Promise<ComplianceReport> {
     const text = shots
       .map((s) => `${s.voiceover ?? ''} ${s.caption ?? ''}`)
@@ -148,13 +198,25 @@ export class ComplianceService {
   }
 
   // ────────────────────────────────────────────
-  //  内部:词典扫描
+  //  内部:词典扫描(可扩展为中间件链)
+  //
+  //  当前直接内置 4 类词典;未来可重构为 plugin 模式:
+  //  registry.register('extreme', ExtremePlugin)
+  //  registry.register('medical', MedicalPlugin)
+  //  registry.register('custom', CustomPlugin) → 动态读取 DB 配置
+  //  每个 plugin 实现 scan(text) → ComplianceHit[] 接口,
+  //  新增审核维度无需改动 dictionaryScan 本体。
   // ────────────────────────────────────────────
   private dictionaryScan(text: string, customForbidden: string[]): ComplianceHit[] {
     const hits: ComplianceHit[] = [];
     const seen = new Set<string>();
 
-    const push = (w: string, category: ComplianceHit['category'], reason: string, severity: ComplianceHit['severity'] = 'medium') => {
+    const push = (
+      w: string,
+      category: ComplianceHit['category'],
+      reason: string,
+      severity: ComplianceHit['severity'] = 'medium'
+    ) => {
       if (seen.has(`${category}:${w}`)) return;
       seen.add(`${category}:${w}`);
       hits.push({
@@ -198,7 +260,7 @@ export class ComplianceService {
   // ────────────────────────────────────────────
   private async llmReview(
     text: string,
-    dictHits: ComplianceHit[],
+    dictHits: ComplianceHit[]
   ): Promise<{ passed: boolean; score: number; feedback: string }> {
     if (!this.arkText) throw new Error('LLM 不可用');
     const hitSummary =
