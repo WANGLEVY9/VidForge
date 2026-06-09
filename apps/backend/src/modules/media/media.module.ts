@@ -6,6 +6,7 @@ import { TtsService } from './services/tts.service';
 import { BgmService } from './services/bgm.service';
 import { StorageService } from './services/storage.service';
 import { ComposerService } from './services/composer.service';
+import { OssService } from './services/oss.service';
 import { AiModule } from '../ai/ai.module';
 
 /**
@@ -24,15 +25,31 @@ import { AiModule } from '../ai/ai.module';
 @Global()
 @Module({
   imports: [AiModule],
-  providers: [FfmpegService, SubtitleService, TtsService, BgmService, StorageService, ComposerService],
-  exports: [FfmpegService, SubtitleService, TtsService, BgmService, StorageService, ComposerService],
+  providers: [
+    FfmpegService,
+    SubtitleService,
+    TtsService,
+    BgmService,
+    StorageService,
+    ComposerService,
+    OssService,
+  ],
+  exports: [
+    FfmpegService,
+    SubtitleService,
+    TtsService,
+    BgmService,
+    StorageService,
+    ComposerService,
+    OssService,
+  ],
 })
 export class MediaModule implements OnModuleInit {
   private readonly logger = new Logger(MediaModule.name);
 
   constructor(
     private readonly ffmpeg: FfmpegService,
-    private readonly bgm: BgmService,
+    private readonly bgm: BgmService
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -41,7 +58,7 @@ export class MediaModule implements OnModuleInit {
       this.logger.log(`FFmpeg 可用: ${probe.version?.slice(0, 80)}`);
     } else {
       this.logger.warn(
-        'FFmpeg 不可用!视频合片/导出/抽帧将失败。请安装 ffmpeg ≥4.x,或在 Docker 镜像中预装。',
+        'FFmpeg 不可用!视频合片/导出/抽帧将失败。请安装 ffmpeg ≥4.x,或在 Docker 镜像中预装。'
       );
     }
     await this.bgm.ensureSeedReadme();

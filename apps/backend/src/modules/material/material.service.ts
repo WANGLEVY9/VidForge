@@ -13,6 +13,7 @@ import { AnalyzeMaterialDto } from './dto/analyze-material.dto';
 import { SemanticSearchDto } from './dto/semantic-search.dto';
 import { ArkVisionService } from '../ai/services/ark-vision.service';
 import { FfmpegService } from '../media/services/ffmpeg.service';
+import { StorageService } from '../media/services/storage.service';
 
 @Injectable()
 export class MaterialService {
@@ -23,7 +24,8 @@ export class MaterialService {
     private materialRepository: Repository<Material>,
     private readonly httpService: HttpService,
     private readonly arkVision: ArkVisionService,
-    private readonly ffmpeg: FfmpegService
+    private readonly ffmpeg: FfmpegService,
+    private readonly storageService: StorageService
   ) {}
 
   async create(userId: string, dto: CreateMaterialDto): Promise<Material> {
@@ -88,7 +90,15 @@ export class MaterialService {
    * 注意:批量删除场景需要先收集所有待失效 key,统一 purge,避免逐个删除时缓存雪崩。
    */
   async remove(userId: string, id: string): Promise<void> {
-    await this.findOne(userId, id);
+    const material = await this.findOne(userId, id);
+    // 尝试删除物理文件（OSS 或本地）
+    if (material.url && !material.url.startsWith('data:')) {
+      try {
+        await this.storageService.delete(material.url);
+      } catch (err: any) {
+        this.logger.warn(`删除素材文件失败: ${material.url} - ${err?.message ?? err}`);
+      }
+    }
     await this.materialRepository.delete(id);
   }
 

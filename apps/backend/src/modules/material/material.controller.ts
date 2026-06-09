@@ -1,6 +1,16 @@
 import {
-  Controller, Get, Post, Body, Param, Delete, Query, Patch,
-  UseGuards, UseInterceptors, UploadedFile, BadRequestException,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Query,
+  Patch,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -17,6 +27,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { Material } from './entities/material.entity';
 import { QueueRunnerService } from '../queue/queue-runner.service';
+import { StorageService } from '../media/services/storage.service';
 import { QUEUE_NAMES, JOB_NAMES } from '../queue/queue.constants';
 
 const UPLOAD_DIR = join(process.cwd(), 'storage', 'uploads');
@@ -29,6 +40,7 @@ export class MaterialController {
   constructor(
     private readonly materialService: MaterialService,
     private readonly queueRunner: QueueRunnerService,
+    private readonly storageService: StorageService
   ) {}
 
   @Post()
@@ -40,10 +52,13 @@ export class MaterialController {
   /**
    * 文件上传端点
    *
-   * 接收 multipart/form-data,自动将文件写入 storage/uploads/ 目录,
-   * 并在数据库中创建素材记录,URL 指向 /static/uploads/<file>。
-   *
-   * 受 NestJS 内置 multer 驱动,磁盘存储 + 200MB 限制 + MIME 类型过滤。
+   * 接收 multipart/form-data，流程：
+   * 1. Multer 将文件写入 storage/uploads/ 目录（磁盘存储，200MB 限制，MIME 过滤）
+   * 2. StorageService 判断是否启用 OSS：
+   *    - 是 → 上传到阿里云 OSS，删除本地临时文件，返回 OSS 公开 URL
+   *    - 否 → 保留本地，返回 /static/uploads/xxx 路径
+   * 3. 创建素材数据库记录
+   * 4. 异步入队 AI 分析
    */
   @Post('upload')
   @ApiOperation({ summary: '上传素材文件( multipart )' })
@@ -58,42 +73,58 @@ export class MaterialController {
       }),
       limits: { fileSize: 200 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
-        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'audio/mpeg', 'audio/mp3'];
+        const allowedMimes = [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'video/mp4',
+          'audio/mpeg',
+          'audio/mp3',
+        ];
         if (allowedMimes.includes(file.mimetype)) {
           cb(null, true);
         } else {
           cb(new BadRequestException(`不支持的媒体类型: ${file.mimetype}`), false);
         }
       },
-    }),
+    })
   )
   async uploadFile(
     @CurrentUser() user: JwtPayload,
     @UploadedFile() file: Express.Multer.File,
     @Body('productSpaceId') productSpaceId?: string,
     @Body('category') category?: string,
-    @Body('tags') tagsRaw?: string,
+    @Body('tags') tagsRaw?: string
   ): Promise<Material> {
     if (!file) throw new BadRequestException('请选择要上传的文件');
 
     // 从 MIME 推断素材类型
     const typeMap: Record<string, 'image' | 'video' | 'audio'> = {
-      'image/jpeg': 'image', 'image/png': 'image', 'image/webp': 'image',
+      'image/jpeg': 'image',
+      'image/png': 'image',
+      'image/webp': 'image',
       'video/mp4': 'video',
-      'audio/mpeg': 'audio', 'audio/mp3': 'audio',
+      'audio/mpeg': 'audio',
+      'audio/mp3': 'audio',
     };
     const mimeType = file.mimetype;
     const assetType = typeMap[mimeType] ?? 'image';
 
     // tags 以逗号分隔的字符串传入,转回数组
     const tags: string[] | undefined = tagsRaw
-      ? tagsRaw.split(',').map((t: string) => t.trim()).filter(Boolean)
+      ? tagsRaw
+          .split(',')
+          .map((t: string) => t.trim())
+          .filter(Boolean)
       : undefined;
+
+    // 通过 StorageService 存储文件（OSS 或本地），获取可公开访问的 URL
+    const fileUrl = await this.storageService.storeUpload(file.path, file.filename, file.mimetype);
 
     const dto: CreateMaterialDto = {
       name: file.originalname,
       type: assetType,
-      url: `/static/uploads/${file.filename}`,
+      url: fileUrl,
       size: file.size,
       tags,
       category: category || undefined,
@@ -113,7 +144,11 @@ export class MaterialController {
       JOB_NAMES.ANALYZE_MATERIAL,
       { userId, materialId: material.id, category: material.category },
       // Redis 不可用时降级为进程内直接分析
-      async () => { await this.materialService.analyzeTags(userId, material.id, { category: material.category }); },
+      async () => {
+        await this.materialService.analyzeTags(userId, material.id, {
+          category: material.category,
+        });
+      }
     );
   }
 
@@ -140,7 +175,7 @@ export class MaterialController {
   analyze(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
-    @Body() dto: AnalyzeMaterialDto,
+    @Body() dto: AnalyzeMaterialDto
   ) {
     return this.materialService.analyzeTags(user.sub, id, dto);
   }
@@ -151,7 +186,7 @@ export class MaterialController {
     @CurrentUser() user: JwtPayload,
     @Query('productCategory') productCategory?: string,
     @Query('videoMood') videoMood?: string,
-    @Query('clipObjects') clipObjects?: string,
+    @Query('clipObjects') clipObjects?: string
   ) {
     return this.materialService.searchByTags(user.sub, { productCategory, videoMood, clipObjects });
   }
