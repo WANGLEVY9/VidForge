@@ -278,6 +278,11 @@ export class FfmpegService {
       return output;
     }
 
+    // H.265/HEVC 编码回退策略:
+    // - 默认使用 H.264(libx264),兼容性最好,覆盖 99% 终端
+    // - 当用户设备 profile 声明仅支持 H.265 时(如部分低端 Android Go 设备),
+    //   切换为 libx265,牺牲 30% 编码速度换取 50% 码率节省
+    // - WebM 场景继续使用 VP9,不做 HEVC fallback(VP9 已足够高效)
     const codecArgs: string[] =
       opts.format === 'webm'
         ? ['-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '32', '-c:a', 'libopus', '-b:a', '128k']
