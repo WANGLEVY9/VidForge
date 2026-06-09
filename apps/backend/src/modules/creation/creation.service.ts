@@ -311,7 +311,12 @@ export class CreationService {
 
   /**
    * 轮询单个分镜的 ARK 任务直到 succeeded/failed/timeout
-   * 期间持续 emit 阶段性进度
+   *
+   * 消息批处理策略:
+   * - 每 4s 发一次 progress + shot-progress 双事件,对外看起来是"实时"更新
+   * - 内部实际每 2 次轮询才 emit 一次(即每 8s 真正发消息),
+   *   降低 WebSocket 帧开销;UI 动画在客户端用 CSS transition 填充间隔
+   * - 最后一条(终态)始终 emit,无论间隔
    */
   private async pollUntilDone(
     taskId: string,
