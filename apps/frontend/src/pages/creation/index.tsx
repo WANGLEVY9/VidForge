@@ -12,7 +12,6 @@ import {
   Row,
   Col,
   Slider,
-  Switch,
   message,
   Timeline,
   Segmented,
@@ -458,7 +457,7 @@ function CreationPage() {
     setStoryboard((prev) =>
       prev.map((item) => (item.id === shotId ? { ...item, status: 'generating' as const } : item))
     );
-    // V0 只是更新视觉状态；真实重生在生成阶段才有意义
+    // 只是更新视觉状态；真实重生在生成阶段才有意义
     setTimeout(() => {
       setStoryboard((prev) =>
         prev.map((item) => (item.id === shotId ? { ...item, status: 'pending' as const } : item))
@@ -688,40 +687,11 @@ function CreationPage() {
                       tooltip={{ formatter: (v) => `${v}秒` }}
                     />
                     <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                      系统将生成 3 个分镜（V0 默认）
+                      系统将生成 3 个分镜
                     </Text>
                   </Form.Item>
 
-                  <Form.Item
-                    label={
-                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                        附加选项
-                      </Text>
-                    }
-                  >
-                    <Space direction="vertical" style={{ width: '100%' }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text style={{ color: 'var(--text-primary)' }}>自动配音（V1）</Text>
-                        <Switch disabled />
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text style={{ color: 'var(--text-primary)' }}>自动字幕（V1）</Text>
-                        <Switch disabled />
-                      </div>
-                    </Space>
-                  </Form.Item>
+                  {/* 附加选项区块 — 功能待实现，暂时隐藏 */}
 
                   <Space direction="vertical" style={{ width: '100%' }} size="middle">
                     <Button

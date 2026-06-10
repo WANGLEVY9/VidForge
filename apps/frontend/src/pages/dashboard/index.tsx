@@ -671,7 +671,7 @@ function DashboardPage() {
         </Col>
       </Row>
 
-      {/* AI 成本观测(V2 端到端 Trace 可视化) */}
+      {/* AI 成本观测(端到端 Trace 可视化) */}
       <Row gutter={[12, 12]} style={{ marginBottom: 'var(--spacing-lg)' }}>
         <Col xs={24}>
           <CostOverviewCard />
