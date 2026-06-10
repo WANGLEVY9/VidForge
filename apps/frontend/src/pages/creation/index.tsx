@@ -143,6 +143,8 @@ function CreationPage() {
   const DRAFT_KEY = 'creation_config';
   const draftRestored = useRef(false);
   const wsCleanup = useRef<null | (() => void)>(null);
+  /** 已保存的剧本 ID（用于单分镜重新生成 API） */
+  const scriptIdRef = useRef<string | null>(null);
   /** 任务是否已进入终态(成功或失败),用于 WS 与轮询去重,避免重复处理 */
   const terminalRef = useRef(false);
   /** REST 轮询兜底定时器(WS 丢事件时的安全网) */
@@ -349,6 +351,30 @@ function CreationPage() {
       message.success(
         `已生成 ${shots.length} 个分镜（来源：${result?.source === 'ark' ? 'AI' : '兜底'}）`
       );
+
+      // 自动保存剧本到后端，获得 scriptId 供后续单分镜重生成使用
+      try {
+        const saved = await scriptApi.save({
+          title: values.prompt || '带货短视频',
+          productName: values.prompt,
+          category: '通用',
+          sellingPoints: values.prompt,
+          style: 'professional',
+          duration,
+          storyboard: shots.map((s) => ({
+            index: s.order,
+            description: s.description,
+            voiceover: s.voiceover,
+            caption: s.caption,
+            duration: s.duration,
+          })),
+          productSpaceId: spaceId,
+        });
+        scriptIdRef.current = saved.id;
+      } catch {
+        // 保存失败不影响用户继续使用，只是单分镜重生成不可用
+        scriptIdRef.current = null;
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || '分镜生成失败';
       setErrorMsg(msg);
@@ -453,17 +479,52 @@ function CreationPage() {
     }
   };
 
-  const handleRegenerateShot = useCallback((shotId: string) => {
-    setStoryboard((prev) =>
-      prev.map((item) => (item.id === shotId ? { ...item, status: 'generating' as const } : item))
-    );
-    // 只是更新视觉状态；真实重生在生成阶段才有意义
-    setTimeout(() => {
+  /** 单分镜重新生成：调用剧本 API 让 ARK 重新生成该分镜的文案和描述 */
+  const handleRegenerateShot = useCallback(
+    async (shotId: string) => {
+      const shot = storyboard.find((s) => s.id === shotId);
+      if (!shot) return;
+
+      // 标记为生成中
       setStoryboard((prev) =>
-        prev.map((item) => (item.id === shotId ? { ...item, status: 'pending' as const } : item))
+        prev.map((item) => (item.id === shotId ? { ...item, status: 'generating' as const } : item))
       );
-    }, 600);
-  }, []);
+
+      const sid = scriptIdRef.current;
+      if (!sid) {
+        message.warning('请先生成并保存剧本');
+        setStoryboard((prev) =>
+          prev.map((item) => (item.id === shotId ? { ...item, status: 'pending' as const } : item))
+        );
+        return;
+      }
+
+      try {
+        const data: any = await scriptApi.regenerateShot(sid, shot.order);
+        setStoryboard((prev) =>
+          prev.map((item) =>
+            item.id === shotId
+              ? {
+                  ...item,
+                  description: data.description ?? item.description,
+                  voiceover: data.voiceover ?? item.voiceover,
+                  caption: data.caption ?? item.caption,
+                  status: 'pending' as const,
+                }
+              : item
+          )
+        );
+        message.success('分镜已重新生成');
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || '重生成失败';
+        message.error(msg);
+        setStoryboard((prev) =>
+          prev.map((item) => (item.id === shotId ? { ...item, status: 'pending' as const } : item))
+        );
+      }
+    },
+    [storyboard]
+  );
 
   /** Agent 一键成片：先调 agent，然后切到生成态展示 */
   const handleAgentRun = async () => {
