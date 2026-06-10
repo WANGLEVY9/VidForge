@@ -85,15 +85,24 @@ export class StorageService implements OnModuleInit {
     if (this.ossService.enabled) {
       const ossKey = `uploads/${filename}`;
       const ossUrl = await this.ossService.upload(localPath, ossKey, mimeType);
-      if (ossUrl) {
-        // 清理本地临时文件
-        await fs.unlink(localPath).catch(() => {});
-        return ossUrl;
-      }
+      // 无论 OSS 上传成功还是失败，都清理本地临时文件
+      await fs.unlink(localPath).catch(() => {});
+      if (ossUrl) return ossUrl;
       this.logger.warn('OSS 上传失败，回退到本地存储');
     }
 
-    // 本地模式：文件已在 storage/uploads/ 中（被 multer 写入）
+    // 本地模式：将临时文件移动到 storage/uploads/
+    const destPath = path.join(this.uploadsRoot, filename);
+    try {
+      await fs.rename(localPath, destPath);
+    } catch (err: any) {
+      if (err?.code === 'EXDEV') {
+        await fs.copyFile(localPath, destPath);
+        await fs.unlink(localPath);
+      } else {
+        throw err;
+      }
+    }
     return `/static/uploads/${filename}`;
   }
 
