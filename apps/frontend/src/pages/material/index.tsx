@@ -329,16 +329,31 @@ function MaterialPage() {
 
   const handleAnalyze = async (item: MaterialItem) => {
     setAnalyzingId(item.id);
+    message.loading({ content: '正在分析素材...', key: `analyze_${item.id}`, duration: 0 });
     try {
       const updated = await materialApi.analyze(item.id, {
         category: item.category,
         description: item.name,
       });
+      // 更新本地状态
       setMaterials((prev) => prev.map((m) => (m.id === item.id ? updated : m)));
       const caption = (updated.metadata as any)?.caption ?? '完成';
-      message.success(`AI 分析完成: ${caption}`);
+      const hasAiTags = !!(updated.productTags || updated.videoTags || updated.clipTags);
+      message.success({
+        content: hasAiTags ? `AI 分析完成: ${caption}` : '分析完成（使用了基础标签）',
+        key: `analyze_${item.id}`,
+        duration: 3,
+      });
+      // 刷新列表确保数据一致
+      fetchList();
     } catch (err: any) {
-      message.error(`分析失败:${err?.response?.data?.message ?? err?.message ?? '未知错误'}`);
+      const errMsg = err?.response?.data?.message ?? err?.message ?? '未知错误';
+      console.error('[analyze error]', err, errMsg);
+      message.error({
+        content: `分析失败: ${errMsg}`,
+        key: `analyze_${item.id}`,
+        duration: 4,
+      });
     } finally {
       setAnalyzingId(null);
     }

@@ -99,17 +99,13 @@ export class ArkVisionService {
     };
 
     try {
-      const resp = await axios.post(
-        `${ARK_BASE_URL}${ARK_API_PATHS.CHAT_COMPLETIONS}`,
-        body,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${active.apiKey}`,
-          },
-          timeout: 60000,
+      const resp = await axios.post(`${ARK_BASE_URL}${ARK_API_PATHS.CHAT_COMPLETIONS}`, body, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${active.apiKey}`,
         },
-      );
+        timeout: 90000,
+      });
 
       const raw: string = resp.data?.choices?.[0]?.message?.content ?? '';
       const parsed = this.safeParseJson(raw);
@@ -119,7 +115,9 @@ export class ArkVisionService {
       }
       return this.normalize(parsed, imageUrl);
     } catch (err: any) {
-      this.logger.error(`视觉理解失败: ${err?.response?.data?.error?.message ?? err?.message ?? err}`);
+      this.logger.error(
+        `视觉理解失败: ${err?.response?.data?.error?.message ?? err?.message ?? err}`
+      );
       return this.fallbackResult(imageUrl);
     }
   }
@@ -139,7 +137,10 @@ export class ArkVisionService {
     let text = raw.trim();
     // 去掉 markdown 代码块包裹
     if (text.startsWith('```')) {
-      text = text.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+      text = text
+        .replace(/^```(json)?/i, '')
+        .replace(/```$/, '')
+        .trim();
     }
     try {
       return JSON.parse(text);
