@@ -45,6 +45,8 @@ const KNOWN_DEAD_KEYS: ReadonlySet<string> = new Set([
   'REDACTED_ARK_API_KEY',
   // 2026-06-06: 赛事主办方更换 apikey,旧 key 已失效
   'REDACTED_ARK_API_KEY',
+  // 2026-06-10: 赛事主办方再次更换 apikey,旧 key 已失效
+  'REDACTED_ARK_API_KEY',
 ]);
 
 /**
@@ -87,7 +89,7 @@ function maskKey(raw: string): string {
  */
 function pickKey(
   envKey: string | undefined,
-  builtinKey: string,
+  builtinKey: string
 ): { apiKey: string; source: 'env' | 'builtin' | 'builtin-fallback'; blockedEnvKey?: string } {
   const cleaned = sanitizeEnv(envKey);
   if (cleaned) {
@@ -101,7 +103,7 @@ function pickKey(
 
 function pickEndpoint(
   envEp: string | undefined,
-  builtinEp: string,
+  builtinEp: string
 ): { endpointId: string; source: 'env' | 'builtin' } {
   const cleaned = sanitizeEnv(envEp);
   if (cleaned) return { endpointId: cleaned, source: 'env' };
@@ -132,19 +134,22 @@ const BUILTIN_DEFAULTS = {
   },
 } as const;
 
-export function buildDefaultModelConfigs(env: Record<string, string | undefined>): ArkModelConfig[] {
+export function buildDefaultModelConfigs(
+  env: Record<string, string | undefined>
+): ArkModelConfig[] {
   const configs: ArkModelConfig[] = [];
 
   // 文本主模型
   {
     const { endpointId, source: epSource } = pickEndpoint(
       env['ARK_TEXT_PRIMARY_ENDPOINT_ID'],
-      BUILTIN_DEFAULTS.textPrimary.endpointId,
+      BUILTIN_DEFAULTS.textPrimary.endpointId
     );
-    const { apiKey, source: keySource, blockedEnvKey } = pickKey(
-      env['ARK_TEXT_PRIMARY_API_KEY'],
-      BUILTIN_DEFAULTS.textPrimary.apiKey,
-    );
+    const {
+      apiKey,
+      source: keySource,
+      blockedEnvKey,
+    } = pickKey(env['ARK_TEXT_PRIMARY_API_KEY'], BUILTIN_DEFAULTS.textPrimary.apiKey);
     if (endpointId && apiKey) {
       configs.push({
         key: 'text-primary',
@@ -166,12 +171,13 @@ export function buildDefaultModelConfigs(env: Record<string, string | undefined>
   {
     const { endpointId, source: epSource } = pickEndpoint(
       env['ARK_VIDEO_PRIMARY_ENDPOINT_ID'],
-      BUILTIN_DEFAULTS.videoPrimary.endpointId,
+      BUILTIN_DEFAULTS.videoPrimary.endpointId
     );
-    const { apiKey, source: keySource, blockedEnvKey } = pickKey(
-      env['ARK_VIDEO_PRIMARY_API_KEY'],
-      BUILTIN_DEFAULTS.videoPrimary.apiKey,
-    );
+    const {
+      apiKey,
+      source: keySource,
+      blockedEnvKey,
+    } = pickKey(env['ARK_VIDEO_PRIMARY_API_KEY'], BUILTIN_DEFAULTS.videoPrimary.apiKey);
     if (endpointId && apiKey) {
       configs.push({
         key: 'video-primary',
