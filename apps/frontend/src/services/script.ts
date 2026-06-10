@@ -75,7 +75,11 @@ export interface InspireSeed {
   category: string;
   style: string;
   hookType: string;
-  shots: { hook: any; demo: any; cta: any };
+  shots: {
+    hook: { description: string; voiceover: string; caption: string };
+    demo: { description: string; voiceover: string; caption: string };
+    cta: { description: string; voiceover: string; caption: string };
+  };
   keyMessages: string[];
   bgmStyle: string;
   performance: string;

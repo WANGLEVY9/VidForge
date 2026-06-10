@@ -7,7 +7,6 @@ import {
   Form,
   Select,
   Slider,
-  Switch,
   Space,
   Typography,
   Tag,
@@ -840,46 +839,7 @@ function ScriptPage() {
                     </Text>
                   </Form.Item>
 
-                  <Form.Item
-                    label={
-                      <Text style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                        附加选项
-                      </Text>
-                    }
-                  >
-                    <Space direction="vertical" style={{ width: '100%' }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text style={{ color: 'var(--text-primary)' }}>自动添加字幕</Text>
-                        <Switch defaultChecked />
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text style={{ color: 'var(--text-primary)' }}>推荐 BGM</Text>
-                        <Switch defaultChecked />
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text style={{ color: 'var(--text-primary)' }}>生成配音脚本</Text>
-                        <Switch defaultChecked />
-                      </div>
-                    </Space>
-                  </Form.Item>
+                  {/* 附加选项 — 功能待实现，暂时隐藏 */}
 
                   <Button
                     type="primary"
@@ -1327,9 +1287,23 @@ function ScriptPage() {
                       }}
                     >
                       <Text style={{ fontSize: 11, color: '#ef4444', fontWeight: 600 }}>HOOK </Text>
-                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>
-                        {seed.shots.hook}
-                      </Text>
+                      <div>
+                        <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                          {seed.shots.hook.voiceover || seed.shots.hook.description}
+                        </Text>
+                      </div>
+                      {seed.shots.hook.description && !seed.shots.hook.voiceover ? null : (
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            color: 'var(--text-tertiary)',
+                            display: 'block',
+                            marginTop: 2,
+                          }}
+                        >
+                          {seed.shots.hook.description}
+                        </Text>
+                      )}
                     </div>
                   )}
                   {seed.shots?.demo && (
@@ -1343,9 +1317,23 @@ function ScriptPage() {
                       }}
                     >
                       <Text style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>DEMO </Text>
-                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>
-                        {seed.shots.demo}
-                      </Text>
+                      <div>
+                        <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                          {seed.shots.demo.voiceover || seed.shots.demo.description}
+                        </Text>
+                      </div>
+                      {seed.shots.demo.description && !seed.shots.demo.voiceover ? null : (
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            color: 'var(--text-tertiary)',
+                            display: 'block',
+                            marginTop: 2,
+                          }}
+                        >
+                          {seed.shots.demo.description}
+                        </Text>
+                      )}
                     </div>
                   )}
                   {seed.shots?.cta && (
@@ -1358,9 +1346,23 @@ function ScriptPage() {
                       }}
                     >
                       <Text style={{ fontSize: 11, color: '#ec4899', fontWeight: 600 }}>CTA </Text>
-                      <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>
-                        {seed.shots.cta}
-                      </Text>
+                      <div>
+                        <Text style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                          {seed.shots.cta.voiceover || seed.shots.cta.description}
+                        </Text>
+                      </div>
+                      {seed.shots.cta.description && !seed.shots.cta.voiceover ? null : (
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            color: 'var(--text-tertiary)',
+                            display: 'block',
+                            marginTop: 2,
+                          }}
+                        >
+                          {seed.shots.cta.description}
+                        </Text>
+                      )}
                     </div>
                   )}
                 </div>

@@ -48,8 +48,9 @@ export class MaterialController {
 
   @Post()
   @ApiOperation({ summary: '创建素材(JSON)' })
-  create(@CurrentUser() user: JwtPayload, @Body() dto: CreateMaterialDto) {
-    return this.materialService.create(user.sub, dto);
+  async create(@CurrentUser() user: JwtPayload, @Body() dto: CreateMaterialDto) {
+    const m = await this.materialService.create(user.sub, dto);
+    return this.resolveMaterialUrls(m);
   }
 
   /**
@@ -143,7 +144,7 @@ export class MaterialController {
 
     const material = await this.materialService.create(user.sub, dto);
     await this.enqueueAutoAnalyze(user.sub, material);
-    return material;
+    return this.resolveMaterialUrls(material);
   }
 
   /** 上传完成后自动入队 AI 分析(异步,不阻塞返回) */
@@ -164,14 +165,16 @@ export class MaterialController {
 
   @Get()
   @ApiOperation({ summary: '获取素材列表（按当前用户隔离，可选 spaceId 过滤）' })
-  findAll(@CurrentUser() user: JwtPayload, @Query() query: QueryMaterialDto) {
-    return this.materialService.findAll(user.sub, query);
+  async findAll(@CurrentUser() user: JwtPayload, @Query() query: QueryMaterialDto) {
+    const result = await this.materialService.findAll(user.sub, query);
+    return { ...result, list: result.list.map((m) => this.resolveMaterialUrls(m)) };
   }
 
   @Get(':id')
   @ApiOperation({ summary: '获取素材详情' })
-  findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
-    return this.materialService.findOne(user.sub, id);
+  async findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    const m = await this.materialService.findOne(user.sub, id);
+    return this.resolveMaterialUrls(m);
   }
 
   @Delete(':id')
@@ -182,28 +185,56 @@ export class MaterialController {
 
   @Patch(':id/analyze')
   @ApiOperation({ summary: 'AI分析素材并生成三层标签' })
-  analyze(
+  async analyze(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() dto: AnalyzeMaterialDto
   ) {
-    return this.materialService.analyzeTags(user.sub, id, dto);
+    const m = await this.materialService.analyzeTags(user.sub, id, dto);
+    return this.resolveMaterialUrls(m);
   }
 
   @Get('search/tags')
   @ApiOperation({ summary: '按标签层级搜索素材' })
-  searchByTags(
+  async searchByTags(
     @CurrentUser() user: JwtPayload,
     @Query('productCategory') productCategory?: string,
     @Query('videoMood') videoMood?: string,
     @Query('clipObjects') clipObjects?: string
   ) {
-    return this.materialService.searchByTags(user.sub, { productCategory, videoMood, clipObjects });
+    const list = await this.materialService.searchByTags(user.sub, {
+      productCategory,
+      videoMood,
+      clipObjects,
+    });
+    return list.map((m) => this.resolveMaterialUrls(m));
   }
 
   @Post('search/semantic')
   @ApiOperation({ summary: '语义搜索素材' })
-  semanticSearch(@CurrentUser() user: JwtPayload, @Body() dto: SemanticSearchDto) {
-    return this.materialService.semanticSearch(user.sub, dto);
+  async semanticSearch(@CurrentUser() user: JwtPayload, @Body() dto: SemanticSearchDto) {
+    const result = await this.materialService.semanticSearch(user.sub, dto);
+    // semanticSearch 可能返回原始 SQL 行(snake_case)或 Material 实例(camelCase)
+    if (Array.isArray(result)) {
+      return result.map((m: any) => {
+        if (m.url) m.url = this.storageService.resolveUrl(m.url);
+        const thumb = m.thumbnail_url ?? m.thumbnailUrl;
+        if (thumb) {
+          m.thumbnail_url = this.storageService.resolveUrl(thumb);
+          m.thumbnailUrl = m.thumbnail_url;
+        }
+        return m;
+      });
+    }
+    return result;
+  }
+
+  /** 将素材 URL 从相对路径(/static/...) 解析为完整的公网 URL */
+  private resolveMaterialUrls(material: Material): Material {
+    // 浅拷贝避免修改 DB 实体
+    const clone = Object.assign(Object.create(Object.getPrototypeOf(material)), material);
+    if (clone.url) clone.url = this.storageService.resolveUrl(clone.url);
+    if (clone.thumbnailUrl) clone.thumbnailUrl = this.storageService.resolveUrl(clone.thumbnailUrl);
+    return clone;
   }
 }
