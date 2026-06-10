@@ -11,11 +11,14 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { memoryStorage } from 'multer';
+import { extname } from 'path';
 import { randomUUID } from 'crypto';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { MaterialService } from './material.service';
 import { CreateMaterialDto } from './dto/create-material.dto';
@@ -30,13 +33,13 @@ import { QueueRunnerService } from '../queue/queue-runner.service';
 import { StorageService } from '../media/services/storage.service';
 import { QUEUE_NAMES, JOB_NAMES } from '../queue/queue.constants';
 
-const UPLOAD_DIR = join(process.cwd(), 'storage', 'uploads');
-
 @ApiTags('素材管理')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('material')
 export class MaterialController {
+  private readonly logger = new Logger(MaterialController.name);
+
   constructor(
     private readonly materialService: MaterialService,
     private readonly queueRunner: QueueRunnerService,
@@ -53,24 +56,19 @@ export class MaterialController {
    * 文件上传端点
    *
    * 接收 multipart/form-data，流程：
-   * 1. Multer 将文件写入 storage/uploads/ 目录（磁盘存储，200MB 限制，MIME 过滤）
-   * 2. StorageService 判断是否启用 OSS：
-   *    - 是 → 上传到阿里云 OSS，删除本地临时文件，返回 OSS 公开 URL
-   *    - 否 → 保留本地，返回 /static/uploads/xxx 路径
-   * 3. 创建素材数据库记录
-   * 4. 异步入队 AI 分析
+   * 1. Multer 使用 memoryStorage 将文件保存在内存中（不依赖本地磁盘目录）
+   * 2. 写入临时文件到 storage/tmp/uploads/
+   * 3. StorageService 判断是否启用 OSS：
+   *    - 是 → 上传到阿里云 OSS，删除临时文件
+   *    - 否 → 移动到 storage/uploads/，返回 /static/uploads/xxx 路径
+   * 4. 创建素材数据库记录
+   * 5. 异步入队 AI 分析
    */
   @Post('upload')
   @ApiOperation({ summary: '上传素材文件( multipart )' })
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: UPLOAD_DIR,
-        filename: (_req, file, cb) => {
-          const safeName = `${randomUUID()}${extname(file.originalname)}`;
-          cb(null, safeName);
-        },
-      }),
+      storage: memoryStorage(),
       limits: { fileSize: 200 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
         const allowedMimes = [
@@ -96,7 +94,10 @@ export class MaterialController {
     @Body('category') category?: string,
     @Body('tags') tagsRaw?: string
   ): Promise<Material> {
-    if (!file) throw new BadRequestException('请选择要上传的文件');
+    if (!file) {
+      this.logger.warn('上传请求中未找到文件字段');
+      throw new BadRequestException('请选择要上传的文件');
+    }
 
     // 从 MIME 推断素材类型
     const typeMap: Record<string, 'image' | 'video' | 'audio'> = {
@@ -118,8 +119,17 @@ export class MaterialController {
           .filter(Boolean)
       : undefined;
 
+    // 生成唯一文件名
+    const filename = `${randomUUID()}${extname(file.originalname)}`;
+
+    // 将内存中的文件写入临时位置，供 StorageService 处理
+    const tmpDir = path.join(process.cwd(), 'storage', 'tmp', 'uploads');
+    await fs.mkdir(tmpDir, { recursive: true });
+    const tmpPath = path.join(tmpDir, filename);
+    await fs.writeFile(tmpPath, file.buffer);
+
     // 通过 StorageService 存储文件（OSS 或本地），获取可公开访问的 URL
-    const fileUrl = await this.storageService.storeUpload(file.path, file.filename, file.mimetype);
+    const fileUrl = await this.storageService.storeUpload(tmpPath, filename, file.mimetype);
 
     const dto: CreateMaterialDto = {
       name: file.originalname,

@@ -8,9 +8,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api`,
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // 不设置默认 Content-Type，让 Axios 根据请求数据自动设置
+  // (FormData → multipart/form-data; JSON → application/json)
 });
 
 // 请求拦截器：自动加 Bearer token
