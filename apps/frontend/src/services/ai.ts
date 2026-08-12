@@ -15,9 +15,8 @@ export interface ArkConfigPublic {
   isPrimary: boolean;
   description?: string;
   rateLimit?: string;
-  apiKeySource?: 'db' | 'env' | 'builtin' | 'builtin-fallback';
+  apiKeySource?: 'db' | 'env' | 'builtin';
   endpointSource?: 'db' | 'env' | 'builtin';
-  blockedEnvKey?: string;
   apiKeyFingerprint?: ArkFingerprint;
   endpointFingerprint?: ArkFingerprint;
 }
@@ -29,10 +28,9 @@ export interface ArkDiagnoseResult {
   durationMs?: number;
   reason?: string;
   sample?: string;
-  keySource?: 'db' | 'env' | 'builtin' | 'builtin-fallback';
+  keySource?: 'db' | 'env' | 'builtin';
   endpointSource?: 'db' | 'env' | 'builtin';
   envBlocked?: boolean;
-  blockedEnvKey?: string;
   hint?: string;
   apiKeyFingerprint?: ArkFingerprint;
   endpointFingerprint?: ArkFingerprint;

@@ -1,15 +1,9 @@
-import {
-  Entity,
-  PrimaryColumn,
-  Column,
-  UpdateDateColumn,
-  CreateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryColumn, Column, UpdateDateColumn, CreateDateColumn } from 'typeorm';
 
 /**
  * ARK 模型 key 的运行时覆盖。
  *
- * 优先级:DB override > env(若不在黑名单) > 代码内置 builtin
+ * 优先级:DB override > env；公开仓库不提供默认凭证
  *
  * 这张表行数极少(目前最多两行 text-primary / video-primary),
  * 主要承载"运维/演示者在 UI 上临时换 key"的需求。

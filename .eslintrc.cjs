@@ -24,6 +24,8 @@ module.exports = {
   plugins: ['react-refresh'],
   rules: {
     'react/react-in-jsx-scope': 'off',
+    // TypeScript interfaces provide the prop contracts for React components.
+    'react/prop-types': 'off',
     '@typescript-eslint/no-unused-vars': [
       'warn',
       { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },

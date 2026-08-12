@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   ArkModelConfig,
-  KNOWN_DEAD_KEY_COUNT,
   ModelConfigRegistry,
   buildDefaultModelConfigs,
 } from '../config/ark.config';
@@ -34,7 +33,7 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
     if (count === 0) {
       this.logger.warn('未检测到任何火山方舟模型配置');
     } else {
-      this.logger.log(`共加载 ${count} 个模型配置 (失效 key 黑名单条目: ${KNOWN_DEAD_KEY_COUNT})`);
+      this.logger.log(`共加载 ${count} 个模型配置`);
     }
   }
 
@@ -56,7 +55,6 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
         existing.apiKey = ov.apiKey;
         existing.endpointSource = 'db';
         existing.apiKeySource = 'db';
-        existing.blockedEnvKey = undefined;
         this.logger.log(
           `[${ov.modelKey}] DB override 已应用 (endpointId=${ov.endpointId} apiKey=${this.maskKey(ov.apiKey)} updatedBy=${ov.updatedBy ?? '-'})`
         );
@@ -79,15 +77,9 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
       `apiKeySource=${config.apiKeySource ?? 'unknown'}`,
       `endpointSource=${config.endpointSource ?? 'unknown'}`,
     ];
-    if (config.blockedEnvKey) tags.push(`envBlocked=${config.blockedEnvKey}`);
     this.logger.log(
       `已加载模型配置: [${config.key}] ${config.name} endpointId=${config.endpointId} apiKey=${keyMasked} (len=${config.apiKey.length}) ${tags.join(' ')}`
     );
-    if (config.apiKeySource === 'builtin-fallback' && config.blockedEnvKey) {
-      this.logger.warn(
-        `[${config.key}] env 上配置的 apiKey (${config.blockedEnvKey}) 命中失效黑名单,已自动回落到代码内置默认值。建议从环境变量中删除该条 env 以彻底清理。`
-      );
-    }
   }
 
   getAllConfigs(): ArkModelConfig[] {
@@ -118,7 +110,6 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
     if (!config) return null;
     config.apiKey = newApiKey;
     config.apiKeySource = 'env';
-    config.blockedEnvKey = undefined;
     this.logger.log(`已更新模型 [${config.name}] 的 APIKEY (内存,未持久化)`);
     return { ...config };
   }
@@ -160,7 +151,6 @@ export class ArkConfigService implements OnModuleInit, OnApplicationBootstrap {
     existing.apiKey = newKey;
     existing.endpointSource = 'db';
     existing.apiKeySource = 'db';
-    existing.blockedEnvKey = undefined;
 
     this.logger.log(
       `[${modelKey}] override 已写入 DB (endpoint=${newEndpoint} key=${this.maskKey(newKey)} updatedBy=${userId ?? '-'})`

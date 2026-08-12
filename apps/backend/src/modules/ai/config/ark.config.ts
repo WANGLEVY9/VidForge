@@ -11,43 +11,16 @@ export interface ArkModelConfig {
    * 当前生效 apiKey 的来源:
    * - db                : 来自 ark_model_overrides 表(用户在 API 配置中心写入)
    * - env               : 来自环境变量
-   * - builtin           : 来自代码内置默认值
-   * - builtin-fallback  : env 上的 key 命中黑名单/被强制屏蔽,自动回落到 builtin
+   * - builtin           : 来自代码内置默认值（当前不提供内置凭证）
    */
-  apiKeySource?: 'db' | 'env' | 'builtin' | 'builtin-fallback';
+  apiKeySource?: 'db' | 'env' | 'builtin';
   /**
    * endpointId 的来源
    */
   endpointSource?: 'db' | 'env' | 'builtin';
-  /**
-   * 如果 env 上的 key 被屏蔽,这里记录被屏蔽的脱敏指纹,用于诊断端点展示
-   */
-  blockedEnvKey?: string;
 }
 
 export type ModelConfigRegistry = Record<string, ArkModelConfig>;
-
-/**
- * 已知失效的旧 key 黑名单。
- *
- * 背景:线上 env(如 Railway)上可能残留过去某个时刻有效但现在已失效的 key,
- * 而代码默认逻辑是 env 优先 > builtin。如果不主动屏蔽,部署后会一直拿失效
- * key 调 ARK,所有调用 fallback 到示例剧本。
- *
- * 凡是命中此名单的 env key 会被忽略,自动回落到代码内置默认值,
- * 同时通过 logger 与 /api/ai/ark/diagnose 端点显式告知运维。
- *
- * 新增已知失效 key 时,请在末尾追加,并在注释里说明何时何处确认失效。
- */
-const KNOWN_DEAD_KEYS: ReadonlySet<string> = new Set([
-  // 2026-05-31: Railway env 上残留的旧 key,curl 直测返回
-  // {"error":{"code":"AuthenticationError","message":"The API key doesn't exist..."}}
-  'REDACTED_ARK_API_KEY',
-  // 2026-06-06: 赛事主办方更换 apikey,旧 key 已失效
-  'REDACTED_ARK_API_KEY',
-  // 2026-06-10: 赛事主办方再次更换 apikey,旧 key 已失效
-  'REDACTED_ARK_API_KEY',
-]);
 
 /**
  * 清理环境变量黏贴时常见的脏字符:
@@ -70,34 +43,13 @@ function sanitizeEnv(raw: string | undefined): string | undefined {
   return v;
 }
 
-/**
- * 给一个 apiKey 生成 8 位脱敏指纹,用于日志/诊断回包,不暴露原文
- */
-function maskKey(raw: string): string {
-  if (!raw) return '';
-  if (raw.length <= 8) return '*'.repeat(raw.length);
-  return `${raw.slice(0, 4)}...${raw.slice(-4)}`;
-}
-
-/**
- * 决策一对 (envKey, builtinKey) 中应该使用哪个。
- *
- * 规则:
- *   1. env 非空 且 env 不在黑名单 → 用 env
- *   2. env 非空 但 env 在黑名单   → 用 builtin,记录 blockedEnvKey(供诊断展示)
- *   3. env 为空                   → 用 builtin
- */
+/** 只从环境变量读取凭证；公开仓库不得内置任何真实 API key。 */
 function pickKey(
   envKey: string | undefined,
-  builtinKey: string
-): { apiKey: string; source: 'env' | 'builtin' | 'builtin-fallback'; blockedEnvKey?: string } {
+  builtinKey?: string
+): { apiKey?: string; source: 'env' | 'builtin' } {
   const cleaned = sanitizeEnv(envKey);
-  if (cleaned) {
-    if (KNOWN_DEAD_KEYS.has(cleaned)) {
-      return { apiKey: builtinKey, source: 'builtin-fallback', blockedEnvKey: maskKey(cleaned) };
-    }
-    return { apiKey: cleaned, source: 'env' };
-  }
+  if (cleaned) return { apiKey: cleaned, source: 'env' };
   return { apiKey: builtinKey, source: 'builtin' };
 }
 
@@ -111,24 +63,19 @@ function pickEndpoint(
 }
 
 /**
- * 内置默认配置(开箱即用)
- * 用于本地开发与私有部署场景。生产环境通过环境变量覆盖。
- *
- * 优先级:env 显式配置 > 内置默认值,但 env 命中 KNOWN_DEAD_KEYS 时自动回落
- *
- * 注意:这两个 EP 与 APIKEY 仅供该项目内部 Demo 使用,
- * 不要在公开仓库中暴露。生产部署务必通过 env 覆盖。
+ * 默认模型元数据（开箱即用）
+ * 端点和凭证均通过环境变量提供；公开仓库不包含任何默认凭证。
  */
 const BUILTIN_DEFAULTS = {
   textPrimary: {
-    endpointId: 'ep-20260514115629-vhldw',
-    apiKey: 'REDACTED_ARK_API_KEY',
+    endpointId: '',
+    apiKey: undefined,
     name: 'Doubao-Seed-2.0-pro',
     rateLimit: '100RPM 50WTPM',
   },
   videoPrimary: {
-    endpointId: 'ep-20260514120705-pqv86',
-    apiKey: 'REDACTED_ARK_API_KEY',
+    endpointId: '',
+    apiKey: undefined,
     name: 'Doubao-Seedance-1.5-pro',
     rateLimit: '5并发',
   },
@@ -145,11 +92,10 @@ export function buildDefaultModelConfigs(
       env['ARK_TEXT_PRIMARY_ENDPOINT_ID'],
       BUILTIN_DEFAULTS.textPrimary.endpointId
     );
-    const {
-      apiKey,
-      source: keySource,
-      blockedEnvKey,
-    } = pickKey(env['ARK_TEXT_PRIMARY_API_KEY'], BUILTIN_DEFAULTS.textPrimary.apiKey);
+    const { apiKey, source: keySource } = pickKey(
+      env['ARK_TEXT_PRIMARY_API_KEY'],
+      BUILTIN_DEFAULTS.textPrimary.apiKey
+    );
     if (endpointId && apiKey) {
       configs.push({
         key: 'text-primary',
@@ -162,7 +108,6 @@ export function buildDefaultModelConfigs(
         rateLimit: env['ARK_TEXT_PRIMARY_RATE_LIMIT'] || BUILTIN_DEFAULTS.textPrimary.rateLimit,
         apiKeySource: keySource,
         endpointSource: epSource,
-        blockedEnvKey,
       });
     }
   }
@@ -173,11 +118,10 @@ export function buildDefaultModelConfigs(
       env['ARK_VIDEO_PRIMARY_ENDPOINT_ID'],
       BUILTIN_DEFAULTS.videoPrimary.endpointId
     );
-    const {
-      apiKey,
-      source: keySource,
-      blockedEnvKey,
-    } = pickKey(env['ARK_VIDEO_PRIMARY_API_KEY'], BUILTIN_DEFAULTS.videoPrimary.apiKey);
+    const { apiKey, source: keySource } = pickKey(
+      env['ARK_VIDEO_PRIMARY_API_KEY'],
+      BUILTIN_DEFAULTS.videoPrimary.apiKey
+    );
     if (endpointId && apiKey) {
       configs.push({
         key: 'video-primary',
@@ -190,7 +134,6 @@ export function buildDefaultModelConfigs(
         rateLimit: env['ARK_VIDEO_PRIMARY_RATE_LIMIT'] || BUILTIN_DEFAULTS.videoPrimary.rateLimit,
         apiKeySource: keySource,
         endpointSource: epSource,
-        blockedEnvKey,
       });
     }
   }
@@ -205,8 +148,3 @@ export const ARK_API_PATHS = {
   VIDEO_CREATE_TASK: '/contents/generations/tasks',
   VIDEO_QUERY_TASK: '/contents/generations/tasks/',
 } as const;
-
-/**
- * 导出黑名单大小,用于启动日志展示
- */
-export const KNOWN_DEAD_KEY_COUNT = KNOWN_DEAD_KEYS.size;
