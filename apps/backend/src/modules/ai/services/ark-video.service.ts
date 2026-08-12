@@ -57,17 +57,13 @@ export class ArkVideoService {
     this.logger.log(`创建视频任务: model=${endpointId}`);
 
     try {
-      const response = await axios.post(
-        `${ARK_BASE_URL}${ARK_API_PATHS.VIDEO_CREATE_TASK}`,
-        body,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-          },
-          timeout: 30000,
+      const response = await axios.post(`${ARK_BASE_URL}${ARK_API_PATHS.VIDEO_CREATE_TASK}`, body, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
         },
-      );
+        timeout: 30000,
+      });
 
       return { id: response.data.id };
     } catch (error: any) {
@@ -94,7 +90,7 @@ export class ArkVideoService {
             Authorization: `Bearer ${apiKey}`,
           },
           timeout: 30000,
-        },
+        }
       );
 
       return response.data;

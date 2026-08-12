@@ -46,7 +46,7 @@ export class CreationService {
     private creationGateway: CreationGateway,
     private readonly arkVideoService: ArkVideoService,
     private readonly arkConfigService: ArkConfigService,
-    private readonly composer: ComposerService,
+    private readonly composer: ComposerService
   ) {}
 
   /**
@@ -176,7 +176,13 @@ export class CreationService {
         shot.taskId = created.id;
         await this.persistShots(taskId, shots);
 
-        const finalState = await this.pollUntilDone(taskId, shot, shotProgressBase, shots.length, i);
+        const finalState = await this.pollUntilDone(
+          taskId,
+          shot,
+          shotProgressBase,
+          shots.length,
+          i
+        );
         shot.videoUrl = finalState.videoUrl;
         shot.thumbnailUrl = finalState.thumbnailUrl;
         shot.status = 'completed';
@@ -306,7 +312,9 @@ export class CreationService {
       status: 'completed',
       result: finalTask.result,
     });
-    this.logger.log(`[${taskId}] 任务完成:${successCount}/${shots.length} 分镜成功 (合片: ${composeMeta.mode})`);
+    this.logger.log(
+      `[${taskId}] 任务完成:${successCount}/${shots.length} 分镜成功 (合片: ${composeMeta.mode})`
+    );
   }
 
   /**
@@ -323,13 +331,13 @@ export class CreationService {
     shot: ShotState,
     shotProgressBase: number,
     totalShots: number,
-    shotIndex: number,
+    shotIndex: number
   ): Promise<{ videoUrl?: string; thumbnailUrl?: string }> {
     if (!shot.taskId) throw new Error('shot.taskId 缺失');
 
     const startedAt = Date.now();
     let polls = 0;
-    while (true) {
+    for (;;) {
       if (this.isCancelled(taskId)) {
         throw new Error('任务已被用户取消');
       }
@@ -366,8 +374,7 @@ export class CreationService {
         const content = remote?.content ?? remote?.result ?? {};
         const videoUrl: string | undefined =
           content?.video_url ?? content?.url ?? remote?.video_url ?? remote?.url;
-        const thumbnailUrl: string | undefined =
-          content?.thumbnail_url ?? remote?.thumbnail_url;
+        const thumbnailUrl: string | undefined = content?.thumbnail_url ?? remote?.thumbnail_url;
         if (!videoUrl) {
           throw new Error('ARK 返回成功但缺少视频 URL');
         }
@@ -386,7 +393,7 @@ export class CreationService {
     shot: ShotState,
     title: string,
     ratio: VideoGenerationOptions['ratio'],
-    resolution: VideoGenerationOptions['resolution'],
+    resolution: VideoGenerationOptions['resolution']
   ): string {
     const parts: string[] = [];
     parts.push(`【主题】${title}`);
@@ -488,7 +495,11 @@ export class CreationService {
   /**
    * 单分镜重新生成：复用真实 ARK 流程
    */
-  async regenerateShot(userId: string, taskId: string, dto: RegenerateShotDto): Promise<{ ok: true }> {
+  async regenerateShot(
+    userId: string,
+    taskId: string,
+    dto: RegenerateShotDto
+  ): Promise<{ ok: true }> {
     const task = await this.findOne(userId, taskId);
     const shots: ShotState[] = ((task.storyboard as any) ?? []).slice();
     const idx = shots.findIndex((s) => s.id === dto.shotId);

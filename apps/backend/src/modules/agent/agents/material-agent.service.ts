@@ -19,11 +19,13 @@ export class MaterialAgentService {
 
   constructor(
     @InjectRepository(Material)
-    private readonly materialRepo: Repository<Material>,
+    private readonly materialRepo: Repository<Material>
   ) {}
 
   async analyze(state: AgentState): Promise<Partial<AgentState>> {
-    this.logger.log(`[${state.taskId}] MaterialAgent 分析: ${state.productName} (${state.category})`);
+    this.logger.log(
+      `[${state.taskId}] MaterialAgent 分析: ${state.productName} (${state.category})`
+    );
     const startedAt = new Date();
     const trace = state.trace ?? [];
 
@@ -49,8 +51,8 @@ export class MaterialAgentService {
         baseList.length > 0
           ? baseList
           : state.productSpaceId
-          ? await this.materialRepo.find({ where, order: { createdAt: 'DESC' }, take: 20 })
-          : baseList;
+            ? await this.materialRepo.find({ where, order: { createdAt: 'DESC' }, take: 20 })
+            : baseList;
 
       // 计算"相关度":category 匹配 +0.5,关键词命中 +0.3,有视觉标签 +0.2
       matched = list
@@ -58,8 +60,7 @@ export class MaterialAgentService {
           let score = 0.1;
           const pt: any = m.productTags ?? {};
           if (pt.category && pt.category === state.category) score += 0.5;
-          const caption: string =
-            (m.metadata as any)?.caption ?? pt?.summary ?? m.name ?? '';
+          const caption: string = (m.metadata as any)?.caption ?? pt?.summary ?? m.name ?? '';
           for (const kw of keywords) {
             if (caption.includes(kw) || (m.name ?? '').includes(kw)) score += 0.3;
           }

@@ -104,7 +104,7 @@ export class BgmService {
           '  fresh__morning-light.mp3',
           '  luxury__velvet-piano.mp3',
         ].join('\n'),
-        'utf8',
+        'utf8'
       );
     }
   }

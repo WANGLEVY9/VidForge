@@ -79,7 +79,7 @@ export const StoryboardEditor: React.FC<StoryboardEditorProps> = ({
   }, [
     activeShotId,
     activeIndex,
-    shots.length,
+    shots,
     playbackState,
     setPlaybackState,
     setActiveShot,

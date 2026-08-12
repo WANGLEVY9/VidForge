@@ -43,9 +43,7 @@ import { HealthController } from './modules/common/health.controller';
         const nodeEnv = configService.get<string>('NODE_ENV');
         // 是否同步表结构：dev 默认开；生产由 DB_SYNCHRONIZE=true 显式开启（用于初次建表）
         const syncEnv = configService.get<string>('DB_SYNCHRONIZE');
-        const synchronize = syncEnv !== undefined
-          ? syncEnv === 'true'
-          : nodeEnv === 'development';
+        const synchronize = syncEnv !== undefined ? syncEnv === 'true' : nodeEnv === 'development';
         const logging = nodeEnv === 'development';
         const ssl = nodeEnv === 'production' ? { rejectUnauthorized: false } : false;
 

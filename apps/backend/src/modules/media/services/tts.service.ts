@@ -49,7 +49,7 @@ export class TtsService {
     text: string,
     outPath: string,
     voiceType = 'BV700_streaming',
-    speedRatio = 1.0,
+    speedRatio = 1.0
   ): Promise<{ outPath: string; durationSec: number; mode: 'real' | 'silence' }> {
     if (!text.trim()) {
       // 没有台词,直接写一段 1s 静音
@@ -133,11 +133,11 @@ export class TtsService {
           '96k',
           outPath,
         ],
-        { stdio: 'ignore' },
+        { stdio: 'ignore' }
       );
       child.on('error', reject);
       child.on('close', (code) =>
-        code === 0 ? resolve() : reject(new Error(`ffmpeg silence exit ${code}`)),
+        code === 0 ? resolve() : reject(new Error(`ffmpeg silence exit ${code}`))
       );
     });
   }

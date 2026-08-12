@@ -10,6 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: 20
 
@@ -28,6 +31,8 @@ jobs:
         name: Install dependencies
       - run: pnpm --filter @vidforge/frontend lint
         name: Lint frontend
+      - run: pnpm --filter @vidforge/backend lint
+        name: Lint backend
 
   build-backend:
     runs-on: ubuntu-latest

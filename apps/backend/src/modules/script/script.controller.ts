@@ -48,13 +48,21 @@ export class ScriptController {
 
   @Patch(':id/shots')
   @ApiOperation({ summary: '更新分镜列表(编辑/排序后保存)' })
-  updateShots(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: UpdateScriptShotsDto) {
+  updateShots(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: UpdateScriptShotsDto
+  ) {
     return this.scriptService.updateShots(user.sub, id, dto);
   }
 
   @Post(':id/regenerate-shot')
   @ApiOperation({ summary: '重新生成单个分镜' })
-  regenerateShot(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body('index') index: number) {
+  regenerateShot(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body('index') index: number
+  ) {
     return this.scriptService.regenerateShot(user.sub, id, index);
   }
 }

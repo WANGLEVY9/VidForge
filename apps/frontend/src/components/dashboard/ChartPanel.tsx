@@ -29,14 +29,23 @@ export const ChartPanel = React.memo(function ChartPanel({
   return (
     <GlassPanel variant="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <StudioHeader title={title} icon={icon} extra={extra} />
-      <div style={{ padding: 'var(--spacing-lg)', flex: 1, minHeight: height, position: 'relative' }}>
+      <div
+        style={{ padding: 'var(--spacing-lg)', flex: 1, minHeight: height, position: 'relative' }}
+      >
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 20 }}>
             <Skeleton.Input active block style={{ height: 16 }} />
             <Skeleton.Input active block style={{ height: height - 60 }} />
           </div>
         ) : empty || !option || Object.keys(option).length === 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+            }}
+          >
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyDescription} />
           </div>
         ) : (

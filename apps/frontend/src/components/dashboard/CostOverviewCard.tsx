@@ -165,7 +165,9 @@ export function CostOverviewCard({ refreshIntervalMs = 30000 }: Props) {
                       }}
                     >
                       {m.unit && m.unit !== '¥' ? (
-                        <span style={{ fontSize: 14, color: 'var(--text-secondary)', marginRight: 2 }}>
+                        <span
+                          style={{ fontSize: 14, color: 'var(--text-secondary)', marginRight: 2 }}
+                        >
                           {m.unit}
                         </span>
                       ) : null}
@@ -209,7 +211,14 @@ export function CostOverviewCard({ refreshIntervalMs = 30000 }: Props) {
                   </Text>
                 )}
               />
-              <Text style={{ fontSize: 11, color: 'var(--text-tertiary)', display: 'block', marginTop: 4 }}>
+              <Text
+                style={{
+                  fontSize: 11,
+                  color: 'var(--text-tertiary)',
+                  display: 'block',
+                  marginTop: 4,
+                }}
+              >
                 缓存命中可降低 token 成本 ~70%（火山方舟 Prompt Cache）
               </Text>
             </div>

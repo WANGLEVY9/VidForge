@@ -36,7 +36,7 @@ export class ProductSpaceController {
   update(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
-    @Body() dto: UpdateProductSpaceDto,
+    @Body() dto: UpdateProductSpaceDto
   ) {
     return this.service.update(user.sub, id, dto);
   }

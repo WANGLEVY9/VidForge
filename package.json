@@ -2,17 +2,26 @@
   "name": "vidforge",
   "version": "1.0.0",
   "description": "电商场景AIGC带货视频生成系统",
+  "license": "MIT",
+  "homepage": "https://github.com/WANGLEVY9/VidForge#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WANGLEVY9/VidForge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WANGLEVY9/VidForge/issues"
+  },
   "private": true,
   "type": "module",
   "packageManager": "pnpm@8.15.4",
   "scripts": {
     "dev": "pnpm --filter=@vidforge/frontend dev & pnpm --filter=@vidforge/backend start:dev",
-    "build": "npm run build:backend",
-    "build:backend": "cd apps/backend && npm install --include=dev --no-audit --no-fund && npm run build",
-    "build:frontend": "cd apps/frontend && npm install --include=dev --no-audit --no-fund && npm run build",
-    "build:all": "npm run build:frontend && npm run build:backend",
+    "build": "pnpm build:all",
+    "build:backend": "pnpm --filter @vidforge/backend build",
+    "build:frontend": "pnpm --filter @vidforge/frontend build",
+    "build:all": "pnpm build:frontend && pnpm build:backend",
     "start": "cd apps/backend && npm run start:prod",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint": "pnpm --filter @vidforge/frontend lint && pnpm --filter @vidforge/backend lint",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "prettier": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "prettier:fix": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",

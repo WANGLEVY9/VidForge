@@ -37,7 +37,7 @@ export class CreationController {
   regenerateShot(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
-    @Body() dto: RegenerateShotDto,
+    @Body() dto: RegenerateShotDto
   ) {
     return this.creationService.regenerateShot(user.sub, id, dto);
   }

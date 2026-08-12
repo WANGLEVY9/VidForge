@@ -21,7 +21,9 @@ export class ComplianceController {
 
   @Post('scan-shots')
   @ApiOperation({ summary: '对分镜列表做合规扫描' })
-  async scanShots(@Body() body: { shots: Array<{ voiceover?: string; caption?: string }>; forbidden?: string[] }) {
+  async scanShots(
+    @Body() body: { shots: Array<{ voiceover?: string; caption?: string }>; forbidden?: string[] }
+  ) {
     return this.compliance.scanShots(body.shots ?? [], body.forbidden ?? []);
   }
 }

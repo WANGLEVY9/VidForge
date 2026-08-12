@@ -25,19 +25,41 @@ export class QualityAgentService {
 
   /** 极限词 / 绝对化用语(广告法第 9 条) */
   private readonly forbiddenWords = [
-    '最', '第一', '一流', '极致', '极佳', '永远', '永久', '绝对', '唯一',
-    '顶级', '顶尖', '完美', '万能', '无敌', '世界级', '国家级', '全球第一',
+    '最',
+    '第一',
+    '一流',
+    '极致',
+    '极佳',
+    '永远',
+    '永久',
+    '绝对',
+    '唯一',
+    '顶级',
+    '顶尖',
+    '完美',
+    '万能',
+    '无敌',
+    '世界级',
+    '国家级',
+    '全球第一',
   ];
   /** 医疗保健类禁用语(电商常见违规) */
   private readonly medicalForbidden = [
-    '治疗', '治愈', '疗效', '根治', '速效', '神效', '消炎', '抗癌',
+    '治疗',
+    '治愈',
+    '疗效',
+    '根治',
+    '速效',
+    '神效',
+    '消炎',
+    '抗癌',
   ];
   /** 诱导/夸大用语 */
   private readonly hypeForbidden = ['赚到了', '免费白送', '一夜暴富'];
 
   constructor(
     private readonly arkText: ArkTextService,
-    private readonly arkConfig: ArkConfigService,
+    private readonly arkConfig: ArkConfigService
   ) {}
 
   async evaluate(state: AgentState): Promise<Partial<AgentState>> {
@@ -140,7 +162,7 @@ export class QualityAgentService {
         duration * 0.15 +
         consistency * 0.2 +
         compliance * 0.2 +
-        hookStrength * 0.15,
+        hookStrength * 0.15
     );
     const passed = qualityScore >= 70 && compHits.length === 0;
     const feedback = this.buildFeedback(issues, qualityScore);
@@ -177,7 +199,9 @@ export class QualityAgentService {
   //  内部工具
   // ──────────────────────────────────────
 
-  private checkCompliance(text: string): Array<{ word: string; reason: string; severity: 'low' | 'medium' | 'high' }> {
+  private checkCompliance(
+    text: string
+  ): Array<{ word: string; reason: string; severity: 'low' | 'medium' | 'high' }> {
     const hits: Array<{ word: string; reason: string; severity: 'low' | 'medium' | 'high' }> = [];
     for (const w of this.forbiddenWords) {
       if (text.includes(w)) hits.push({ word: w, reason: '广告法极限词', severity: 'high' });
@@ -193,25 +217,30 @@ export class QualityAgentService {
 
   private buildFeedback(
     issues: NonNullable<AgentState['qualityControl']>['issues'],
-    qualityScore: number,
+    qualityScore: number
   ): string {
     if (issues.length === 0) return `当前剧本质量良好(${qualityScore}/100),可直接输出`;
     const high = issues.filter((i) => i.severity === 'high');
     const medium = issues.filter((i) => i.severity === 'medium');
     const lines: string[] = [`本次剧本综合分 ${qualityScore}/100,需要重做以下方面:`];
     high.forEach((i) =>
-      lines.push(`- [严重] ${i.message}${i.suggestion ? ` → 建议: ${i.suggestion}` : ''}`),
+      lines.push(`- [严重] ${i.message}${i.suggestion ? ` → 建议: ${i.suggestion}` : ''}`)
     );
     medium.forEach((i) =>
-      lines.push(`- [中等] ${i.message}${i.suggestion ? ` → 建议: ${i.suggestion}` : ''}`),
+      lines.push(`- [中等] ${i.message}${i.suggestion ? ` → 建议: ${i.suggestion}` : ''}`)
     );
     return lines.join('\n');
   }
 
-  private async scoreByLlm(state: AgentState): Promise<{ consistency: number; hookStrength: number }> {
+  private async scoreByLlm(
+    state: AgentState
+  ): Promise<{ consistency: number; hookStrength: number }> {
     const shots = state.scriptGeneration?.shots ?? [];
     const compactPlan = shots
-      .map((s) => `分镜${s.order}(${s.role ?? ''}, ${s.duration}s):画面=${s.description}; 台词=${s.script}`)
+      .map(
+        (s) =>
+          `分镜${s.order}(${s.role ?? ''}, ${s.duration}s):画面=${s.description}; 台词=${s.script}`
+      )
       .join('\n');
 
     const prompt = `你是电商短视频质量评估专家,基于以下分镜剧本严格打分。

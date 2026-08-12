@@ -27,7 +27,8 @@ import {
 export class QueueModule {
   static forRoot(): DynamicModule {
     const redisUrl = process.env.REDIS_URL;
-    const useRealQueue = !!redisUrl && (redisUrl.startsWith('redis://') || redisUrl.startsWith('rediss://'));
+    const useRealQueue =
+      !!redisUrl && (redisUrl.startsWith('redis://') || redisUrl.startsWith('rediss://'));
 
     if (!useRealQueue) {
       // 没配 Redis:不注册 BullMQ 任何东西,只暴露一个 stub QueueRunnerService
@@ -74,7 +75,7 @@ export class QueueModule {
           { name: QUEUE_NAMES.CREATION_SHOT },
           { name: QUEUE_NAMES.CREATION_COMPOSE },
           { name: QUEUE_NAMES.EXPORT_ENCODE },
-          { name: QUEUE_NAMES.MATERIAL_ANALYZE },
+          { name: QUEUE_NAMES.MATERIAL_ANALYZE }
         ),
       ],
       providers: [
@@ -105,7 +106,6 @@ function createInlineRunner(): QueueRunnerService {
   stub.isRedisHealthy = async () => false;
   stub.enqueue = async (_q, _name, _data, fallback) => {
     void fallback().catch((err) => {
-      // eslint-disable-next-line no-console
       console.error(`[inline-fallback] ${err?.message ?? err}`);
     });
     return { mode: 'inline' as const };
