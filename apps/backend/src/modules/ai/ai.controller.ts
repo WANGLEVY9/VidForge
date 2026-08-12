@@ -35,10 +35,7 @@ function fingerprint(raw: string | undefined | null) {
     issues.push('contains-fullwidth-or-cjk-punctuation');
   return {
     length: raw.length,
-    masked:
-      raw.length <= 8
-        ? '*'.repeat(raw.length)
-        : `${raw.slice(0, 4)}...${raw.slice(-4)}`,
+    masked: raw.length <= 8 ? '*'.repeat(raw.length) : `${raw.slice(0, 4)}...${raw.slice(-4)}`,
     issues,
   };
 }
@@ -51,7 +48,7 @@ export class AiController {
   constructor(
     private readonly arkConfigService: ArkConfigService,
     private readonly arkTextService: ArkTextService,
-    private readonly arkVideoService: ArkVideoService,
+    private readonly arkVideoService: ArkVideoService
   ) {}
 
   @Get('health')
@@ -66,9 +63,7 @@ export class AiController {
     // 出于安全, 不回传 apiKey 全文, 仅回传脱敏前后 4 位
     return this.arkConfigService.getAllConfigs().map((c) => ({
       ...c,
-      apiKey: c.apiKey
-        ? `${c.apiKey.slice(0, 4)}...${c.apiKey.slice(-4)}`
-        : '',
+      apiKey: c.apiKey ? `${c.apiKey.slice(0, 4)}...${c.apiKey.slice(-4)}` : '',
       apiKeyFingerprint: fingerprint(c.apiKey),
       endpointFingerprint: fingerprint(c.endpointId),
     }));
@@ -77,8 +72,7 @@ export class AiController {
   @Get('ark/diagnose')
   @ApiOperation({
     summary: 'ARK 文本模型自检',
-    description:
-      '一键诊断: 是否配置了文本模型 + 实际能否调通 (发送一条最小 ping 请求) + 当前 key 来源(env / 内置默认 / 黑名单回落)',
+    description: '一键诊断: 是否配置了文本模型 + 实际能否调通 (发送一条最小 ping 请求)',
   })
   async diagnose() {
     const primary = this.arkConfigService.getPrimaryConfig('text');
@@ -94,25 +88,18 @@ export class AiController {
     // 直接从 config 读取来源元数据,不再做字符串猜测
     const keySource = primary.apiKeySource ?? 'builtin';
     const endpointSource = primary.endpointSource ?? 'builtin';
-    const blockedEnvKey = primary.blockedEnvKey;
-    const envBlocked = keySource === 'builtin-fallback';
 
     const startedAt = Date.now();
     const apiKeyFingerprint = fingerprint(primary.apiKey);
     const endpointFingerprint = fingerprint(primary.endpointId);
 
     const buildHint = (ok: boolean): string => {
-      if (envBlocked) {
-        return `检测到 env ARK_TEXT_PRIMARY_API_KEY=${blockedEnvKey} 命中失效黑名单,已自动回落到代码内置默认值。建议从部署平台删除该 env 以彻底清理。${
-          ok ? '当前调用 ✅ 成功。' : ''
-        }`;
-      }
       if (keySource === 'env') {
         return ok
           ? '当前使用 env 注入的 key,调用成功'
-          : 'Key 来源: env(ARK_TEXT_PRIMARY_API_KEY)。若调用失败,大概率是该 env 值已失效,建议删除该环境变量改用代码内置默认值';
+          : 'Key 来源: env(ARK_TEXT_PRIMARY_API_KEY)。请检查环境变量中的凭证和端点配置';
       }
-      return ok ? '当前使用代码内置默认 key,调用成功' : '当前使用代码内置默认 key,但调用失败,请检查代码硬编码 key 是否仍然有效';
+      return ok ? '当前使用代码内置配置,调用成功' : '当前未配置可用的 ARK 凭证';
     };
 
     try {
@@ -133,8 +120,6 @@ export class AiController {
         sample: String(content).slice(0, 64),
         keySource,
         endpointSource,
-        envBlocked,
-        blockedEnvKey,
         hint: buildHint(true),
         apiKeyFingerprint,
         endpointFingerprint,
@@ -148,8 +133,6 @@ export class AiController {
         reason: error?.message ?? String(error),
         keySource,
         endpointSource,
-        envBlocked,
-        blockedEnvKey,
         hint: buildHint(false),
         apiKeyFingerprint,
         endpointFingerprint,
@@ -159,7 +142,9 @@ export class AiController {
 
   @Post('ark/chat')
   @ApiOperation({ summary: '文本对话' })
-  async chatCompletion(@Body() dto: { messages: Array<{ role: string; content: string }>; modelKey?: string }) {
+  async chatCompletion(
+    @Body() dto: { messages: Array<{ role: string; content: string }>; modelKey?: string }
+  ) {
     return this.arkTextService.chatCompletion({
       messages: dto.messages as any,
       modelKey: dto.modelKey,
@@ -190,7 +175,7 @@ export class AiController {
   async updateConfig(
     @Param('key') key: string,
     @Body() dto: { endpointId?: string; apiKey?: string },
-    @Req() req: Request,
+    @Req() req: Request
   ) {
     if (!dto || (dto.endpointId === undefined && dto.apiKey === undefined)) {
       throw new HttpException('请至少提供 endpointId 或 apiKey 之一', HttpStatus.BAD_REQUEST);
@@ -203,9 +188,7 @@ export class AiController {
       }
       return {
         ...updated,
-        apiKey: updated.apiKey
-          ? `${updated.apiKey.slice(0, 4)}...${updated.apiKey.slice(-4)}`
-          : '',
+        apiKey: updated.apiKey ? `${updated.apiKey.slice(0, 4)}...${updated.apiKey.slice(-4)}` : '',
         apiKeyFingerprint: fingerprint(updated.apiKey),
         endpointFingerprint: fingerprint(updated.endpointId),
       };
@@ -213,7 +196,7 @@ export class AiController {
       if (err instanceof HttpException) throw err;
       throw new HttpException(
         err?.message ?? '写入 override 失败',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }
@@ -227,9 +210,7 @@ export class AiController {
     }
     return {
       ...result,
-      apiKey: result.apiKey
-        ? `${result.apiKey.slice(0, 4)}...${result.apiKey.slice(-4)}`
-        : '',
+      apiKey: result.apiKey ? `${result.apiKey.slice(0, 4)}...${result.apiKey.slice(-4)}` : '',
       apiKeyFingerprint: fingerprint(result.apiKey),
       endpointFingerprint: fingerprint(result.endpointId),
     };

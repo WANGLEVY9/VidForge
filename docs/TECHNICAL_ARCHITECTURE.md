@@ -34,6 +34,7 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 **Core Business Value**: Reduce merchant video production time from hours to minutes, with zero technical expertise required, while maintaining creative control through AI-assisted workflows.
 
 **Key Capabilities**:
+
 - Multi-type material management with AI-powered tagging (three-layer taxonomy) and multi-dimensional retrieval (keyword / tag filter / vector similarity / sort)
 - Intelligent script generation with RAG-enhanced trending video references and a visual "trend library" drawer
 - One-click video creation with shot-level intervention (add/delete/duplicate/reorder/regenerate)
@@ -132,33 +133,33 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 
 ## 3. Technology Stack
 
-| Layer | Technology | Version | Purpose |
-|-------|-----------|---------|---------|
-| **Frontend** | React | 18.x | UI framework |
-| | TypeScript | 5.x | Type safety |
-| | Vite | 5.x | Build tool / HMR |
-| | Ant Design | 5.x | Component library (full theme adaptation) |
-| | ECharts | 5.x | Data visualization (8 chart types) |
-| | Zustand | 4.x | State management (6 stores) |
-| | Socket.IO Client | 4.x | Real-time updates |
-| | @dnd-kit | 6.x | Drag-and-drop storyboard |
-| **Backend** | NestJS | 10.x | Node.js framework |
-| | TypeScript | 5.x | Type safety |
-| | TypeORM | 0.3.x | ORM / database |
-| | PostgreSQL | 14+ | Primary database |
-| | pgvector | - | Vector similarity search |
-| | Redis | 7+ | Cache / Queue / PubSub |
-| | BullMQ | 5.x | Task queue (4 queues, dual-mode) |
-| | Socket.IO | 4.x | WebSocket |
-| | LangChain / LangGraph | 1.x | Agent orchestration |
-| | FFmpeg | 5+ | Media processing (spawn-based) |
-| **AI** | Volcengine ARK Doubao-Seed-2.0-pro | - | Text generation / Vision analysis |
-| | Volcengine ARK Doubao-Seedance-1.5-pro | - | Video generation |
-| | BGE-M3 (Ollama, optional) | - | Text embedding |
-| **DevOps** | pnpm | 8+ | Package manager |
-| | Railway | - | Backend hosting |
-| | Vercel | - | Frontend hosting |
-| | ESLint / Prettier / StyleLint | - | Code quality |
+| Layer        | Technology                             | Version | Purpose                                   |
+| ------------ | -------------------------------------- | ------- | ----------------------------------------- |
+| **Frontend** | React                                  | 18.x    | UI framework                              |
+|              | TypeScript                             | 5.x     | Type safety                               |
+|              | Vite                                   | 5.x     | Build tool / HMR                          |
+|              | Ant Design                             | 5.x     | Component library (full theme adaptation) |
+|              | ECharts                                | 5.x     | Data visualization (8 chart types)        |
+|              | Zustand                                | 4.x     | State management (6 stores)               |
+|              | Socket.IO Client                       | 4.x     | Real-time updates                         |
+|              | @dnd-kit                               | 6.x     | Drag-and-drop storyboard                  |
+| **Backend**  | NestJS                                 | 10.x    | Node.js framework                         |
+|              | TypeScript                             | 5.x     | Type safety                               |
+|              | TypeORM                                | 0.3.x   | ORM / database                            |
+|              | PostgreSQL                             | 14+     | Primary database                          |
+|              | pgvector                               | -       | Vector similarity search                  |
+|              | Redis                                  | 7+      | Cache / Queue / PubSub                    |
+|              | BullMQ                                 | 5.x     | Task queue (4 queues, dual-mode)          |
+|              | Socket.IO                              | 4.x     | WebSocket                                 |
+|              | LangChain / LangGraph                  | 1.x     | Agent orchestration                       |
+|              | FFmpeg                                 | 5+      | Media processing (spawn-based)            |
+| **AI**       | Volcengine ARK Doubao-Seed-2.0-pro     | -       | Text generation / Vision analysis         |
+|              | Volcengine ARK Doubao-Seedance-1.5-pro | -       | Video generation                          |
+|              | BGE-M3 (Ollama, optional)              | -       | Text embedding                            |
+| **DevOps**   | pnpm                                   | 8+      | Package manager                           |
+|              | Railway                                | -       | Backend hosting                           |
+|              | Vercel                                 | -       | Frontend hosting                          |
+|              | ESLint / Prettier / StyleLint          | -       | Code quality                              |
 
 ---
 
@@ -169,6 +170,7 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 **Purpose**: Provide a structured asset library for AIGC video generation, handling ingestion, analysis, and retrieval of visual/audio assets.
 
 **Core Entities**:
+
 - `Material`: Image, video, or audio asset with metadata and three-layer tags
   - `productTags`: Product-level (name, category, brand, colors, material)
   - `videoTags`: Video-level (summary, scene, shot, composition, lighting, style, mood)
@@ -176,6 +178,7 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
   - `embedding`: pgvector 1024-dim vector for semantic similarity search (`select: false`)
 
 **Upload Pipeline**:
+
 ```
 User file → Multer FileInterceptor → diskStorage (randomUUID filename)
   → MIME filter (image/jpeg|png|webp, video/mp4, audio/mpeg|mp3)
@@ -184,13 +187,15 @@ User file → Multer FileInterceptor → diskStorage (randomUUID filename)
   → Auto-enqueue analyze job (queue or inline fallback)
   → Return Material
 ```
+
 - Files stored on disk under `storage/uploads/`
 - URL prefix: `/static/uploads/` → served by NestJS static assets middleware
 - Production target: migrate to object storage (Aliyun OSS / Volcengine TOS)
 
 **Analysis Pipeline**:
 
-*Image analysis*:
+_Image analysis_:
+
 ```
 Material URL → ArKVisionService.understandImage()
   → ARK Doubao-Seed-2.0-pro multimodal vision
@@ -199,7 +204,8 @@ Material URL → ArKVisionService.understandImage()
   → Fallback: heuristic product/video/clip tags
 ```
 
-*Video analysis*:
+_Video analysis_:
+
 ```
 Material URL → downloadFile() (supports data:/http/https/local)
   → FfmpegService.extractKeyframes(3 frames)
@@ -211,6 +217,7 @@ Material URL → downloadFile() (supports data:/http/https/local)
 ```
 
 **Retrieval System**:
+
 - **Keyword search**: PostgreSQL `LIKE` on name/tags
 - **Tag filtering**: Three-layer tag filter (productCategory, videoMood, clipObjects)
 - **Vector similarity**: pgvector `<=>` cosine similarity (requires extension)
@@ -219,18 +226,19 @@ Material URL → downloadFile() (supports data:/http/https/local)
 
 **API Endpoints**:
 
-| Method | Path | Description | New in v2.3 |
-|--------|------|-------------|-------------|
-| GET | `/api/material` | List materials (paginated, sortable, filterable) | `orderBy`, `orderDirection` params |
-| POST | `/api/material` | Create material record (JSON) | — |
-| POST | `/api/material/upload` | Upload file (multipart) | ✅ New in v2.2 |
-| GET | `/api/material/:id` | Get material detail | — |
-| DELETE | `/api/material/:id` | Delete material | — |
-| PATCH | `/api/material/:id/analyze` | Trigger AI tag analysis | — |
-| GET | `/api/material/search/tags` | Tag-based search (product/video/clip) | — |
-| POST | `/api/material/semantic-search` | Vector similarity search | — |
+| Method | Path                            | Description                                      | New in v2.3                        |
+| ------ | ------------------------------- | ------------------------------------------------ | ---------------------------------- |
+| GET    | `/api/material`                 | List materials (paginated, sortable, filterable) | `orderBy`, `orderDirection` params |
+| POST   | `/api/material`                 | Create material record (JSON)                    | —                                  |
+| POST   | `/api/material/upload`          | Upload file (multipart)                          | ✅ New in v2.2                     |
+| GET    | `/api/material/:id`             | Get material detail                              | —                                  |
+| DELETE | `/api/material/:id`             | Delete material                                  | —                                  |
+| PATCH  | `/api/material/:id/analyze`     | Trigger AI tag analysis                          | —                                  |
+| GET    | `/api/material/search/tags`     | Tag-based search (product/video/clip)            | —                                  |
+| POST   | `/api/material/semantic-search` | Vector similarity search                         | —                                  |
 
 **Queue Integration**:
+
 - Queue name: `material-analyze`
 - Processor: `MaterialAnalyzeProcessor` (via `ModuleRef` lazy resolution to avoid circular deps)
 - Auto-enqueue after upload; fallback to inline execution when Redis unavailable
@@ -243,6 +251,7 @@ Material URL → downloadFile() (supports data:/http/https/local)
 **Purpose**: Automate the production of e-commerce video scripts using trending video references, product information, and configurable creative templates.
 
 **Core Entities**:
+
 - `Script`: Generated video script with narrative framework and storyboard
   - `shots[]`: Array of shot objects with description, voiceover, camera movement, duration, BGM, subtitles
   - `voiceover`: TTS voiceover configuration
@@ -251,6 +260,7 @@ Material URL → downloadFile() (supports data:/http/https/local)
   - `ragReferences`: Trending video references used
 
 **Key Flows**:
+
 1. **Script Generation** (`POST /api/script/generate`):
    - Receives: product name, category, selling points, target audience, style, duration
    - RAG enhancement: searches seed hit scripts by category + style → injects top-2 matches as few-shot examples
@@ -265,6 +275,7 @@ Material URL → downloadFile() (supports data:/http/https/local)
 3. **Agent-Driven Script Generation**: Via LangGraph pipeline (see Agent Orchestration)
 
 **Script Generation Prompt Architecture**:
+
 ```
 System: You are an e-commerce video script expert.
   - Rules: output strict JSON, avoid forbidden words, 3 shots max (hook/demo/cta)
@@ -283,12 +294,14 @@ Knowledge: Product space selling points, brand voice, best practices
 **Purpose**: Transform scripts and materials into complete videos with real-time progress tracking and shot-level editing.
 
 **Core Entities**:
+
 - `CreationTask`: Video generation task with status lifecycle
   - Status: `PENDING → PROCESSING → GENERATING_ASSETS → RENDERING → SUCCESS/FAILED`
   - Shots: Individual video segments with generation state
   - Progress: Overall and per-shot progress percentages
 
 **Key Flows**:
+
 1. **Manual Creation**: User inputs prompt → system generates storyboard via LLM → user edits shots → "Start Generation" triggers video pipeline
 2. **AI One-Click**: Agent pipeline (material_analysis → script_generation → video_composition → quality_control)
 3. **Shot-Level Intervention**:
@@ -307,6 +320,7 @@ Knowledge: Product space selling points, brand voice, best practices
    - Step 7: Publish to storage outputs
 
 **Real-Time Progress**:
+
 - WebSocket (Socket.IO, `/creation` namespace): events for `progress`, `shot-progress`, `complete`, `error`
 - REST polling fallback: 5-second interval fallback
 - Per-shot status tracking with detailed progress messages
@@ -320,6 +334,7 @@ Knowledge: Product space selling points, brand voice, best practices
 | GIF | 480p | 9:16 | Social |
 
 **Error Handling**:
+
 - Single shot failure → other shots continue; failed shot falls back to first successful shot
 - Compose failure → falls back to first generated shot URL
 - Subtitle burn failure → returns un-subtitled video
@@ -334,6 +349,7 @@ Knowledge: Product space selling points, brand voice, best practices
 **Framework**: LangGraph (`@langchain/langgraph`) `StateGraph`
 
 **Pipeline**:
+
 ```
 User Input → Orchestrator → Material Analysis → Script Generation → Video Composition → Quality Check
                                 ↑                    |                    |                  |
@@ -373,11 +389,13 @@ User Input → Orchestrator → Material Analysis → Script Generation → Vide
    - Generates structured feedback for self-reflection loop
 
 **Self-Learning Flywheel** (`orchestrator.service.ts`):
+
 - High-quality results (score >= 85) are persisted to `ProductSpace.knowledge.bestPractices`
 - Subsequent generations inject these as few-shot examples
 - Feedback loop creates a continuously improving system
 
 **Trace System**:
+
 - Every agent pushes structured trace entries: `{ span, startedAt, endedAt, latencyMs, status, summary, errorMessage }`
 - Traces stored in `trace_spans` table for post-hoc analysis
 - Exposed via `/api/analytics/traces` endpoint
@@ -390,15 +408,15 @@ User Input → Orchestrator → Material Analysis → Script Generation → Vide
 
 **Available Endpoints**:
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/analytics/overview` | Summary cards (totals, trends, MoM changes) |
-| GET | `/api/analytics/trends` | Time-series production data (7/30/90 days) |
-| GET | `/api/analytics/distribution` | Category/style distribution |
-| GET | `/api/analytics/queue` | BullMQ queue status (depth, throughput) |
-| GET | `/api/analytics/attribution` | Factor attribution analysis (style × status heatmap) |
-| GET | `/api/analytics/traces` | Agent execution traces (waterfall) |
-| GET | `/api/analytics/cost` | AI cost overview (tokens, cache hit rate, latency) |
+| Method | Path                          | Description                                          |
+| ------ | ----------------------------- | ---------------------------------------------------- |
+| GET    | `/api/analytics/overview`     | Summary cards (totals, trends, MoM changes)          |
+| GET    | `/api/analytics/trends`       | Time-series production data (7/30/90 days)           |
+| GET    | `/api/analytics/distribution` | Category/style distribution                          |
+| GET    | `/api/analytics/queue`        | BullMQ queue status (depth, throughput)              |
+| GET    | `/api/analytics/attribution`  | Factor attribution analysis (style × status heatmap) |
+| GET    | `/api/analytics/traces`       | Agent execution traces (waterfall)                   |
+| GET    | `/api/analytics/cost`         | AI cost overview (tokens, cache hit rate, latency)   |
 
 All endpoints return empty fallbacks on failure (soft-fail pattern).
 AnalyticsService injects `QueueRunnerService` and `TraceService` — both from `@Global()` modules.
@@ -410,6 +428,7 @@ AnalyticsService injects `QueueRunnerService` and `TraceService` — both from `
 **Purpose**: Handle video export with format transcoding and delivery.
 
 **Key Flows**:
+
 1. Export task creation → download source → FFmpeg transcode → publish → completion notification
 2. Supports per-shot individual download
 3. Multiple export formats and resolutions (see Creation Module)
@@ -422,30 +441,31 @@ AnalyticsService injects `QueueRunnerService` and `TraceService` — both from `
 
 ### Volcengine ARK API
 
-| Model | Type | Endpoint ID | Rate Limit | Usage |
-|-------|------|-------------|------------|-------|
-| Doubao-Seed-2.0-pro | Text / Vision | `ep-20260514115629-vhldw` | 100RPM / 50WTPM | Script generation, vision analysis, quality scoring, agent reasoning |
-| Doubao-Seedance-1.5-pro | Video | `ep-20260514120705-pqv86` | 5 concurrent | Video shot generation |
+| Model                   | Type          | Endpoint ID               | Rate Limit      | Usage                                                                |
+| ----------------------- | ------------- | ------------------------- | --------------- | -------------------------------------------------------------------- |
+| Doubao-Seed-2.0-pro     | Text / Vision | `ep-20260514115629-vhldw` | 100RPM / 50WTPM | Script generation, vision analysis, quality scoring, agent reasoning |
+| Doubao-Seedance-1.5-pro | Video         | `ep-20260514120705-pqv86` | 5 concurrent    | Video shot generation                                                |
 
 ### API Configuration
 
 The ARK configuration system supports three-tier key resolution:
+
 1. **Environment variables** (highest priority): `ARK_TEXT_PRIMARY_API_KEY`, `ARK_VIDEO_PRIMARY_API_KEY`
 2. **Built-in defaults**: Hardcoded in `ark.config.ts` for local development
-3. **Dead key blacklist**: Known invalid keys auto-skip to fallback (`KNOWN_DEAD_KEYS`)
+3. **Credential isolation**: API credentials are injected through environment variables or deployment secrets and are never committed to the repository.
 
 ### Integration Points
 
-| Service | AI Model | Function |
-|---------|----------|----------|
-| `ArkTextService` | Doubao-Seed-2.0-pro | Chat completion for script generation |
+| Service            | AI Model                         | Function                                            |
+| ------------------ | -------------------------------- | --------------------------------------------------- |
+| `ArkTextService`   | Doubao-Seed-2.0-pro              | Chat completion for script generation               |
 | `ArkVisionService` | Doubao-Seed-2.0-pro (multimodal) | Image/video keyframe understanding + tag generation |
-| `ArkVideoService` | Doubao-Seedance-1.5-pro | Video shot generation + async task polling |
-| `QualityAgent` | Doubao-Seed-2.0-pro | Consistency/hook score evaluation |
-| `ScriptAgent` | Doubao-Seed-2.0-pro | Script generation with ARK + self-reflection |
-| `BgmService` | Local file selection | BGM selection by style (8 categories) |
-| `TtsService` | Volcengine OpenSpeech / FFmpeg | Voiceover synthesis (silence fallback) |
-| Embedding | BGE-M3 (Ollama, optional) | Material vector embeddings for pgvector |
+| `ArkVideoService`  | Doubao-Seedance-1.5-pro          | Video shot generation + async task polling          |
+| `QualityAgent`     | Doubao-Seed-2.0-pro              | Consistency/hook score evaluation                   |
+| `ScriptAgent`      | Doubao-Seed-2.0-pro              | Script generation with ARK + self-reflection        |
+| `BgmService`       | Local file selection             | BGM selection by style (8 categories)               |
+| `TtsService`       | Volcengine OpenSpeech / FFmpeg   | Voiceover synthesis (silence fallback)              |
+| Embedding          | BGE-M3 (Ollama, optional)        | Material vector embeddings for pgvector             |
 
 ### AI Prompt Strategy
 
@@ -474,14 +494,14 @@ The ARK configuration system supports three-tier key resolution:
 
 ### State Management (Zustand)
 
-| Store | Purpose | Persistence |
-|-------|---------|-------------|
-| `useAuthStore` | Auth token, user info, login/logout | `localStorage` |
-| `useAppStore` | Sidebar collapse, global loading | Session |
-| `useSpaceStore` | Active workspace, workspace list | `localStorage` |
-| `useStoryboardStore` | Shot CRUD, reorder, selection | Memory (client-only) |
-| `useScriptHandoffStore` | Cross-page script transfer | Memory |
-| `useNotificationStore` | Notifications with polling | Memory |
+| Store                   | Purpose                             | Persistence          |
+| ----------------------- | ----------------------------------- | -------------------- |
+| `useAuthStore`          | Auth token, user info, login/logout | `localStorage`       |
+| `useAppStore`           | Sidebar collapse, global loading    | Session              |
+| `useSpaceStore`         | Active workspace, workspace list    | `localStorage`       |
+| `useStoryboardStore`    | Shot CRUD, reorder, selection       | Memory (client-only) |
+| `useScriptHandoffStore` | Cross-page script transfer          | Memory               |
+| `useNotificationStore`  | Notifications with polling          | Memory               |
 
 ### Key UX Features
 
@@ -519,16 +539,16 @@ The ARK configuration system supports three-tier key resolution:
 
 ### Data Visualization (ECharts)
 
-| Chart | Widget | Data Source |
-|-------|--------|-------------|
-| Line/Bar/Area | TrendChart | `/api/analytics/trends` |
-| Nightingale Rose | DistributionChart | `/api/analytics/distribution` |
-| Radar | ModelComparisonChart | `/api/analytics/distribution` |
-| Stacked Bar | ModelCategoryChart | `/api/analytics/attribution` |
-| Heatmap | FactorAttributionChart | `/api/analytics/attribution` |
-| Waterfall | TraceTimeline | `/api/analytics/traces` |
-| Progress Bar | QueueStatus | `/api/analytics/queue` |
-| Stat Cards | OverviewCards + CostOverviewCard | `/api/analytics/overview`, `/api/analytics/cost` |
+| Chart            | Widget                           | Data Source                                      |
+| ---------------- | -------------------------------- | ------------------------------------------------ |
+| Line/Bar/Area    | TrendChart                       | `/api/analytics/trends`                          |
+| Nightingale Rose | DistributionChart                | `/api/analytics/distribution`                    |
+| Radar            | ModelComparisonChart             | `/api/analytics/distribution`                    |
+| Stacked Bar      | ModelCategoryChart               | `/api/analytics/attribution`                     |
+| Heatmap          | FactorAttributionChart           | `/api/analytics/attribution`                     |
+| Waterfall        | TraceTimeline                    | `/api/analytics/traces`                          |
+| Progress Bar     | QueueStatus                      | `/api/analytics/queue`                           |
+| Stat Cards       | OverviewCards + CostOverviewCard | `/api/analytics/overview`, `/api/analytics/cost` |
 
 ---
 
@@ -538,17 +558,18 @@ The ARK configuration system supports three-tier key resolution:
 
 **Key Entities**:
 
-| Entity | Table | Key Fields |
-|--------|-------|------------|
-| User | `users` | email, password, avatar, role |
-| ProductSpace | `product_spaces` | name, category, knowledge (JSONB) |
-| Material | `materials` | type, url, tags (JSONB), productTags (JSONB), videoTags (JSONB), clipTags (JSONB), embedding (vector(1024), optional), metadata (JSONB) |
-| Script | `scripts` | title, content (JSONB shots), voiceover, bgmSuggestion, tags, compliance, duration |
-| CreationTask | `creation_tasks` | status, progress, storyboard (JSONB), result (JSONB), agentTrace |
-| ExportTask | `export_tasks` | format, resolution, status, progress, result (JSONB) |
-| TraceSpan | `trace_spans` | span, taskId, startedAt, endedAt, latencyMs, status, summary, errorMessage |
+| Entity       | Table            | Key Fields                                                                                                                              |
+| ------------ | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| User         | `users`          | email, password, avatar, role                                                                                                           |
+| ProductSpace | `product_spaces` | name, category, knowledge (JSONB)                                                                                                       |
+| Material     | `materials`      | type, url, tags (JSONB), productTags (JSONB), videoTags (JSONB), clipTags (JSONB), embedding (vector(1024), optional), metadata (JSONB) |
+| Script       | `scripts`        | title, content (JSONB shots), voiceover, bgmSuggestion, tags, compliance, duration                                                      |
+| CreationTask | `creation_tasks` | status, progress, storyboard (JSONB), result (JSONB), agentTrace                                                                        |
+| ExportTask   | `export_tasks`   | format, resolution, status, progress, result (JSONB)                                                                                    |
+| TraceSpan    | `trace_spans`    | span, taskId, startedAt, endedAt, latencyMs, status, summary, errorMessage                                                              |
 
 **Vector Search**: pgvector extension enables cosine similarity search via `<=>` operator on `embedding` column. Requires manual extension setup:
+
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "embedding" vector(1024);
@@ -594,21 +615,22 @@ ALTER TABLE materials ADD COLUMN IF NOT EXISTS "embedding" vector(1024);
 
 ### Environment Variables
 
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `DATABASE_URL` | Yes | PostgreSQL connection |
-| `REDIS_URL` | No (falls back to in-process) | Queue/cache |
-| `JWT_SECRET` | Yes | Auth signing |
-| `ARK_TEXT_PRIMARY_ENDPOINT_ID` | No (has builtin) | Text model endpoint |
-| `ARK_TEXT_PRIMARY_API_KEY` | No (has builtin) | Text model API key |
-| `ARK_VIDEO_PRIMARY_ENDPOINT_ID` | No (has builtin) | Video model endpoint |
-| `ARK_VIDEO_PRIMARY_API_KEY` | No (has builtin) | Video model API key |
-| `WEB_BASE_URL` | Yes | CORS allowed origin |
-| `NODE_ENV` | Yes | Environment flag |
+| Variable                        | Required                      | Purpose               |
+| ------------------------------- | ----------------------------- | --------------------- |
+| `DATABASE_URL`                  | Yes                           | PostgreSQL connection |
+| `REDIS_URL`                     | No (falls back to in-process) | Queue/cache           |
+| `JWT_SECRET`                    | Yes                           | Auth signing          |
+| `ARK_TEXT_PRIMARY_ENDPOINT_ID`  | No (has builtin)              | Text model endpoint   |
+| `ARK_TEXT_PRIMARY_API_KEY`      | No (has builtin)              | Text model API key    |
+| `ARK_VIDEO_PRIMARY_ENDPOINT_ID` | No (has builtin)              | Video model endpoint  |
+| `ARK_VIDEO_PRIMARY_API_KEY`     | No (has builtin)              | Video model API key   |
+| `WEB_BASE_URL`                  | Yes                           | CORS allowed origin   |
+| `NODE_ENV`                      | Yes                           | Environment flag      |
 
 ### Graceful Degradation
 
 The system auto-detects missing dependencies and degrades gracefully:
+
 - **No Redis**: BullMQ falls back to in-process task execution (4 queues all covered)
 - **No ARK API key**: Script generation returns template-based fallback; material analysis returns heuristic tags
 - **No pgvector**: Vector search falls back to `ILIKE` text search
@@ -620,16 +642,19 @@ The system auto-detects missing dependencies and degrades gracefully:
 ## 9. Security & Compliance
 
 ### Authentication
+
 - JWT-based auth with bcrypt password hashing
 - Route guards (`RequireAuth`, `JwtAuthGuard`) on all protected routes
 - Token stored in `localStorage` with auto-refresh on 401 redirect
 
 ### Authorization
+
 - ProductSpace-level isolation: all data queries filtered by `productSpaceId`
 - User-scoped analytics: metrics calculated per authenticated user
 - Material ownership enforcement: `findOne` validates `material.userId === userId`
 
 ### Compliance System (`ComplianceService`)
+
 - Dictionary-based content screening covering 5 categories:
   - Advertising law prohibited terms (绝对化用语, 极限词)
   - Medical claim violations (医疗保健功效)
@@ -641,6 +666,7 @@ The system auto-detects missing dependencies and degrades gracefully:
 - Scoring: compliance score contributes 20% to Agent quality evaluation
 
 ### API Security
+
 - CORS whitelist (configurable via `WEB_BASE_URL`, supports `*.vercel.app` wildcard)
 - Swagger docs behind JWT auth in production
 - Input validation via `class-validator` on all DTOs
@@ -649,6 +675,7 @@ The system auto-detects missing dependencies and degrades gracefully:
 - Rate limiting: 30 req/10s short burst + 100 req/60s sustained (ThrottlerGuard)
 
 ### Privacy
+
 - `PrivacyConsent` first-use dialog (analytics, drafts, logging toggles)
 - `PrivacySettings` panel: data retention, export, local data clearing
 - Configurable consent options stored in localStorage
@@ -659,13 +686,13 @@ The system auto-detects missing dependencies and degrades gracefully:
 
 ### Code Quality Tooling
 
-| Tool | Purpose | Configuration |
-|------|---------|---------------|
-| ESLint | TypeScript/React linting | `.eslintrc.cjs` — recommended configs |
-| Prettier | Code formatting | `.prettierrc` — single quotes, 100 print width |
-| StyleLint | CSS/Less linting | `.stylelintrc.cjs` — standard config |
-| Husky | Git hooks | Configured in `package.json` (pre-commit lint-staged) |
-| Lint-staged | Stage-specific linting | TS/TSX → ESLint + Prettier, CSS → StyleLint |
+| Tool        | Purpose                  | Configuration                                         |
+| ----------- | ------------------------ | ----------------------------------------------------- |
+| ESLint      | TypeScript/React linting | `.eslintrc.cjs` — recommended configs                 |
+| Prettier    | Code formatting          | `.prettierrc` — single quotes, 100 print width        |
+| StyleLint   | CSS/Less linting         | `.stylelintrc.cjs` — standard config                  |
+| Husky       | Git hooks                | Configured in `package.json` (pre-commit lint-staged) |
+| Lint-staged | Stage-specific linting   | TS/TSX → ESLint + Prettier, CSS → StyleLint           |
 
 ### CI Pipeline Status
 
@@ -684,31 +711,37 @@ The system auto-detects missing dependencies and degrades gracefully:
 ## 11. Observability
 
 ### Logging
+
 - NestJS Logger across all services with structured context identifiers
 - ARK API call logging with timing, model, and error capture
 - Queue job lifecycle logging (enqueue, start, complete, fail)
 
 ### Task Tracing
+
 - Agent trace spans with timing: `{ span, startedAt, endedAt, latencyMs, status, summary }`
 - Trace storage in `trace_spans` table for waterfall analysis
 - Trace query API for performance analysis and cost attribution
 
 ### Health Check
+
 - `GET /api/health`: Returns server status (ok), timestamp (ISO), and uptime (seconds)
 - Railway uses this for automatic health monitoring and restart
 
 ### ARK Diagnostics
+
 - `GET /api/ai/ark/diagnose`: Pings all ARK endpoints with current credentials
 - Returns per-model status: endpoint, key source, connectivity, latency, sample response
 - Key fingerprinting: checks length, masking, known issues (whitespace, quotes)
 - Frontend diagnostics panel for user-side troubleshooting
 
 ### Queue Monitoring
+
 - BullMQ queue metrics: depth, active workers, waiting tasks, average wait time, throughput
 - Frontend `QueueStatus` component with 10-second polling
 - Cost overview: total calls, tokens, cost cents, cache hit rate, avg latency
 
 ### Cost Tracking
+
 - Real-time AI cost aggregation in `TraceService.overview()`
 - Dashboard `CostOverviewCard` with 30-second polling
 - Metrics: total API calls, total tokens consumed, estimated cost (cents), cache hit rate, average latency (ms)
@@ -722,8 +755,8 @@ The system auto-detects missing dependencies and degrades gracefully:
 
 ### Changelog
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 2.0 | 2026-06-06 | Initial consolidation from multiple docs |
-| 2.2 | 2026-06-06 | Updated for P0 fixes: multer upload, video analysis, embedding column, retryCount fix |
-| 2.2+ | 2026-06-06 | Updated for P1: sorting, tag filters, queue processor, trend library, UI design system |
+| Version | Date       | Changes                                                                                |
+| ------- | ---------- | -------------------------------------------------------------------------------------- |
+| 2.0     | 2026-06-06 | Initial consolidation from multiple docs                                               |
+| 2.2     | 2026-06-06 | Updated for P0 fixes: multer upload, video analysis, embedding column, retryCount fix  |
+| 2.2+    | 2026-06-06 | Updated for P1: sorting, tag filters, queue processor, trend library, UI design system |

@@ -1,0 +1,32 @@
+name: Bug report
+description: 报告可复现的问题
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      description: 请清晰描述实际行为与预期行为。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 环境
+      placeholder: macOS/Linux, Node version, browser
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: 安全确认
+      options:
+        - label: 我没有在 Issue 中包含 API Key、密码、令牌或用户数据。
+          required: true

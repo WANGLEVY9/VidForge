@@ -23,7 +23,6 @@ import {
   ExperimentOutlined,
   ReloadOutlined,
   ThunderboltOutlined,
-  WarningFilled,
 } from '@ant-design/icons';
 import {
   aiApi,
@@ -56,15 +55,9 @@ const SOURCE_META: Record<NonNullable<ArkConfigPublic['apiKeySource']>, SourceTa
   },
   builtin: {
     color: 'default',
-    label: '内置默认',
+    label: '未配置默认',
     icon: <ExperimentOutlined />,
-    desc: '使用代码硬编码的默认值',
-  },
-  'builtin-fallback': {
-    color: 'orange',
-    label: '黑名单回落',
-    icon: <WarningFilled />,
-    desc: 'env 上的 key 命中失效黑名单,已自动回落到内置',
+    desc: '公开仓库不提供默认凭证',
   },
 };
 
@@ -138,7 +131,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
   const handleClearOverride = async (modelKey: string) => {
     Modal.confirm({
       title: `清除 [${modelKey}] 的 DB override?`,
-      content: '清除后该模型将回落到 env / 代码内置默认值,请确认。',
+      content: '清除后该模型将回落到环境变量配置，请确认。',
       okText: '清除',
       okButtonProps: { danger: true },
       cancelText: '取消',
@@ -180,9 +173,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
   const video = configs.find((c) => c.key === 'video-primary');
 
   const overallStatus = useMemo(() => {
-    const hasFallback = configs.some((c) => c.apiKeySource === 'builtin-fallback');
     if (!configs.length) return { ok: false, color: 'default', label: '未加载' };
-    if (hasFallback) return { ok: true, color: 'orange', label: '已回落到内置' };
     return { ok: true, color: 'success', label: 'API 已连接' };
   }, [configs]);
 
@@ -249,7 +240,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
         <Paragraph style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
           管理 VidForge 调用的火山方舟 ARK 模型。修改后会写入数据库 (
           <code>ark_model_overrides</code>),立即对所有用户生效;清除则回落到环境变量 /
-          代码内置默认值。
+          环境变量或数据库中的配置。
         </Paragraph>
 
         {pingState.result && (
@@ -282,11 +273,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
                 size="small"
                 title={
                   <Space>
-                    {cfg.apiKeySource === 'builtin-fallback' ? (
-                      <WarningFilled style={{ color: '#f59e0b' }} />
-                    ) : (
-                      <CheckCircleFilled style={{ color: '#10b981' }} />
-                    )}
+                    <CheckCircleFilled style={{ color: '#10b981' }} />
                     <span>{cfg.name}</span>
                     <Tag color={meta.color} icon={meta.icon}>
                       {meta.label}
@@ -365,23 +352,6 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
                     </Descriptions.Item>
                   )}
                 </Descriptions>
-
-                {cfg.apiKeySource === 'builtin-fallback' && cfg.blockedEnvKey && (
-                  <Alert
-                    type="warning"
-                    showIcon
-                    icon={<WarningFilled />}
-                    style={{ marginTop: 12 }}
-                    message="env 上的 key 已被屏蔽"
-                    description={
-                      <span style={{ fontSize: 12 }}>
-                        检测到环境变量上的 key <Text code>{cfg.blockedEnvKey}</Text>{' '}
-                        命中失效黑名单,已自动回落到内置默认值。建议从部署平台删除该条 env
-                        以彻底清理。
-                      </span>
-                    }
-                  />
-                )}
               </Card>
             );
           })}
@@ -400,7 +370,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
               · DB 中存储为明文,生产环境建议结合 KMS / 密钥管理服务
             </Text>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              · 优先级:DB override &gt; env(非黑名单) &gt; 代码内置默认
+              · 优先级:DB override &gt; env；公开仓库不包含默认凭证
             </Text>
           </Space>
         </Card>

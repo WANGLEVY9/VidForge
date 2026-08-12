@@ -16,6 +16,9 @@ build
 # IDE
 .vscode
 .idea
+.claude/settings.local.json
+.trae/
+.superpowers/
 *.swp
 *.swo
 *~
@@ -50,3 +53,6 @@ coverage
 *.png
 *.gif
 *.webp
+
+# Local project notes and generated deployment artifacts
+docs/memory/

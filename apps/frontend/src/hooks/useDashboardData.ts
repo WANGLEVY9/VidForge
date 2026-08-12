@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { analyticsApi, type OverviewData, type TrendPoint, type DistributionItem, type AttributionMatrix, type TraceItem } from '../../services/analytics';
-import { creationApi, type CreationTask } from '../../services/creation';
+import {
+  analyticsApi,
+  type OverviewData,
+  type TrendPoint,
+  type DistributionItem,
+  type AttributionMatrix,
+  type TraceItem,
+} from '../services/analytics';
+import { creationApi, type CreationTask } from '../services/creation';
 
 export interface DashboardDataState {
   overview: OverviewData | null;
@@ -46,7 +53,11 @@ const initialErrors = {
   recentTasks: false,
 };
 
-export function useDashboardData(spaceId?: string, period: string = '月', refreshIntervalMs: number = 30000) {
+export function useDashboardData(
+  spaceId?: string,
+  period: string = '月',
+  refreshIntervalMs: number = 30000
+) {
   const [state, setState] = useState<DashboardDataState>({
     overview: null,
     trends: [],
@@ -66,7 +77,7 @@ export function useDashboardData(spaceId?: string, period: string = '月', refre
       errors: { ...initialErrors },
     }));
 
-    const periodMap: Record<string, string> = { '日': 'day', '周': 'week', '月': 'month' };
+    const periodMap: Record<string, string> = { 日: 'day', 周: 'week', 月: 'month' };
     const periodParam = periodMap[period] ?? 'month';
 
     const results = await Promise.allSettled([
