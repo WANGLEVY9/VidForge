@@ -413,14 +413,14 @@ DATABASE_URL=postgresql://user:password@host:5432/vidforge
 JWT_SECRET=<随机密钥>
 
 # 必填 — ARK 模型（火山方舟）
-ARK_TEXT_PRIMARY_ENDPOINT_ID=ep-20260514115629-vhldw
+ARK_TEXT_PRIMARY_ENDPOINT_ID=ep-your-text-endpoint
 ARK_TEXT_PRIMARY_API_KEY=ark-xxxxxxxx
-ARK_VIDEO_PRIMARY_ENDPOINT_ID=ep-20260514120705-pqv86
+ARK_VIDEO_PRIMARY_ENDPOINT_ID=ep-your-video-endpoint
 ARK_VIDEO_PRIMARY_API_KEY=ark-xxxxxxxx
 
 # 可选 — 阿里云 OSS（不配则用本地存储）
 OSS_REGION=oss-cn-guangzhou
-OSS_ACCESS_KEY_ID=REDACTED_ALIBABA_ACCESS_KEY_ID
+OSS_ACCESS_KEY_ID=<your_access_key_id>
 OSS_ACCESS_KEY_SECRET=<your_secret>
 OSS_BUCKET=vidforge-assets
 
