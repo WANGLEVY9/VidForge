@@ -29,6 +29,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
         name: Install dependencies
+      - run: pnpm audit --prod --audit-level=high
+        name: Audit production dependencies
       - run: pnpm --filter @vidforge/frontend lint
         name: Lint frontend
       - run: pnpm --filter @vidforge/backend lint
