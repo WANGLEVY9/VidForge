@@ -7,15 +7,17 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  
+
   // 启用CORS
   // 生产环境：从 WEB_BASE_URL 读取允许的来源（支持逗号分隔多个域名，未配置则放开 vercel.app/localhost）
   // 开发环境：放开本地 3000 端口
   const isProd = process.env.NODE_ENV === 'production';
   const allowedOrigins = isProd
-    ? (process.env.WEB_BASE_URL
-        ? process.env.WEB_BASE_URL.split(',').map((o) => o.trim()).filter(Boolean)
-        : [])
+    ? process.env.WEB_BASE_URL
+      ? process.env.WEB_BASE_URL.split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
+      : []
     : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 
   app.enableCors({
@@ -37,7 +39,7 @@ async function bootstrap() {
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
-    }),
+    })
   );
 
   // 全局前缀

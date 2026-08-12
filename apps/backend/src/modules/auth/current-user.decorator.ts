@@ -9,5 +9,5 @@ export const CurrentUser = createParamDecorator(
   (_: unknown, ctx: ExecutionContext): JwtPayload | undefined => {
     const req = ctx.switchToHttp().getRequest();
     return req.user as JwtPayload | undefined;
-  },
+  }
 );

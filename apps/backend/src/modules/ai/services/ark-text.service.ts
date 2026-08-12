@@ -29,7 +29,7 @@ export class ArkTextService {
   constructor(
     private readonly arkConfigService: ArkConfigService,
     private readonly cache: ArkResponseCacheService,
-    @Optional() private readonly traceService?: TraceService,
+    @Optional() private readonly traceService?: TraceService
   ) {}
 
   async chatCompletion(options: ChatCompletionOptions): Promise<any> {
@@ -98,17 +98,13 @@ export class ArkTextService {
     this.logger.debug(`发送文本请求: model=${endpointId}`);
 
     try {
-      const response = await axios.post(
-        `${ARK_BASE_URL}${ARK_API_PATHS.CHAT_COMPLETIONS}`,
-        body,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-          },
-          timeout: 120000,
+      const response = await axios.post(`${ARK_BASE_URL}${ARK_API_PATHS.CHAT_COMPLETIONS}`, body, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
         },
-      );
+        timeout: 120000,
+      });
 
       const data = response.data;
       const usage = data?.usage ?? {};
@@ -141,12 +137,11 @@ export class ArkTextService {
 
       return data;
     } catch (error: any) {
-      const errorMsg =
-        error?.response?.data?.error?.message || error?.message || '未知错误';
+      const errorMsg = error?.response?.data?.error?.message || error?.message || '未知错误';
       const status = error?.response?.status;
       const code = error?.code;
       this.logger.error(
-        `文本模型调用失败 status=${status ?? '-'} code=${code ?? '-'}: ${errorMsg}`,
+        `文本模型调用失败 status=${status ?? '-'} code=${code ?? '-'}: ${errorMsg}`
       );
       if (this.traceService && options.traceTaskId) {
         void this.traceService.recordSpan({

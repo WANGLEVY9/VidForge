@@ -90,7 +90,14 @@ export const MetricCard: React.FC<MetricCardProps> = React.memo(function MetricC
               {change} 较上月
             </Text>
           ) : (
-            <Text style={{ fontSize: 12, color: 'var(--text-tertiary)', display: 'block', marginTop: 4 }}>
+            <Text
+              style={{
+                fontSize: 12,
+                color: 'var(--text-tertiary)',
+                display: 'block',
+                marginTop: 4,
+              }}
+            >
               —
             </Text>
           )}

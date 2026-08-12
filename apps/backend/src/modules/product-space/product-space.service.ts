@@ -10,7 +10,7 @@ export class ProductSpaceService {
 
   constructor(
     @InjectRepository(ProductSpace)
-    private readonly repo: Repository<ProductSpace>,
+    private readonly repo: Repository<ProductSpace>
   ) {}
 
   /**
@@ -110,7 +110,7 @@ export class ProductSpaceService {
       hookType: string;
       qualityScore: number;
       summary: string;
-    },
+    }
   ): Promise<void> {
     if (sample.qualityScore < 85) return; // 低分不沉淀
     try {
@@ -136,7 +136,7 @@ export class ProductSpaceService {
       space.knowledge = { ...knowledge, bestPractices: next };
       await this.repo.save(space);
       this.logger.log(
-        `[learnFromHighScore] space=${spaceId} 新增高分案例(${sample.qualityScore}/100)`,
+        `[learnFromHighScore] space=${spaceId} 新增高分案例(${sample.qualityScore}/100)`
       );
     } catch (err: any) {
       this.logger.warn(`learnFromHighScore 失败: ${err?.message ?? err}`);

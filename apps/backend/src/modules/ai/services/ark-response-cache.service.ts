@@ -91,7 +91,9 @@ export class ArkResponseCacheService {
     entry.hitCount += 1;
     this.hitCount += 1;
     this.savedTokensTotal += entry.savedTokens;
-    this.logger.debug(`[cache HIT] key=${key.slice(0, 8)} 累计节省 ${this.savedTokensTotal} tokens`);
+    this.logger.debug(
+      `[cache HIT] key=${key.slice(0, 8)} 累计节省 ${this.savedTokensTotal} tokens`
+    );
     return entry.value;
   }
 
@@ -99,7 +101,7 @@ export class ArkResponseCacheService {
   set(
     input: { model: string; messages: any[]; temperature?: number; maxTokens?: number },
     value: any,
-    savedTokens = 0,
+    savedTokens = 0
   ): void {
     if (!this.shouldCache(input.temperature)) return;
 

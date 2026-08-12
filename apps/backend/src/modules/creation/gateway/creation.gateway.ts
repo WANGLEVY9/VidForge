@@ -25,7 +25,10 @@ import { Logger } from '@nestjs/common';
 @WebSocketGateway({
   cors: {
     // 与 main.ts 中 HTTP CORS 对齐：放开所有 *.vercel.app 子域 + 配置的 WEB_BASE_URL + 同源
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void
+    ) => {
       if (!origin) return callback(null, true);
       const allowed = (process.env.WEB_BASE_URL ?? '')
         .split(',')
@@ -60,7 +63,10 @@ export class CreationGateway implements OnGatewayConnection, OnGatewayDisconnect
     this.logger.log(`客户端 ${client.id} 订阅任务: ${taskId}`);
   }
 
-  emitShotProgress(taskId: string, data: { shotId: string; progress: number; status: string; message?: string }) {
+  emitShotProgress(
+    taskId: string,
+    data: { shotId: string; progress: number; status: string; message?: string }
+  ) {
     this.server.to(`task:${taskId}`).emit('shot-progress', data);
   }
 

@@ -30,7 +30,7 @@ export class SubtitleService {
    * 根据分镜列表构造字幕行
    */
   buildLinesFromShots(
-    shots: Array<{ caption?: string; voiceover?: string; duration?: number }>,
+    shots: Array<{ caption?: string; voiceover?: string; duration?: number }>
   ): SubtitleLine[] {
     const lines: SubtitleLine[] = [];
     let cursor = 0;

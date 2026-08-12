@@ -43,7 +43,7 @@ export class TraceService {
 
   constructor(
     @InjectRepository(TraceSpan)
-    private readonly repo: Repository<TraceSpan>,
+    private readonly repo: Repository<TraceSpan>
   ) {}
 
   /** 写入一条完整的 span(开始时间已知,直接终结) */
@@ -79,7 +79,7 @@ export class TraceService {
           costCents,
           cacheHit: input.cacheHit ?? false,
           metadata: input.metadata,
-        }),
+        })
       );
     } catch (err: any) {
       this.logger.warn(`Trace 写入失败: ${err?.message ?? err}`);
@@ -125,13 +125,15 @@ export class TraceService {
   }
 
   /** 聚合"按 task 分组的瀑布图"前 N 条 */
-  async listTaskWaterfalls(limit = 20): Promise<Array<{
-    taskId: string;
-    scope: string;
-    totalDurationMs: number;
-    totalCostCents: number;
-    spans: TraceSpan[];
-  }>> {
+  async listTaskWaterfalls(limit = 20): Promise<
+    Array<{
+      taskId: string;
+      scope: string;
+      totalDurationMs: number;
+      totalCostCents: number;
+      spans: TraceSpan[];
+    }>
+  > {
     // 取最近活动的 task IDs
     const recent = await this.repo
       .createQueryBuilder('s')
@@ -178,7 +180,7 @@ export class TraceService {
       const totalCostCents = todayList.reduce((s, x) => s + (x.costCents ?? 0), 0);
       const totalTokens = todayList.reduce(
         (s, x) => s + (x.promptTokens ?? 0) + (x.completionTokens ?? 0),
-        0,
+        0
       );
       const cacheHits = todayList.filter((x) => x.cacheHit).length;
       const cacheHitRate = totalCalls > 0 ? Math.round((cacheHits / totalCalls) * 1000) / 10 : 0;

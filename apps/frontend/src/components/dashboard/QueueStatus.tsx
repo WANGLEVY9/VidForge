@@ -63,10 +63,25 @@ export function QueueStatus() {
 
   const metrics: QueueMetric[] = [
     { label: '队列深度', value: String(data.depth), icon: <InboxOutlined />, color: '#6366f1' },
-    { label: '处理中', value: String(data.processing), icon: <LoadingOutlined />, color: '#10b981' },
+    {
+      label: '处理中',
+      value: String(data.processing),
+      icon: <LoadingOutlined />,
+      color: '#10b981',
+    },
     { label: '等待中', value: String(data.waiting), icon: <HourglassOutlined />, color: '#f59e0b' },
-    { label: '平均等待', value: `${data.avgWaitTime}s`, icon: <ClockCircleOutlined />, color: '#3b82f6' },
-    { label: '吞吐量', value: `${data.throughput}/分钟`, icon: <BarChartOutlined />, color: '#a855f7' },
+    {
+      label: '平均等待',
+      value: `${data.avgWaitTime}s`,
+      icon: <ClockCircleOutlined />,
+      color: '#3b82f6',
+    },
+    {
+      label: '吞吐量',
+      value: `${data.throughput}/分钟`,
+      icon: <BarChartOutlined />,
+      color: '#a855f7',
+    },
   ];
 
   return (
@@ -75,7 +90,14 @@ export function QueueStatus() {
       <div style={{ padding: 'var(--spacing-lg)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 4,
+              }}
+            >
               <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>队列利用率</Text>
               <Text style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
                 {utilization}%
@@ -84,9 +106,7 @@ export function QueueStatus() {
             <Progress
               percent={utilization}
               size="small"
-              strokeColor={
-                utilization > 80 ? '#ef4444' : utilization > 50 ? '#f59e0b' : '#10b981'
-              }
+              strokeColor={utilization > 80 ? '#ef4444' : utilization > 50 ? '#f59e0b' : '#10b981'}
               trailColor="var(--border-color)"
             />
           </div>

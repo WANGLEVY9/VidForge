@@ -27,7 +27,7 @@ export class CompositionAgentService {
   constructor(
     private readonly arkVideo: ArkVideoService,
     private readonly arkConfig: ArkConfigService,
-    private readonly composer: ComposerService,
+    private readonly composer: ComposerService
   ) {}
 
   async compose(state: AgentState): Promise<Partial<AgentState>> {
@@ -99,7 +99,9 @@ export class CompositionAgentService {
               prompt: this.buildShotPrompt(shot.description, shot.script, shot.cameraMovement),
               ratio: ratio as any,
               resolution: resolution as any,
-              firstFrameUrl: shot.materialId ? this.materialUrlOf(state, shot.materialId) : undefined,
+              firstFrameUrl: shot.materialId
+                ? this.materialUrlOf(state, shot.materialId)
+                : undefined,
               duration: shot.duration,
             });
             shot.arkTaskId = created.id;
@@ -112,7 +114,7 @@ export class CompositionAgentService {
             shot.errorMessage = msg;
             return { shotId: shot.id, error: msg };
           }
-        }),
+        })
       );
       shotResults.push(...results);
     }
@@ -191,7 +193,7 @@ export class CompositionAgentService {
 
   private async poll(arkTaskId: string): Promise<{ videoUrl: string }> {
     const startedAt = Date.now();
-    while (true) {
+    for (;;) {
       if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
         throw new Error('ARK 任务轮询超时');
       }

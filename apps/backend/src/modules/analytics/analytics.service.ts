@@ -37,7 +37,7 @@ export class AnalyticsService {
     @InjectRepository(CreationTask)
     private creationRepo: Repository<CreationTask>,
     private readonly queueRunner: QueueRunnerService,
-    private readonly traceService: TraceService,
+    private readonly traceService: TraceService
   ) {}
 
   // ─────────────────────────────────────────────
@@ -66,13 +66,14 @@ export class AnalyticsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayCreations = await safeCount(() =>
-      this.creationRepo.count({ where: { ...baseWhere, createdAt: MoreThanOrEqual(today) } }),
+      this.creationRepo.count({ where: { ...baseWhere, createdAt: MoreThanOrEqual(today) } })
     );
 
     const completed = await safeCount(() =>
-      this.creationRepo.count({ where: { ...baseWhere, status: 'completed' } }),
+      this.creationRepo.count({ where: { ...baseWhere, status: 'completed' } })
     );
-    const successRate = totalCreations > 0 ? Math.round((completed / totalCreations) * 1000) / 10 : 0;
+    const successRate =
+      totalCreations > 0 ? Math.round((completed / totalCreations) * 1000) / 10 : 0;
 
     // ── 真实环比(近 30 天 / 上个 30 天) ───────────
     const momChanges = await this.computeMomChanges(baseWhere);
@@ -134,7 +135,13 @@ export class AnalyticsService {
       };
     } catch (err: any) {
       this.logger.warn(`computeMomChanges 失败: ${err?.message ?? err}`);
-      return { materials: '+0%', scripts: '+0%', creations: '+0%', successRate: '+0%', avgDuration: '+0%' };
+      return {
+        materials: '+0%',
+        scripts: '+0%',
+        creations: '+0%',
+        successRate: '+0%',
+        avgDuration: '+0%',
+      };
     }
   }
 
@@ -182,7 +189,9 @@ export class AnalyticsService {
       const byDate = new Map<string, { count: number; success: number }>();
       for (const r of rows) {
         const key =
-          typeof r.date === 'string' ? r.date.slice(0, 10) : new Date(r.date).toISOString().slice(0, 10);
+          typeof r.date === 'string'
+            ? r.date.slice(0, 10)
+            : new Date(r.date).toISOString().slice(0, 10);
         byDate.set(key, { count: Number(r.count), success: Number(r.success) });
       }
 

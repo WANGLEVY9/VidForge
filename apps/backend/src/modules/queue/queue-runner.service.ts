@@ -23,7 +23,7 @@ export class QueueRunnerService {
     @InjectQueue(QUEUE_NAMES.CREATION_SHOT) private readonly shotQueue: Queue,
     @InjectQueue(QUEUE_NAMES.CREATION_COMPOSE) private readonly composeQueue: Queue,
     @InjectQueue(QUEUE_NAMES.EXPORT_ENCODE) private readonly exportQueue: Queue,
-    @InjectQueue(QUEUE_NAMES.MATERIAL_ANALYZE) private readonly materialQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.MATERIAL_ANALYZE) private readonly materialQueue: Queue
   ) {}
 
   /**
@@ -43,7 +43,7 @@ export class QueueRunnerService {
     } catch (err: any) {
       this.redisHealthy = false;
       this.logger.warn(
-        `队列 Redis 不可达 (${err?.message ?? err}),降级到进程内异步执行。生产环境务必配置 REDIS_URL。`,
+        `队列 Redis 不可达 (${err?.message ?? err}),降级到进程内异步执行。生产环境务必配置 REDIS_URL。`
       );
     }
     return this.redisHealthy;
@@ -62,7 +62,7 @@ export class QueueRunnerService {
     jobName: string,
     data: T,
     fallback: () => Promise<void>,
-    options?: { priority?: number; delay?: number; attempts?: number },
+    options?: { priority?: number; delay?: number; attempts?: number }
   ): Promise<{ jobId?: string; mode: 'queue' | 'inline' }> {
     const healthy = await this.isRedisHealthy();
     if (!healthy) {
@@ -102,13 +102,7 @@ export class QueueRunnerService {
     const result: Record<string, any> = {};
     for (const { name, q } of queues) {
       try {
-        result[name] = await q.getJobCounts(
-          'waiting',
-          'active',
-          'completed',
-          'failed',
-          'delayed',
-        );
+        result[name] = await q.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
       } catch (err: any) {
         result[name] = { error: err?.message ?? String(err) };
       }

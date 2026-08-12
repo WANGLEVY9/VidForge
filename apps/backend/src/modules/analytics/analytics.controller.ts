@@ -23,7 +23,7 @@ export class AnalyticsController {
   getTrends(
     @CurrentUser() user: JwtPayload,
     @Query('period') period: string = 'month',
-    @Query('spaceId') spaceId?: string,
+    @Query('spaceId') spaceId?: string
   ) {
     return this.analyticsService.getTrends(period, user.sub, spaceId);
   }

@@ -41,14 +41,12 @@ export const HIT_SCRIPTS: HitScriptSeed[] = [
     hookType: '疑问',
     shots: {
       hook: {
-        description:
-          '镜头特写女生苦恼地看着镜子,手指轻触脸颊,光线柔和自然。前景虚化,焦点在表情',
+        description: '镜头特写女生苦恼地看着镜子,手指轻触脸颊,光线柔和自然。前景虚化,焦点在表情',
         voiceover: '为什么 30 岁的皮肤,看起来像 40 岁?',
         caption: '皮肤在悄悄衰老?',
       },
       demo: {
-        description:
-          '俯拍木质梳妆台,产品居中带阴影,旁边有干花和水珠飘落的慢镜头,侧逆光勾边',
+        description: '俯拍木质梳妆台,产品居中带阴影,旁边有干花和水珠飘落的慢镜头,侧逆光勾边',
         voiceover: '这瓶精华含烟酰胺 + 玻色因双效配方,30 秒就能补水提亮',
         caption: '30 秒补水提亮',
       },
@@ -70,8 +68,7 @@ export const HIT_SCRIPTS: HitScriptSeed[] = [
     hookType: '反差',
     shots: {
       hook: {
-        description:
-          '高级感大理石台面,产品被滴入金色精华液包围,上方点光源打出戏剧光影',
+        description: '高级感大理石台面,产品被滴入金色精华液包围,上方点光源打出戏剧光影',
         voiceover: '一瓶顶 3 瓶,这才是 2026 年的精华',
         caption: '一瓶 = 3 瓶',
       },
@@ -104,8 +101,7 @@ export const HIT_SCRIPTS: HitScriptSeed[] = [
         caption: '5秒充50%',
       },
       demo: {
-        description:
-          '快剪展示充电速度对比表,数字"5%→50%"在屏幕上跳动,旁边是普通充电的进度条',
+        description: '快剪展示充电速度对比表,数字"5%→50%"在屏幕上跳动,旁边是普通充电的进度条',
         voiceover: '120W 超级闪充,出门通勤 5 分钟搞定一天电量',
         caption: '120W 闪充',
       },
@@ -187,8 +183,7 @@ export const HIT_SCRIPTS: HitScriptSeed[] = [
         caption: '续命神器',
       },
       demo: {
-        description:
-          '微距展示食品质地拉丝(或饮品流动)、配料,旁边有原料图和"0 添加"标识',
+        description: '微距展示食品质地拉丝(或饮品流动)、配料,旁边有原料图和"0 添加"标识',
         voiceover: '0 蔗糖 0 反式脂肪,真材实料,孕妇都能吃',
         caption: '0 蔗糖 0 反式',
       },
@@ -288,7 +283,11 @@ export const HIT_SCRIPTS: HitScriptSeed[] = [
   },
 ];
 
-export function searchHitScripts(opts: { category?: string; style?: string; topK?: number }): HitScriptSeed[] {
+export function searchHitScripts(opts: {
+  category?: string;
+  style?: string;
+  topK?: number;
+}): HitScriptSeed[] {
   const { category, style, topK = 3 } = opts;
   const scored = HIT_SCRIPTS.map((s) => {
     let score = 0.1;

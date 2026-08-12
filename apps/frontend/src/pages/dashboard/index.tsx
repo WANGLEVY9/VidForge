@@ -1,12 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import {
-  Row,
-  Col,
-  Button,
-  Space,
-  Segmented,
-} from 'antd';
+import { Row, Col, Button, Space, Segmented } from 'antd';
 import {
   VideoCameraOutlined,
   FileTextOutlined,
@@ -70,7 +64,15 @@ const chartCommonLegend = {
   textStyle: { color: 'var(--text-secondary)' },
 };
 
-const chartBrandColors = ['#6366f1', '#a855f7', '#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#06b6d4'];
+const chartBrandColors = [
+  '#6366f1',
+  '#a855f7',
+  '#10b981',
+  '#f59e0b',
+  '#3b82f6',
+  '#ec4899',
+  '#06b6d4',
+];
 
 function DashboardPage() {
   const { spaceId } = useParams<{ spaceId?: string }>();
@@ -80,8 +82,17 @@ function DashboardPage() {
   const [period, setPeriod] = useState('月');
   const [chartMode, setChartMode] = useState('折线');
 
-  const { overview, trends, distribution, attribution, traces, recentTasks, loading, refresh, lastUpdated } =
-    useDashboardData(spaceId, period, 30000);
+  const {
+    overview,
+    trends,
+    distribution,
+    attribution,
+    traces,
+    recentTasks,
+    loading,
+    refresh,
+    lastUpdated,
+  } = useDashboardData(spaceId, period, 30000);
 
   // ── 趋势图 ──
   const trendOption = useMemo(() => {
@@ -424,7 +435,11 @@ function DashboardPage() {
       </div>
 
       {/* Metric Cards */}
-      <Row gutter={[16, 16]} className="stagger-children" style={{ marginBottom: 'var(--spacing-xl)' }}>
+      <Row
+        gutter={[16, 16]}
+        className="stagger-children"
+        style={{ marginBottom: 'var(--spacing-xl)' }}
+      >
         {statCards.map((stat, i) => (
           <Col xs={12} sm={8} md={8} lg={4} key={i}>
             <MetricCard

@@ -130,7 +130,7 @@ export const ComplianceCard: React.FC<Props> = ({ report }) => {
                 <div style={{ flex: 1 }}>
                   <Space size={6}>
                     <Text strong style={{ color: 'var(--text-primary)' }}>
-                      "{hit.word}"
+                      &ldquo;{hit.word}&rdquo;
                     </Text>
                     <Tag style={{ fontSize: 11, margin: 0 }}>{CATEGORY_LABEL[hit.category]}</Tag>
                   </Space>
