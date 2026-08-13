@@ -149,8 +149,34 @@ export default function QuickStartPage() {
                       type="button"
                       role="radio"
                       aria-checked={item.id === format.id}
+                      id={`quick-start-format-${item.id}`}
+                      tabIndex={item.id === format.id ? 0 : -1}
                       className={item.id === format.id ? 'is-active' : ''}
                       onClick={() => setFormatId(item.id)}
+                      onKeyDown={(event) => {
+                        const currentIndex = formats.findIndex(
+                          (formatItem) => formatItem.id === item.id
+                        );
+                        const nextIndex =
+                          event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                            ? (currentIndex + 1) % formats.length
+                            : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                              ? (currentIndex - 1 + formats.length) % formats.length
+                              : event.key === 'Home'
+                                ? 0
+                                : event.key === 'End'
+                                  ? formats.length - 1
+                                  : -1;
+
+                        if (nextIndex < 0) return;
+
+                        event.preventDefault();
+                        const nextFormat = formats[nextIndex];
+                        setFormatId(nextFormat.id);
+                        window.requestAnimationFrame(() => {
+                          document.getElementById(`quick-start-format-${nextFormat.id}`)?.focus();
+                        });
+                      }}
                       key={item.id}
                     >
                       <strong>{item.label}</strong>
@@ -171,7 +197,7 @@ export default function QuickStartPage() {
                 <strong>{preset.label}</strong>
                 <small>Agent preview · ready to inspect</small>
               </div>
-              <div className="quick-start-plan-copy">
+              <div className="quick-start-plan-copy" aria-live="polite">
                 <div className="quick-start-plan-heading">
                   <div>
                     <p>Generated plan</p>

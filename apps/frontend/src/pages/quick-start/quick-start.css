@@ -26,6 +26,11 @@
   text-decoration: none;
 }
 
+.quick-start-page :focus-visible {
+  outline: 2px solid var(--quick-violet);
+  outline-offset: 4px;
+}
+
 .quick-start-nav {
   display: flex;
   width: min(1240px, calc(100% - 48px));
@@ -258,6 +263,13 @@
 .quick-start-format-list button:hover {
   transform: translateY(-1px);
   border-color: rgb(255 255 255 / 25%);
+}
+
+.quick-start-preset-list button:focus-visible,
+.quick-start-format-list button:focus-visible {
+  border-color: var(--quick-violet);
+  box-shadow: 0 0 0 3px rgb(182 163 255 / 16%);
+  outline-offset: 2px;
 }
 .quick-start-preset-list button {
   min-height: 94px;
