@@ -12,6 +12,7 @@ import { AiModule } from '../ai/ai.module';
 import { ScriptModule } from '../script/script.module';
 import { ProductSpaceModule } from '../product-space/product-space.module';
 import { Material } from '../material/entities/material.entity';
+import { AgentRun } from './entities/agent-run.entity';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { Material } from '../material/entities/material.entity';
     AiModule,
     ScriptModule,
     ProductSpaceModule,
-    TypeOrmModule.forFeature([Material]),
+    TypeOrmModule.forFeature([Material, AgentRun]),
   ],
   controllers: [AgentController],
   providers: [

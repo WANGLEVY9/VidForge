@@ -11,6 +11,13 @@ material_analysis -> script_generation -> video_composition -> quality_control
 
 ## Runtime guarantees
 
+- `POST /api/agent/run` creates a durable `agent_runs` control-plane record and
+  returns a task ID immediately; `GET /api/agent/status/:taskId` reads the
+  latest state from PostgreSQL rather than process memory.
+- The database record is the durable control plane for status and final output;
+  the current LangGraph checkpoint is still process-local, so a worker restart
+  does not yet resume from an exact node checkpoint; recovery policy remains a
+  follow-up area.
 - Provider, database, and transient network failures use LangGraph retry
   policies with exponential backoff.
 - Cancellation, syntax/type errors, and HTTP 4xx input errors are not retried.
@@ -19,6 +26,8 @@ material_analysis -> script_generation -> video_composition -> quality_control
 - The replan budget is bounded by `AGENT_QC_MAX_RETRIES` (default `2`).
 - The complete workflow is persisted as an `agent_workflow` trace span with
   status, retry count, final node, quality score, and trace span count.
+- Status reads and cancellation are scoped to the authenticated user, so a task
+  ID cannot be used to inspect another user's run.
 
 ## Tuning
 

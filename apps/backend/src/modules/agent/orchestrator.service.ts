@@ -13,11 +13,14 @@ import { ProductSpaceService } from '../product-space/product-space.service';
 import { TraceService } from '../trace/trace.service';
 import {
   createAgentRetryPolicy,
+  createAgentTaskId,
   nextQualityNode,
   readAgentRuntimeConfig,
 } from './agent-runtime.config';
 
 type NodeReturn = Partial<AgentState>;
+export type AgentProgressUpdate = Partial<Pick<AgentState, 'status' | 'currentNode' | 'progress'>>;
+export type AgentProgressReporter = (update: AgentProgressUpdate) => Promise<void> | void;
 
 /**
  * Agent 编排器(LangGraph 状态机)
@@ -46,9 +49,15 @@ export class OrchestratorService {
     private readonly traceService: TraceService
   ) {}
 
-  async run(dto: RunAgentDto): Promise<AgentResult> {
-    const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  async run(
+    dto: RunAgentDto,
+    taskId = createAgentTaskId(),
+    reportProgress?: AgentProgressReporter
+  ): Promise<AgentResult> {
     const startedAt = new Date();
+    const report = async (update: AgentProgressUpdate) => {
+      await reportProgress?.(update);
+    };
 
     const channels: Record<string, { value: (...args: any[]) => any; default: () => any }> = {
       taskId: { value: (a: any, b: any) => b ?? a, default: () => taskId },
@@ -76,12 +85,14 @@ export class OrchestratorService {
     const workflow = new StateGraph({ channels } as any)
       .addNode('orchestrator', async (_state: AgentState): Promise<NodeReturn> => {
         this.logger.log(`[${taskId}] Orchestrator starting...`);
+        await report({ status: 'running', currentNode: 'material_analysis', progress: 5 });
         return { status: 'running', currentNode: 'material_analysis', progress: 5 };
       })
       .addNode(
         'material_analysis',
         async (state: AgentState): Promise<NodeReturn> => {
           const result = await this.materialAgent.analyze(state);
+          await report({ status: 'running', currentNode: 'script_generation', progress: 25 });
           return { ...result, currentNode: 'script_generation', progress: 25 };
         },
         { retryPolicy: this.retryPolicy }
@@ -90,6 +101,7 @@ export class OrchestratorService {
         'script_generation',
         async (state: AgentState): Promise<NodeReturn> => {
           const result = await this.scriptAgent.generate(state);
+          await report({ status: 'running', currentNode: 'video_composition', progress: 50 });
           return { ...result, currentNode: 'video_composition', progress: 50 };
         },
         { retryPolicy: this.retryPolicy }
@@ -98,6 +110,7 @@ export class OrchestratorService {
         'video_composition',
         async (state: AgentState): Promise<NodeReturn> => {
           const result = await this.compositionAgent.compose(state);
+          await report({ status: 'running', currentNode: 'quality_control', progress: 75 });
           // 每次合成尝试递增 retryCount,由 quality_control 控制 replan 上限。
           return {
             ...result,
@@ -112,6 +125,11 @@ export class OrchestratorService {
         'quality_control',
         async (state: AgentState): Promise<NodeReturn> => {
           const result = await this.qualityAgent.evaluate(state);
+          await report({
+            status: result.qualityControl?.passed ? 'completed' : 'running',
+            currentNode: result.qualityControl?.passed ? '__end__' : 'script_generation',
+            progress: result.qualityControl?.passed ? 100 : 80,
+          });
           return {
             ...result,
             currentNode: '__end__',

@@ -2,6 +2,7 @@ import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 import {
   createAgentRetryPolicy,
+  createAgentTaskId,
   isRetryableAgentError,
   nextQualityNode,
   readAgentRuntimeConfig,
@@ -35,4 +36,8 @@ test('quality failures replan from script generation and stop at the retry budge
   assert.equal(nextQualityNode(false, 1, 2), 'script_generation');
   assert.equal(nextQualityNode(false, 2, 2), '__end__');
   assert.equal(nextQualityNode(true, 0, 2), '__end__');
+});
+
+test('agent task IDs are stable in shape and unique by timestamp/random suffix', () => {
+  assert.equal(createAgentTaskId(123, 0.5), 'task_123_i');
 });

@@ -14,20 +14,20 @@ export class AgentController {
   constructor(private readonly agentService: AgentService) {}
 
   @Post('run')
-  @ApiOperation({ summary: '启动完整 Agent 工作流' })
+  @ApiOperation({ summary: '创建并异步启动完整 Agent 工作流' })
   run(@CurrentUser() user: JwtPayload, @Body() dto: RunAgentDto) {
     return this.agentService.run({ ...dto, userId: user.sub });
   }
 
   @Get('status/:taskId')
   @ApiOperation({ summary: '查询工作流状态' })
-  getStatus(@Param('taskId') taskId: string) {
-    return this.agentService.getStatus(taskId);
+  getStatus(@CurrentUser() user: JwtPayload, @Param('taskId') taskId: string) {
+    return this.agentService.getStatus(user.sub, taskId);
   }
 
   @Post('cancel/:taskId')
   @ApiOperation({ summary: '取消进行中的工作流' })
-  cancel(@Param('taskId') taskId: string) {
-    return this.agentService.cancel(taskId);
+  cancel(@CurrentUser() user: JwtPayload, @Param('taskId') taskId: string) {
+    return this.agentService.cancel(user.sub, taskId);
   }
 }

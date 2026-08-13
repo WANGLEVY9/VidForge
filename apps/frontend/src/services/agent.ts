@@ -11,9 +11,11 @@ export interface RunAgentDto {
 
 export interface AgentResult {
   taskId: string;
-  status: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
   progress: number;
   currentNode: string;
+  result?: Record<string, unknown>;
+  error?: string;
 }
 
 export const agentApi = {

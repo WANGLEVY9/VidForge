@@ -39,6 +39,10 @@ export function readAgentRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Ag
   };
 }
 
+export function createAgentTaskId(now = Date.now(), random = Math.random()): string {
+  return `task_${now}_${random.toString(36).slice(2, 7)}`;
+}
+
 /**
  * Do not retry caller/input errors or cancellation. Network, provider and
  * transient database errors remain retryable by LangGraph.

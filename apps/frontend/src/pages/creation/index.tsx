@@ -131,6 +131,8 @@ function CreationPage() {
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [, setAgentTaskId] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
+  const [agentNode, setAgentNode] = useState<string | null>(null);
+  const [agentProgress, setAgentProgress] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
   /**
    * 来自剧本页的一次性 handoff 信息(消费即清),用于在顶部展示
@@ -540,13 +542,21 @@ function CreationPage() {
         duration,
       });
       setAgentTaskId(result.taskId);
-      setAgentStatus('running');
+      setAgentStatus(result.status);
+      setAgentNode(result.currentNode);
+      setAgentProgress(result.progress);
 
       const poll = setInterval(async () => {
         try {
           const status = await agentApi.getStatus(result.taskId);
           setAgentStatus(status.status);
-          if (status.status === 'completed' || status.status === 'failed') {
+          setAgentNode(status.currentNode);
+          setAgentProgress(status.progress);
+          if (
+            status.status === 'completed' ||
+            status.status === 'failed' ||
+            status.status === 'cancelled'
+          ) {
             clearInterval(poll);
             if (status.status === 'completed') {
               message.success('AI 工作流完成！');
@@ -783,13 +793,19 @@ function CreationPage() {
                       size="large"
                       style={{ borderRadius: 'var(--radius-md)', height: 44 }}
                       onClick={handleAgentRun}
-                      loading={agentStatus === 'running'}
+                      loading={agentStatus === 'running' || agentStatus === 'pending'}
                     >
                       AI 一键成片{' '}
-                      {agentStatus === 'running' && (
+                      {(agentStatus === 'running' || agentStatus === 'pending') && (
                         <Badge status="processing" style={{ marginLeft: 8 }} />
                       )}
                     </Button>
+                    {agentStatus && (agentStatus === 'running' || agentStatus === 'pending') && (
+                      <div style={{ marginTop: 8 }}>
+                        <Progress percent={agentProgress} size="small" status="active" />
+                        <Text type="secondary">Agent 阶段：{agentNode ?? 'queued'}</Text>
+                      </div>
+                    )}
                   </Space>
                 </Form>
               </div>
