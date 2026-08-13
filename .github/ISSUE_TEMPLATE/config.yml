@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/WANGLEVY9/VidForge/security/advisories/new
+    about: 请通过私密 Security Advisory 报告漏洞，不要创建公开 Issue。
+  - name: Community support
+    url: https://github.com/WANGLEVY9/VidForge/discussions
+    about: 使用问题、想法交流和展示作品请前往 Discussions。

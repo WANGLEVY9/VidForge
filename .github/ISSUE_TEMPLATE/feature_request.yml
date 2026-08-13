@@ -1,0 +1,32 @@
+name: Feature request
+description: 提议能够服务明确用户场景的改进
+title: '[Feature]: '
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 用户问题
+      description: 谁在什么场景下遇到了什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 描述期望行为；如果有替代方案也请一并说明。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 如何判断该改进已经完成？
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 贡献意愿
+      options:
+        - label: 我愿意在维护者确认方向后提交 Pull Request。

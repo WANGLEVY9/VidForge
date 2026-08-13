@@ -31,6 +31,10 @@ jobs:
         name: Install dependencies
       - run: pnpm audit --prod --audit-level=high
         name: Audit production dependencies
+      - run: pnpm docs:check
+        name: Check local documentation links
+      - run: pnpm test
+        name: Run repository tests
       - run: pnpm --filter @vidforge/frontend lint
         name: Lint frontend
       - run: pnpm --filter @vidforge/backend lint

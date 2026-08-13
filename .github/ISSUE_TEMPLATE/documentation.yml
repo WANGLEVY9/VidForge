@@ -1,0 +1,19 @@
+name: Documentation
+description: 报告缺失、错误或难以理解的文档
+title: '[Docs]: '
+labels: [documentation]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: 文档位置
+      placeholder: README 章节、文件路径或页面 URL
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: 问题与建议
+      description: 说明哪里不清晰，以及你期望看到什么内容。
+    validations:
+      required: true
