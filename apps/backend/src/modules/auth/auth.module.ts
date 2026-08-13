@@ -6,6 +6,7 @@ import { User } from './entities/user.entity';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { resolveJwtSecret, shouldSeedDemoUser } from './auth.config';
 
 @Module({
   imports: [
@@ -14,15 +15,8 @@ import { JwtAuthGuard } from './jwt-auth.guard';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
-        const isProduction = cfg.get<string>('NODE_ENV') === 'production';
-        const configuredSecret = cfg.get<string>('JWT_SECRET')?.trim();
-
-        if (isProduction && (!configuredSecret || configuredSecret.length < 32)) {
-          throw new Error('JWT_SECRET must contain at least 32 characters in production');
-        }
-
         return {
-          secret: configuredSecret || 'vidforge-local-development-only-secret',
+          secret: resolveJwtSecret(cfg.get<string>('NODE_ENV'), cfg.get<string>('JWT_SECRET')),
           signOptions: {
             expiresIn: cfg.get<string>('JWT_EXPIRES_IN') || '7d',
           },
@@ -43,10 +37,12 @@ export class AuthModule implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    if (this.configService.get<string>('SEED_DEMO_USER') !== 'true') return;
-
-    if (this.configService.get<string>('NODE_ENV') === 'production') {
-      this.logger.warn('SEED_DEMO_USER is ignored in production');
+    const nodeEnv = this.configService.get<string>('NODE_ENV');
+    const seedFlag = this.configService.get<string>('SEED_DEMO_USER');
+    if (!shouldSeedDemoUser(nodeEnv, seedFlag)) {
+      if (nodeEnv === 'production' && seedFlag === 'true') {
+        this.logger.warn('SEED_DEMO_USER is ignored in production');
+      }
       return;
     }
 
