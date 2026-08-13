@@ -1,8 +1,6 @@
 import { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Spin } from 'antd';
-import BasicLayout from './layouts/BasicLayout';
-import WorkspaceLayout from './layouts/WorkspaceLayout';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { RequireAuth } from './components/common/RequireAuth';
 import { useAuthStore } from './store/useAuthStore';
@@ -19,6 +17,9 @@ const AbComparePage = lazy(() => import('@/pages/ab-compare'));
 const AuthPage = lazy(() => import('@/pages/auth/AuthPage'));
 const ProfilePage = lazy(() => import('@/pages/profile'));
 const WorkspaceListPage = lazy(() => import('@/pages/workspace/WorkspaceListPage'));
+const LandingPage = lazy(() => import('@/pages/landing/LandingPage'));
+const BasicLayout = lazy(() => import('./layouts/BasicLayout'));
+const WorkspaceLayout = lazy(() => import('./layouts/WorkspaceLayout'));
 
 const Loading = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
@@ -71,6 +72,16 @@ function App() {
     <ErrorBoundary>
       <SpaceBootstrap />
       <Routes>
+        {/* 无需登录的开源项目展示页 */}
+        <Route
+          path="/"
+          element={
+            <Suspense fallback={<Loading />}>
+              <LandingPage />
+            </Suspense>
+          }
+        />
+
         {/* 鉴权页：不走 BasicLayout */}
         <Route
           path="/auth/login"
@@ -91,15 +102,14 @@ function App() {
 
         {/* 受保护的主应用 */}
         <Route
-          path="/"
           element={
             <RequireAuth>
-              <BasicLayout />
+              <Suspense fallback={<Loading />}>
+                <BasicLayout />
+              </Suspense>
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="/workspace" replace />} />
-
           {/* 商品空间列表 */}
           <Route
             path="workspace"
@@ -113,7 +123,14 @@ function App() {
           />
 
           {/* 单个商品空间内的多板块（带 Tabs 的二级 Layout） */}
-          <Route path="workspace/:spaceId" element={<WorkspaceLayout />}>
+          <Route
+            path="workspace/:spaceId"
+            element={
+              <Suspense fallback={<Loading />}>
+                <WorkspaceLayout />
+              </Suspense>
+            }
+          >
             <Route index element={<Navigate to="material" replace />} />
             <Route
               path="material"

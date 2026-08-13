@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vid-forge-frontend-nu.vercel.app/sitemap.xml

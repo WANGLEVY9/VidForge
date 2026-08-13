@@ -1,7 +1,7 @@
 {
   "name": "VidForge",
   "short_name": "VidForge",
-  "description": "电商场景 AIGC 带货视频生成系统",
+  "description": "Open-source AI pipeline for multimodal commerce assets, scripts, orchestration, and video composition",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0f1a",

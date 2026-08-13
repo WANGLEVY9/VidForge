@@ -9,11 +9,15 @@
 - 开源治理、贡献、安全与社区模板
 - CI 构建、Lint、依赖审计和全历史密钥扫描
 - 本地环境检查及其自动化测试
+- 无需登录的响应式项目展示页与交互式工作流说明
+- 搜索引擎、Open Graph、robots.txt 和 sitemap 元数据
 
 ### Changed
 
 - 更新存在已知漏洞的生产依赖
 - ARK、OSS、JWT 等凭证仅允许从环境或部署 Secret 注入
+- 业务布局改为延迟加载，并为前端包体设置自动化预算
+- Service Worker 对导航请求采用 network-first，避免长期缓存旧页面
 
 ### Security
 
