@@ -20,6 +20,7 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { TemplateModule } from './modules/template/template.module';
 import { HealthController } from './modules/common/health.controller';
 import { RATE_LIMITS } from './rate-limit.config';
+import { resolveDatabaseSynchronize } from './database/database-options';
 
 @Module({
   imports: [
@@ -39,11 +40,15 @@ import { RATE_LIMITS } from './rate-limit.config';
       useFactory: (configService: ConfigService) => {
         const databaseUrl = configService.get<string>('DATABASE_URL');
         const nodeEnv = configService.get<string>('NODE_ENV');
-        // 是否同步表结构：dev 默认开；生产由 DB_SYNCHRONIZE=true 显式开启（用于初次建表）
+        // 仅开发环境允许 synchronize；生产环境必须显式执行 migration:run。
         const syncEnv = configService.get<string>('DB_SYNCHRONIZE');
-        const synchronize = syncEnv !== undefined ? syncEnv === 'true' : nodeEnv === 'development';
+        const synchronize = resolveDatabaseSynchronize(nodeEnv, syncEnv);
         const logging = nodeEnv === 'development';
         const ssl = nodeEnv === 'production' ? { rejectUnauthorized: false } : false;
+
+        if (nodeEnv === 'production' && syncEnv === 'true') {
+          console.warn('DB_SYNCHRONIZE=true 在生产环境已被忽略，请执行 backend migration:run');
+        }
 
         if (databaseUrl) {
           return {
@@ -51,6 +56,8 @@ import { RATE_LIMITS } from './rate-limit.config';
             url: databaseUrl,
             entities: [__dirname + '/**/*.entity{.ts,.js}'],
             synchronize,
+            migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+            migrationsRun: false,
             logging,
             ssl,
             // 启动时即建立连接池，便于早期发现配置问题
@@ -66,6 +73,8 @@ import { RATE_LIMITS } from './rate-limit.config';
           database: configService.get('DB_NAME'),
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize,
+          migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+          migrationsRun: false,
           logging,
           ssl,
           autoLoadEntities: true,

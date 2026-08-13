@@ -7,7 +7,7 @@ VidForge 的路线图以可复现、可贡献和可部署为优先级。时间�
 - [ ] 为认证、合规检查和剧本处理补充单元测试
 - [ ] 提供 Docker Compose 本地依赖环境
 - [ ] 将 TypeScript `any` 警告逐步降至可阻断的新代码基线
-- [ ] 建立数据库迁移，生产环境不再依赖 schema synchronize
+- [x] 建立数据库迁移，生产环境不再依赖 schema synchronize
 - [ ] 补充端到端最小冒烟测试
 
 ## Next — 可观察、可扩展的视频管线

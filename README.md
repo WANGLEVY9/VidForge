@@ -176,11 +176,18 @@ Dashboard 页面会显示:
 
 ```
 DATABASE_URL          # 必填
-DB_SYNCHRONIZE=true   # 首次部署开启,验证后改为 false
 JWT_SECRET            # 64 字节 hex
 NODE_ENV=production
 WEB_BASE_URL          # https://<vercel-domain>
 ```
+
+生产环境不会执行 TypeORM `synchronize`。首次部署或升级时，在后端目录执行一次：
+
+```bash
+pnpm --filter @vidforge/backend migration:run
+```
+
+已有历史部署可以安全执行首个 baseline migration；它使用幂等建表和索引语句，不会删除现有数据。后续 schema 变更必须新增 migration 并在应用启动前执行。
 
 **可选**:
 

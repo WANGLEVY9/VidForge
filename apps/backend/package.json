@@ -8,6 +8,9 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
+    "migration:show": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:show",
+    "migration:run": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:run",
+    "migration:revert": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:revert",
     "test": "node ../../scripts/run-backend-tests.mjs",
     "lint": "eslint src --ext ts --report-unused-disable-directives --max-warnings 400",
     "lint:fix": "eslint src --ext ts --fix"

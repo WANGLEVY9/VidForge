@@ -5,7 +5,7 @@ This is a practical backlog for improving VidForge as a real open-source project
 ## Reliability and security
 
 - [ ] Add integration tests for the health and authentication endpoints.
-- [ ] Add database migrations and document the production migration workflow.
+- [x] Add database migrations and document the production migration workflow.
 - [ ] Verify production startup fails safely when required secrets are missing.
 - [ ] Add request-size and upload-type limits to every media upload path.
 - [ ] Add rate limiting guidance and a deployable default for authentication endpoints.
