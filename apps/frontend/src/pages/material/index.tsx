@@ -366,6 +366,13 @@ function MaterialPage() {
     setPreviewVisible(true);
   };
 
+  const handlePreviewKeyDown = (event: React.KeyboardEvent, item: MaterialItem) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handlePreview(item);
+    }
+  };
+
   const handleDownload = (item: MaterialItem) => {
     if (!item.url) {
       message.info('该素材暂无可下载地址');
@@ -930,6 +937,10 @@ function MaterialPage() {
                   }}
                   className="material-card-hover"
                   onClick={() => handlePreview(item)}
+                  onKeyDown={(event) => handlePreviewKeyDown(event, item)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`预览素材：${item.name}`}
                 >
                   {/* 预览区 */}
                   <div
@@ -1139,6 +1150,10 @@ function MaterialPage() {
                   transition: 'background 0.2s',
                 }}
                 onClick={() => handlePreview(item)}
+                onKeyDown={(event) => handlePreviewKeyDown(event, item)}
+                role="button"
+                tabIndex={0}
+                aria-label={`预览素材：${item.name}`}
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >

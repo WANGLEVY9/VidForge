@@ -1,11 +1,10 @@
 import React from 'react';
 
-interface GlassPanelProps {
+interface GlassPanelProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
   variant?: 'default' | 'strong' | 'card';
-  onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
 const variantClassMap: Record<'default' | 'strong' | 'card', string> = {
@@ -20,6 +19,7 @@ const GlassPanel: React.FC<GlassPanelProps> = ({
   style,
   variant = 'default',
   onClick,
+  ...rest
 }) => {
   const variantClass = variantClassMap[variant] || variantClassMap.default;
 
@@ -28,6 +28,7 @@ const GlassPanel: React.FC<GlassPanelProps> = ({
       className={[variantClass, className].filter(Boolean).join(' ')}
       style={style}
       onClick={onClick}
+      {...rest}
     >
       {children}
     </div>
