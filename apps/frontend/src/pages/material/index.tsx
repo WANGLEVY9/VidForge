@@ -17,6 +17,7 @@ import {
   Segmented,
   Skeleton,
   List,
+  Progress,
 } from 'antd';
 import {
   SearchOutlined,
@@ -38,6 +39,7 @@ import {
   CloseOutlined,
   FileOutlined,
   LoadingOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps, MenuProps } from 'antd';
 import { GlassPanel } from '../../components/studio/GlassPanel';
@@ -154,6 +156,7 @@ function MaterialPage() {
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [queueExpanded, setQueueExpanded] = useState(true);
   const queueIdCounter = useRef(0);
+  const uploadQueueRef = useRef<UploadQueueItem[]>([]);
 
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -167,6 +170,18 @@ function MaterialPage() {
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterMood, setFilterMood] = useState<string | null>(null);
   const [filterStyle, setFilterStyle] = useState<string | null>(null);
+
+  useEffect(() => {
+    uploadQueueRef.current = uploadQueue;
+  }, [uploadQueue]);
+
+  useEffect(() => {
+    return () => {
+      uploadQueueRef.current.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      });
+    };
+  }, []);
 
   usePageTiming('Material');
 
@@ -223,34 +238,28 @@ function MaterialPage() {
     return list;
   }, [materials, searchText, filterCategory, filterMood, filterStyle]);
 
-  const uploadProps: UploadProps = {
-    multiple: true,
-    fileList,
-    onChange: ({ fileList: newFileList }) => setFileList(newFileList),
-    customRequest: async ({ file, onSuccess, onError }) => {
-      const f = file as File;
-      const queueId = `upload_${++queueIdCounter.current}`;
-      // 生成预览 URL
-      const previewUrl = f.type.startsWith('image/')
-        ? URL.createObjectURL(f)
-        : f.type.startsWith('video/')
-          ? URL.createObjectURL(f)
-          : '';
-
-      const queueItem: UploadQueueItem = {
-        id: queueId,
-        file: f,
-        previewUrl,
-        progress: 0,
-        status: 'uploading',
-      };
-      setUploadQueue((prev) => [queueItem, ...prev]);
-      setQueueExpanded(true);
-
+  const processUpload = useCallback(
+    async (
+      file: File,
+      queueId: string,
+      callbacks: Pick<
+        Parameters<NonNullable<UploadProps['customRequest']>>[0],
+        'onSuccess' | 'onError' | 'onProgress'
+      > = {}
+    ) => {
       try {
-        const result = await materialApi.upload(f, { productSpaceId: activeSpaceId ?? undefined });
-        onSuccess?.('ok');
-        // 更新队列条目为完成状态
+        const result = await materialApi.upload(
+          file,
+          { productSpaceId: activeSpaceId ?? undefined },
+          (event) => {
+            const percent = event.total ? Math.round((event.loaded / event.total) * 100) : 0;
+            setUploadQueue((prev) =>
+              prev.map((q) => (q.id === queueId ? { ...q, progress: percent } : q))
+            );
+            callbacks.onProgress?.({ percent });
+          }
+        );
+        callbacks.onSuccess?.('ok');
         setUploadQueue((prev) =>
           prev.map((q) =>
             q.id === queueId
@@ -258,10 +267,10 @@ function MaterialPage() {
               : q
           )
         );
-        message.success(`${f.name} 上传成功`);
+        message.success(`${file.name} 上传成功`);
         fetchList();
       } catch (err: any) {
-        onError?.(err);
+        callbacks.onError?.(err);
         const detail = err?.response?.data?.message ?? err?.message ?? '未知错误';
         setUploadQueue((prev) =>
           prev.map((q) =>
@@ -271,6 +280,36 @@ function MaterialPage() {
         message.error(`上传失败:${detail}`);
       }
     },
+    [activeSpaceId, fetchList]
+  );
+
+  const uploadProps: UploadProps = {
+    multiple: true,
+    fileList,
+    onChange: ({ fileList: newFileList }) => setFileList(newFileList),
+    customRequest: ({ file, onSuccess, onError, onProgress }) => {
+      const f = file as File;
+      const queueId = `upload_${++queueIdCounter.current}`;
+      const previewUrl =
+        f.type.startsWith('image/') || f.type.startsWith('video/') ? URL.createObjectURL(f) : '';
+      setUploadQueue((prev) => [
+        { id: queueId, file: f, previewUrl, progress: 0, status: 'uploading' },
+        ...prev,
+      ]);
+      setQueueExpanded(true);
+      void processUpload(f, queueId, { onSuccess, onError, onProgress });
+    },
+  };
+
+  const retryUpload = (item: UploadQueueItem) => {
+    setUploadQueue((prev) =>
+      prev.map((q) =>
+        q.id === item.id
+          ? { ...q, status: 'uploading' as const, progress: 0, errorMsg: undefined }
+          : q
+      )
+    );
+    void processUpload(item.file, item.id);
   };
 
   /** 从队列中移除条目 */
@@ -283,9 +322,9 @@ function MaterialPage() {
   /** 清除所有已完成的队列条目 */
   const clearDoneQueue = () => {
     uploadQueue.forEach((q) => {
-      if (q.previewUrl) URL.revokeObjectURL(q.previewUrl);
+      if (q.status === 'done' && q.previewUrl) URL.revokeObjectURL(q.previewUrl);
     });
-    setUploadQueue((prev) => prev.filter((q) => q.status === 'uploading'));
+    setUploadQueue((prev) => prev.filter((q) => q.status !== 'done'));
   };
 
   /** 在队列中预览素材 */
@@ -325,6 +364,19 @@ function MaterialPage() {
   const handlePreview = (item: MaterialItem) => {
     setPreviewItem(item);
     setPreviewVisible(true);
+  };
+
+  const handleDownload = (item: MaterialItem) => {
+    if (!item.url) {
+      message.info('该素材暂无可下载地址');
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = item.url;
+    link.download = item.name;
+    link.target = '_blank';
+    link.rel = 'noreferrer';
+    link.click();
   };
 
   const handleAnalyze = async (item: MaterialItem) => {
@@ -674,6 +726,16 @@ function MaterialPage() {
                       />
                     </Tooltip>
                   ),
+                  item.status === 'error' && (
+                    <Tooltip title="重试上传" key="retry">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<ReloadOutlined />}
+                        onClick={() => retryUpload(item)}
+                      />
+                    </Tooltip>
+                  ),
                   <Tooltip title="移除" key="remove">
                     <Button
                       type="text"
@@ -767,7 +829,7 @@ function MaterialPage() {
                       </Text>
                       {item.status === 'uploading' && (
                         <Text style={{ color: 'var(--brand-primary)', fontSize: 11 }}>
-                          <LoadingOutlined /> 上传中...
+                          <LoadingOutlined /> 上传中 {item.progress}%
                         </Text>
                       )}
                       {item.status === 'done' && (
@@ -781,6 +843,15 @@ function MaterialPage() {
                     </Space>
                   }
                 />
+                {item.status === 'uploading' && (
+                  <Progress
+                    percent={item.progress}
+                    size="small"
+                    showInfo={false}
+                    status="active"
+                    style={{ width: 140, margin: 0 }}
+                  />
+                )}
               </List.Item>
             )}
           />
@@ -1165,6 +1236,7 @@ function MaterialPage() {
                       type="text"
                       icon={<DownloadOutlined />}
                       style={{ color: 'var(--text-secondary)' }}
+                      onClick={() => handleDownload(item)}
                     />
                   </Tooltip>
                   <Tooltip title="删除">

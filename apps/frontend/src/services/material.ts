@@ -1,4 +1,5 @@
 import apiClient from '../utils/api';
+import type { AxiosProgressEvent } from 'axios';
 
 export interface MaterialItem {
   id: string;
@@ -56,13 +57,17 @@ export const materialApi = {
   },
 
   /** 文件上传( multipart/form-data ) */
-  upload(file: File, extra?: { productSpaceId?: string; category?: string; tags?: string }) {
+  upload(
+    file: File,
+    extra?: { productSpaceId?: string; category?: string; tags?: string },
+    onUploadProgress?: (event: AxiosProgressEvent) => void
+  ) {
     const formData = new FormData();
     formData.append('file', file);
     if (extra?.productSpaceId) formData.append('productSpaceId', extra.productSpaceId);
     if (extra?.category) formData.append('category', extra.category);
     if (extra?.tags) formData.append('tags', extra.tags);
-    return apiClient.post<any, MaterialItem>('/material/upload', formData);
+    return apiClient.post<any, MaterialItem>('/material/upload', formData, { onUploadProgress });
   },
 
   delete(id: string) {
