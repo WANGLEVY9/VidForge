@@ -38,6 +38,16 @@ export interface ComposeResult {
   subtitleBurned: boolean;
 }
 
+export function validateComposeShots(shots: ComposeShotInput[]): void {
+  if (shots.length === 0) throw new Error('compose: 分镜列表为空');
+  shots.forEach((shot, index) => {
+    if (!shot.videoUrl?.trim()) throw new Error(`分镜 ${shot.index ?? index} 缺少 videoUrl`);
+    if (shot.duration !== undefined && (!Number.isFinite(shot.duration) || shot.duration <= 0)) {
+      throw new Error(`分镜 ${shot.index ?? index} 的 duration 必须为正数`);
+    }
+  });
+}
+
 /**
  * 视频合片协调器
  *
@@ -70,7 +80,7 @@ export class ComposerService {
     const { taskId, ratio, resolution } = opts;
     const onProgress = opts.onProgress ?? (() => {});
 
-    if (shots.length === 0) throw new Error('compose: 分镜列表为空');
+    validateComposeShots(shots);
 
     const workdir = await this.storage.createTaskWorkdir('creation', taskId);
     onProgress(2, '准备合片工作目录');
@@ -81,9 +91,6 @@ export class ComposerService {
       const localSegments: string[] = [];
       for (let i = 0; i < shots.length; i++) {
         const shot = shots[i];
-        if (!shot.videoUrl) {
-          throw new Error(`分镜 ${shot.index} 缺少 videoUrl`);
-        }
         const local = path.join(segmentsDir, `seg_${String(i).padStart(2, '0')}.mp4`);
         await this.ffmpeg.downloadTo(shot.videoUrl, local);
         localSegments.push(local);

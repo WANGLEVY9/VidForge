@@ -5,6 +5,12 @@ import * as fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import axios from 'axios';
 
+export function assertDownloadSize(bytes: number, maxBytes: number): void {
+  if (!Number.isFinite(bytes) || bytes < 0) throw new Error('下载内容大小无效');
+  if (!Number.isFinite(maxBytes) || maxBytes <= 0) throw new Error('下载大小限制无效');
+  if (bytes > maxBytes) throw new Error(`下载内容超过大小限制 (${maxBytes} bytes)`);
+}
+
 /**
  * FFmpeg 封装服务
  *
@@ -36,6 +42,7 @@ export class FfmpegService {
    */
   async downloadTo(url: string, destPath: string, maxBytes = 100 * 1024 * 1024): Promise<string> {
     if (!url) throw new Error('downloadTo: url 为空');
+    assertDownloadSize(0, maxBytes);
     this.logger.debug(`下载 ${url} -> ${destPath}`);
     const resp = await axios.get(url, {
       responseType: 'stream',
@@ -45,13 +52,35 @@ export class FfmpegService {
     });
 
     await fs.mkdir(path.dirname(destPath), { recursive: true });
-    await new Promise<void>((resolve, reject) => {
-      const writer = createWriteStream(destPath);
-      resp.data.pipe(writer);
-      writer.on('finish', () => resolve());
-      writer.on('error', reject);
-      resp.data.on('error', reject);
-    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const writer = createWriteStream(destPath);
+        let bytes = 0;
+        let settled = false;
+        const fail = (error: Error) => {
+          if (settled) return;
+          settled = true;
+          resp.data.destroy();
+          writer.destroy();
+          reject(error);
+        };
+        resp.data.on('data', (chunk: Buffer) => {
+          bytes += chunk.length;
+          if (bytes > maxBytes) fail(new Error(`下载内容超过大小限制 (${maxBytes} bytes)`));
+        });
+        resp.data.pipe(writer);
+        writer.on('finish', () => {
+          if (settled) return;
+          settled = true;
+          resolve();
+        });
+        writer.on('error', fail);
+        resp.data.on('error', fail);
+      });
+    } catch (error) {
+      await fs.unlink(destPath).catch(() => undefined);
+      throw error;
+    }
     return destPath;
   }
 
@@ -199,8 +228,6 @@ export class FfmpegService {
     }
 
     // 把多路音频做 amix(权重默认相等,但前面已经把 BGM 音量降下来了)
-    const labels = audioStreams.map((_, i) => (i === 0 && voicePath ? '[a_voice]' : '[a_bgm]'));
-    // 修正:若两个都有,labels 应为 [a_voice][a_bgm]
     const finalLabels: string[] = [];
     if (voicePath) finalLabels.push('[a_voice]');
     if (bgmPath) finalLabels.push('[a_bgm]');
@@ -372,7 +399,7 @@ export class FfmpegService {
   private run(
     cmd: string,
     args: string[],
-    opts: { capture?: boolean } = {}
+    _opts: { capture?: boolean } = {}
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       this.logger.debug(`${cmd} ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`);

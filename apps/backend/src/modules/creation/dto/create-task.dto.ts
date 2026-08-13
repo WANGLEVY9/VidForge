@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsArray, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsBoolean, IsIn } from 'class-validator';
+import { MEDIA_ASPECT_RATIOS, MEDIA_RESOLUTIONS } from '../../media/media-pipeline.config';
 
 export class CreateTaskDto {
   @IsString()
@@ -20,9 +21,11 @@ export class CreateTaskDto {
   modelKey?: string;
 
   @IsOptional()
+  @IsIn(MEDIA_ASPECT_RATIOS)
   aspectRatio?: string;
 
   @IsOptional()
+  @IsIn(MEDIA_RESOLUTIONS)
   quality?: string;
 
   /** 用于 BGM 风格匹配,与 Script.style 对齐 */
