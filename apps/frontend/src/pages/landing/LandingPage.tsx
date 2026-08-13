@@ -128,8 +128,6 @@ export default function LandingPage() {
           <a
             className="landing-icon-link"
             href={repositoryUrl}
-            target="_blank"
-            rel="noreferrer"
             aria-label="View VidForge on GitHub"
           >
             <GitHubIcon />
@@ -166,12 +164,7 @@ export default function LandingPage() {
               <Link className="landing-button landing-button-primary" to="/workspace">
                 Explore the workspace <ArrowIcon />
               </Link>
-              <a
-                className="landing-button landing-button-ghost"
-                href={repositoryUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a className="landing-button landing-button-ghost" href={repositoryUrl}>
                 <GitHubIcon /> View source
               </a>
             </div>
@@ -285,11 +278,7 @@ export default function LandingPage() {
               replaceable. PostgreSQL remains the source of truth while optional services add
               retrieval and durable execution.
             </p>
-            <a
-              href={`${repositoryUrl}/blob/main/docs/TECHNICAL_ARCHITECTURE.md`}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href={`${repositoryUrl}/blob/main/docs/TECHNICAL_ARCHITECTURE.md`}>
               Read the technical architecture <ArrowIcon />
             </a>
           </div>
@@ -324,13 +313,13 @@ export default function LandingPage() {
             observability, or help make commerce-video workflows easier to reproduce.
           </p>
           <div className="landing-community-links">
-            <a href={`${repositoryUrl}/blob/main/CONTRIBUTING.md`} target="_blank" rel="noreferrer">
+            <a href={`${repositoryUrl}/blob/main/CONTRIBUTING.md`}>
               Contribution guide <ArrowIcon />
             </a>
-            <a href={`${repositoryUrl}/issues`} target="_blank" rel="noreferrer">
+            <a href={`${repositoryUrl}/issues`}>
               Good first issues <ArrowIcon />
             </a>
-            <a href={`${repositoryUrl}/discussions`} target="_blank" rel="noreferrer">
+            <a href={`${repositoryUrl}/discussions`}>
               Join discussions <ArrowIcon />
             </a>
           </div>
@@ -346,15 +335,9 @@ export default function LandingPage() {
         </div>
         <p>Open-source AI video production infrastructure.</p>
         <div>
-          <a href={`${repositoryUrl}/blob/main/LICENSE`} target="_blank" rel="noreferrer">
-            MIT License
-          </a>
-          <a href={`${repositoryUrl}/blob/main/SECURITY.md`} target="_blank" rel="noreferrer">
-            Security
-          </a>
-          <a href={repositoryUrl} target="_blank" rel="noreferrer">
-            GitHub
-          </a>
+          <a href={`${repositoryUrl}/blob/main/LICENSE`}>MIT License</a>
+          <a href={`${repositoryUrl}/blob/main/SECURITY.md`}>Security</a>
+          <a href={repositoryUrl}>GitHub</a>
         </div>
       </footer>
     </div>

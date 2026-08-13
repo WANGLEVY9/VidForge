@@ -74,9 +74,7 @@ export default function QuickStartPage() {
         </Link>
         <div className="quick-start-nav-links">
           <Link to="/">Overview</Link>
-          <a href="https://github.com/WANGLEVY9/VidForge" target="_blank" rel="noreferrer">
-            Source ↗
-          </a>
+          <a href="https://github.com/WANGLEVY9/VidForge">Source ↗</a>
           <Link className="quick-start-nav-cta" to="/auth/register">
             Create workspace <ArrowIcon />
           </Link>

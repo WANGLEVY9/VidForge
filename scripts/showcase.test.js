@@ -26,3 +26,13 @@ test('public deployment metadata points to the canonical showcase', () => {
   assert.match(robots, /Sitemap: https:\/\/vid-forge-frontend-nu\.vercel\.app\/sitemap\.xml/);
   assert.match(sitemap, /<loc>https:\/\/vid-forge-frontend-nu\.vercel\.app\/<\/loc>/);
 });
+
+test('showcase external links use same-tab navigation for embedded browsers', () => {
+  const landing = read('apps/frontend/src/pages/landing/LandingPage.tsx');
+  const quickStart = read('apps/frontend/src/pages/quick-start/QuickStartPage.tsx');
+
+  assert.doesNotMatch(landing, /target="_blank"/);
+  assert.doesNotMatch(quickStart, /target="_blank"/);
+  assert.match(landing, /href=\{repositoryUrl\}/);
+  assert.match(quickStart, /href="https:\/\/github\.com\/WANGLEVY9\/VidForge"/);
+});
