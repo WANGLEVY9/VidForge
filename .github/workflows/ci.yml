@@ -73,3 +73,5 @@ jobs:
         name: Install dependencies
       - run: pnpm --filter @vidforge/frontend build
         name: Build frontend
+      - run: pnpm check:bundle
+        name: Enforce frontend bundle budgets
