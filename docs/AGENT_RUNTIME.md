@@ -1,0 +1,34 @@
+# VidForge Agent Runtime
+
+VidForge uses a deterministic LangGraph workflow with specialized agents. The
+graph keeps the high-cost media steps behind explicit state boundaries:
+
+```text
+material_analysis -> script_generation -> video_composition -> quality_control
+                                      ^                         |
+                                      |----- quality replan ----|
+```
+
+## Runtime guarantees
+
+- Provider, database, and transient network failures use LangGraph retry
+  policies with exponential backoff.
+- Cancellation, syntax/type errors, and HTTP 4xx input errors are not retried.
+- Quality failures re-enter `script_generation`, so the quality feedback is
+  actually available to the next plan instead of repeating the same render.
+- The replan budget is bounded by `AGENT_QC_MAX_RETRIES` (default `2`).
+- The complete workflow is persisted as an `agent_workflow` trace span with
+  status, retry count, final node, quality score, and trace span count.
+
+## Tuning
+
+```dotenv
+AGENT_MAX_RETRIES=3
+AGENT_RETRY_BASE_DELAY_MS=2000
+AGENT_QC_MAX_RETRIES=2
+```
+
+Values are clamped by the runtime to prevent accidental retry storms. The
+workflow remains deterministic at the graph level; model calls are isolated in
+specialized nodes so later work can replace one node with a router, subagent,
+or human approval step without changing the media pipeline contract.

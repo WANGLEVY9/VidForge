@@ -11,7 +11,7 @@
 
 面向 TikTok Shop 等跨境电商商家的 AIGC 带货视频生成全链路系统。商家上传商品素材 → 输入卖点 → 系统自动生成多分镜剧本 → 一键合成 ≤15s 的带货短视频(支持 9:16 / 16:9)。
 
-**[项目展示](https://vid-forge-frontend-nu.vercel.app/)** · **[路线图](./ROADMAP.md)** · **[参与贡献](./CONTRIBUTING.md)** · **[获得帮助](./SUPPORT.md)**
+**[项目展示](https://vid-forge-frontend-nu.vercel.app/)** · **[路线图](./ROADMAP.md)** · **[Agent Runtime](./docs/AGENT_RUNTIME.md)** · **[参与贡献](./CONTRIBUTING.md)** · **[获得帮助](./SUPPORT.md)**
 
 > **V2 升级亮点(2026-05-31)**:LangGraph 多 Agent 真实推理 / FFmpeg 真实合片 / 端到端 Trace + 成本观测 / RAG 爆款知识库 / 商品空间知识飞轮 / 三层合规审核
 

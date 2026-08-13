@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { StateGraph, END } from '@langchain/langgraph';
+import { StateGraph } from '@langchain/langgraph';
+import type { RetryPolicy } from '@langchain/langgraph';
 import { RunnableConfig } from '@langchain/core/runnables';
 import { AgentState } from './interfaces/agent-state.interface';
 import { AgentResult } from './interfaces/agent-result.interface';
@@ -9,6 +10,12 @@ import { ScriptAgentService } from './agents/script-agent.service';
 import { CompositionAgentService } from './agents/composition-agent.service';
 import { QualityAgentService } from './agents/quality-agent.service';
 import { ProductSpaceService } from '../product-space/product-space.service';
+import { TraceService } from '../trace/trace.service';
+import {
+  createAgentRetryPolicy,
+  nextQualityNode,
+  readAgentRuntimeConfig,
+} from './agent-runtime.config';
 
 type NodeReturn = Partial<AgentState>;
 
@@ -17,9 +24,8 @@ type NodeReturn = Partial<AgentState>;
  *
  * 重试与容错策略:
  * - 每个 Agent 节点内置指数退避重试:第 1 次重试等 2s,第 2 次 4s,第 3 次 8s,上限 3 次
- * - quality_control 的条件边最多允许 2 次视频合成重试(retryCount < 2)
- * - 任一节点抛异常不中断整个 workflow,异常被收集到 state.errors[],
- *   后续节点仍可继续执行;最终由 quality_control 综合判定通过/失败
+ * - quality_control 失败会回到 script_generation,让反馈真正参与下一轮计划
+ * - 任一节点的 provider / 网络瞬态异常由 LangGraph RetryPolicy 处理
  * - abort signal 从 AbortController 传递到各节点的 RunnableConfig,
  *   确保取消操作能快速终止正在执行的节点
  */
@@ -28,20 +34,16 @@ export class OrchestratorService {
   private readonly logger = new Logger(OrchestratorService.name);
   private activeRuns = new Map<string, { abort: () => void }>();
 
-  // 重试策略配置(通过环境变量注入,便于运维调参):
-  // AGENT_MAX_RETRIES: 单个节点最大重试次数,默认 3
-  // AGENT_RETRY_BASE_DELAY_MS: 首次重试等待毫秒,默认 2000,后续翻倍
-  // AGENT_QC_MAX_RETRIES: quality_control 允许回退到 video_composition 的最大次数,默认 2
-  private readonly maxRetries = Number(process.env.AGENT_MAX_RETRIES) || 3;
-  private readonly retryBaseDelayMs = Number(process.env.AGENT_RETRY_BASE_DELAY_MS) || 2000;
-  private readonly qcMaxRetries = Number(process.env.AGENT_QC_MAX_RETRIES) || 2;
+  private readonly runtime = readAgentRuntimeConfig();
+  private readonly retryPolicy: RetryPolicy = createAgentRetryPolicy(this.runtime);
 
   constructor(
     private readonly materialAgent: MaterialAgentService,
     private readonly scriptAgent: ScriptAgentService,
     private readonly compositionAgent: CompositionAgentService,
     private readonly qualityAgent: QualityAgentService,
-    private readonly productSpace: ProductSpaceService
+    private readonly productSpace: ProductSpaceService,
+    private readonly traceService: TraceService
   ) {}
 
   async run(dto: RunAgentDto): Promise<AgentResult> {
@@ -76,49 +78,67 @@ export class OrchestratorService {
         this.logger.log(`[${taskId}] Orchestrator starting...`);
         return { status: 'running', currentNode: 'material_analysis', progress: 5 };
       })
-      .addNode('material_analysis', async (state: AgentState): Promise<NodeReturn> => {
-        const result = await this.materialAgent.analyze(state);
-        return { ...result, currentNode: 'script_generation', progress: 25 };
-      })
-      .addNode('script_generation', async (state: AgentState): Promise<NodeReturn> => {
-        const result = await this.scriptAgent.generate(state);
-        return { ...result, currentNode: 'video_composition', progress: 50 };
-      })
-      .addNode('video_composition', async (state: AgentState): Promise<NodeReturn> => {
-        const result = await this.compositionAgent.compose(state);
-        // 每次合成尝试递增 retryCount，确保 quality_control 的条件边
-        // retryCount < 2 能在两次尝试后正确结束，避免无限循环
-        return {
-          ...result,
-          currentNode: 'quality_control',
-          progress: 75,
-          retryCount: (state.retryCount ?? 0) + 1,
-        };
-      })
-      .addNode('quality_control', async (state: AgentState): Promise<NodeReturn> => {
-        const result = await this.qualityAgent.evaluate(state);
-        return { ...result, currentNode: '__end__', progress: 100, status: 'completed' };
-      })
+      .addNode(
+        'material_analysis',
+        async (state: AgentState): Promise<NodeReturn> => {
+          const result = await this.materialAgent.analyze(state);
+          return { ...result, currentNode: 'script_generation', progress: 25 };
+        },
+        { retryPolicy: this.retryPolicy }
+      )
+      .addNode(
+        'script_generation',
+        async (state: AgentState): Promise<NodeReturn> => {
+          const result = await this.scriptAgent.generate(state);
+          return { ...result, currentNode: 'video_composition', progress: 50 };
+        },
+        { retryPolicy: this.retryPolicy }
+      )
+      .addNode(
+        'video_composition',
+        async (state: AgentState): Promise<NodeReturn> => {
+          const result = await this.compositionAgent.compose(state);
+          // 每次合成尝试递增 retryCount,由 quality_control 控制 replan 上限。
+          return {
+            ...result,
+            currentNode: 'quality_control',
+            progress: 75,
+            retryCount: (state.retryCount ?? 0) + 1,
+          };
+        },
+        { retryPolicy: this.retryPolicy }
+      )
+      .addNode(
+        'quality_control',
+        async (state: AgentState): Promise<NodeReturn> => {
+          const result = await this.qualityAgent.evaluate(state);
+          return {
+            ...result,
+            currentNode: '__end__',
+            progress: 100,
+            status: result.qualityControl?.passed ? 'completed' : 'failed',
+          };
+        },
+        { retryPolicy: this.retryPolicy }
+      )
       .addEdge('__start__', 'orchestrator')
       .addEdge('orchestrator', 'material_analysis')
       .addEdge('material_analysis', 'script_generation')
       .addEdge('script_generation', 'video_composition')
       .addEdge('video_composition', 'quality_control')
       /**
-       * 条件边:quality_control → 重试 or 结束
+       * 条件边:quality_control → script_generation 重规划 or 结束
        *
        * 指数退避细节:
-       * - retryCount=1 → 第 1 次重试前等 2s → 回 video_composition
-       * - retryCount=2 → 第 2 次重试前等 4s → 回 video_composition
-       * - retryCount≥2 → 不再重试,直接结束(即最多 2 次合成尝试)
-       * - 每次重试前递增 retryCount,由 video_composition 节点负责
+       * - 质量反馈先回到 Script Agent,避免重复渲染同一个计划
+       * - retryCount 由 video_composition 节点递增,因此重规划次数有硬上限
        */
       .addConditionalEdges('quality_control', (state: AgentState) => {
-        if (state.qualityControl?.passed) return '__end__';
-        if ((state.retryCount ?? 0) < 2) {
-          return 'video_composition';
-        }
-        return '__end__';
+        return nextQualityNode(
+          state.qualityControl?.passed,
+          state.retryCount ?? 0,
+          this.runtime.qcMaxRetries
+        );
       });
 
     const app = workflow.compile();
@@ -153,7 +173,7 @@ export class OrchestratorService {
       // 下次生成时自动作为高分案例 few-shot 注入。
       void this.maybeLearn(dto, finalState as AgentState);
 
-      return {
+      const result: AgentResult = {
         taskId,
         status: finalState.status,
         progress: finalState.progress,
@@ -162,12 +182,21 @@ export class OrchestratorService {
         startedAt,
         completedAt: new Date(),
       };
+      void this.recordRunTrace(
+        taskId,
+        dto.userId,
+        startedAt,
+        'ok',
+        result,
+        finalState as AgentState
+      );
+      return result;
     } catch (error: any) {
       const isAbort = error.name === 'AbortError' || error.message?.includes('abort');
       this.logger.error(
         `[${taskId}] Workflow ${isAbort ? 'cancelled' : 'failed'}: ${error.message}`
       );
-      return {
+      const result: AgentResult = {
         taskId,
         status: isAbort ? 'cancelled' : 'failed',
         progress: 0,
@@ -177,9 +206,39 @@ export class OrchestratorService {
         completedAt: new Date(),
         error: error.message,
       };
+      void this.recordRunTrace(taskId, dto.userId, startedAt, isAbort ? 'ok' : 'error', result);
+      return result;
     } finally {
       this.activeRuns.delete(taskId);
     }
+  }
+
+  private async recordRunTrace(
+    taskId: string,
+    userId: string | undefined,
+    startedAt: Date,
+    status: 'ok' | 'error',
+    result: AgentResult,
+    finalState?: AgentState
+  ): Promise<void> {
+    await this.traceService.recordSpan({
+      userId,
+      taskId,
+      scope: 'agent',
+      span: 'agent_workflow',
+      startedAt,
+      endedAt: result.completedAt ?? new Date(),
+      status,
+      summary: finalState?.qualityControl
+        ? `质量分 ${finalState.qualityControl.qualityScore},通过=${finalState.qualityControl.passed}`
+        : (result.error ?? `工作流 ${result.status}`),
+      metadata: {
+        currentNode: result.currentNode,
+        progress: result.progress,
+        retryCount: finalState?.retryCount ?? 0,
+        traceSpanCount: finalState?.trace?.length ?? 0,
+      },
+    });
   }
 
   /**
