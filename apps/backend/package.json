@@ -8,7 +8,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
-    "test": "node --test --require ts-node/register src/modules/auth/auth.config.test.ts",
+    "test": "node ../../scripts/run-backend-tests.mjs",
     "lint": "eslint src --ext ts --report-unused-disable-directives --max-warnings 400",
     "lint:fix": "eslint src --ext ts --fix"
   },

@@ -19,6 +19,7 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { TemplateModule } from './modules/template/template.module';
 import { HealthController } from './modules/common/health.controller';
+import { RATE_LIMITS } from './rate-limit.config';
 
 @Module({
   imports: [
@@ -31,10 +32,7 @@ import { HealthController } from './modules/common/health.controller';
     // 全局限流(防 ARK 配额被刷爆)
     // - 默认 100 req/min/IP
     // - 短时段(10s)上限 30,防止单点突发
-    ThrottlerModule.forRoot([
-      { name: 'short', ttl: 10_000, limit: 30 },
-      { name: 'medium', ttl: 60_000, limit: 100 },
-    ]),
+    ThrottlerModule.forRoot([...RATE_LIMITS]),
 
     // 数据库配置
     TypeOrmModule.forRootAsync({

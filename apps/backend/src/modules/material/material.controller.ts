@@ -32,6 +32,7 @@ import { Material } from './entities/material.entity';
 import { QueueRunnerService } from '../queue/queue-runner.service';
 import { StorageService } from '../media/services/storage.service';
 import { QUEUE_NAMES, JOB_NAMES } from '../queue/queue.constants';
+import { assetTypeForMime, MAX_MEDIA_UPLOAD_BYTES } from './media-upload.config';
 
 @ApiTags('素材管理')
 @ApiBearerAuth()
@@ -70,7 +71,7 @@ export class MaterialController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
-      limits: { fileSize: 200 * 1024 * 1024 },
+      limits: { fileSize: MAX_MEDIA_UPLOAD_BYTES },
       fileFilter: (_req, file, cb) => {
         const allowedMimes = [
           'image/jpeg',
@@ -101,16 +102,11 @@ export class MaterialController {
     }
 
     // 从 MIME 推断素材类型
-    const typeMap: Record<string, 'image' | 'video' | 'audio'> = {
-      'image/jpeg': 'image',
-      'image/png': 'image',
-      'image/webp': 'image',
-      'video/mp4': 'video',
-      'audio/mpeg': 'audio',
-      'audio/mp3': 'audio',
-    };
     const mimeType = file.mimetype;
-    const assetType = typeMap[mimeType] ?? 'image';
+    const assetType = assetTypeForMime(mimeType);
+    if (!assetType) {
+      throw new BadRequestException(`不支持的媒体类型: ${mimeType}`);
+    }
 
     // tags 以逗号分隔的字符串传入,转回数组
     const tags: string[] | undefined = tagsRaw
