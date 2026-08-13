@@ -54,31 +54,24 @@
 
 ```bash
 # 1. 安装依赖
-cd apps/backend && npm install --legacy-peer-deps
-cd ../frontend && npm install --legacy-peer-deps
+corepack enable
+pnpm install --frozen-lockfile
 
-# 2. 环境变量(最小集)
-cd ../backend
-cat > .env <<EOF
-DATABASE_URL=postgresql://localhost:5432/vidforge
-DB_SYNCHRONIZE=true
-JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(64).toString('hex'))")
-NODE_ENV=development
-EOF
+# 2. 创建本地配置，并至少填写 DATABASE_URL 与 JWT_SECRET
+cp apps/backend/.env.example apps/backend/.env
 
-# ARK 凭证不会内置在代码中。需要使用 ARK 功能时，请在本地 `.env` 中配置下列环境变量。
-
-# 3. 启动后端
-npm run start:dev    # http://localhost:3001/api
-                     # Swagger:http://localhost:3001/api/docs
-
-# 4. 另起终端启动前端
-cd ../frontend && npm run dev    # http://localhost:3000
+# 3. 检查环境并启动前后端
+pnpm check:env
+pnpm dev
 ```
+
+前端默认运行在 `http://localhost:3000`，后端 API 位于
+`http://localhost:3001/api`，Swagger 文档位于 `http://localhost:3001/api/docs`。
+ARK 凭证不会内置在代码中；只有使用对应 AI 功能时才需要配置 ARK 环境变量。
 
 ### 默认账号
 
-后端启动时自动播种 demo 账号:`demo@vidforge.app` / `demo1234`
+开发环境可通过 `SEED_DEMO_USER=true` 播种演示账号。请勿在公开生产环境启用演示账号。
 
 ## 📁 项目结构
 
@@ -187,11 +180,10 @@ VOLC_TTS_APPID/TOKEN  # 缺失则 TTS 生成静音占位
 
 ## 📄 相关文档
 
-- [项目记忆 / 迭代记录](./docs/项目记忆.md)
 - [生产部署方案](./docs/生产部署方案.md)
-- [部署检查清单](./docs/部署检查清单.md)
-- [占位符记录](./docs/占位符记录.md)
 - [架构说明](./docs/架构说明.md)
+- [Technical Architecture](./docs/TECHNICAL_ARCHITECTURE.md)
+- [交付与验证报告](./docs/DELIVERY_REPORT.md)
 
 ## 📝 开发规范
 

@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Logger, Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -13,12 +13,21 @@ import { JwtAuthGuard } from './jwt-auth.guard';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (cfg: ConfigService) => ({
-        secret: cfg.get<string>('JWT_SECRET') || 'vidforge_dev_secret_change_me',
-        signOptions: {
-          expiresIn: cfg.get<string>('JWT_EXPIRES_IN') || '7d',
-        },
-      }),
+      useFactory: (cfg: ConfigService) => {
+        const isProduction = cfg.get<string>('NODE_ENV') === 'production';
+        const configuredSecret = cfg.get<string>('JWT_SECRET')?.trim();
+
+        if (isProduction && (!configuredSecret || configuredSecret.length < 32)) {
+          throw new Error('JWT_SECRET must contain at least 32 characters in production');
+        }
+
+        return {
+          secret: configuredSecret || 'vidforge-local-development-only-secret',
+          signOptions: {
+            expiresIn: cfg.get<string>('JWT_EXPIRES_IN') || '7d',
+          },
+        };
+      },
     }),
   ],
   providers: [AuthService, JwtAuthGuard],
@@ -26,10 +35,24 @@ import { JwtAuthGuard } from './jwt-auth.guard';
   exports: [AuthService, JwtAuthGuard, JwtModule],
 })
 export class AuthModule implements OnModuleInit {
-  constructor(private readonly authService: AuthService) {}
+  private readonly logger = new Logger(AuthModule.name);
+
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService
+  ) {}
 
   async onModuleInit() {
-    // 启动时尝试播种 demo 账号；表未建好时静默失败
-    await this.authService.ensureDemoUser();
+    if (this.configService.get<string>('SEED_DEMO_USER') !== 'true') return;
+
+    if (this.configService.get<string>('NODE_ENV') === 'production') {
+      this.logger.warn('SEED_DEMO_USER is ignored in production');
+      return;
+    }
+
+    await this.authService.ensureDemoUser(
+      this.configService.get<string>('DEMO_USER_EMAIL') || 'demo@vidforge.app',
+      this.configService.get<string>('DEMO_USER_PASSWORD') || 'demo1234'
+    );
   }
 }

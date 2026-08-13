@@ -12,6 +12,7 @@ interface LocalProps {
 }
 
 export default function AuthPage({ mode }: LocalProps) {
+  const demoLoginEnabled = import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'true';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const setSession = useAuthStore((s) => s.setSession);
@@ -60,7 +61,9 @@ export default function AuthPage({ mode }: LocalProps) {
     setLoading(true);
     setError(null);
     try {
-      const res = await authApi.login({ email: 'demo@vidforge.app', password: 'demo1234' });
+      const email = import.meta.env.VITE_DEMO_USER_EMAIL || 'demo@vidforge.app';
+      const password = import.meta.env.VITE_DEMO_USER_PASSWORD || 'demo1234';
+      const res = await authApi.login({ email, password });
       setSession(res.token, res.user);
       message.success('已登录 Demo 账号');
       const redirect = searchParams.get('redirect') || '/workspace';
@@ -193,7 +196,7 @@ export default function AuthPage({ mode }: LocalProps) {
           </Button>
         </Form>
 
-        {mode === 'login' && (
+        {mode === 'login' && demoLoginEnabled && (
           <>
             <Divider style={{ margin: '20px 0', borderColor: 'var(--border-color)' }} plain>
               <Text style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>或</Text>

@@ -26,20 +26,21 @@ export class AuthService {
     private readonly jwtService: JwtService
   ) {}
 
-  /** 启动时确保 demo 账号存在 */
-  async ensureDemoUser(): Promise<void> {
+  /** 在显式启用的非生产环境中确保 demo 账号存在。 */
+  async ensureDemoUser(email: string, password: string): Promise<void> {
     try {
-      const exists = await this.userRepo.findOne({ where: { email: 'demo@vidforge.app' } });
+      const normalizedEmail = email.toLowerCase().trim();
+      const exists = await this.userRepo.findOne({ where: { email: normalizedEmail } });
       if (exists) return;
-      const passwordHash = await bcrypt.hash('demo1234', SALT_ROUNDS);
+      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
       const user = this.userRepo.create({
-        email: 'demo@vidforge.app',
+        email: normalizedEmail,
         username: 'Demo 用户',
         passwordHash,
         role: 'demo',
       });
       await this.userRepo.save(user);
-      this.logger.log('已创建 demo 账号: demo@vidforge.app / demo1234');
+      this.logger.log(`已创建 demo 账号: ${normalizedEmail}`);
     } catch (err: any) {
       this.logger.warn(`ensureDemoUser 失败（可能是表未建好）: ${err?.message ?? err}`);
     }

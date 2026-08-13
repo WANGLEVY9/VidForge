@@ -6,7 +6,7 @@ console.log('🔍 开始环境检查...\n');
 
 // 检查Node.js版本
 const nodeVersion = process.versions.node;
-const [major, minor] = nodeVersion.split('.').map(Number);
+const [major] = nodeVersion.split('.').map(Number);
 console.log(`Node.js 版本: ${nodeVersion}`);
 if (major < 18) {
   console.error('❌ Node.js 版本需要 >= 18.0.0');
@@ -35,15 +35,10 @@ try {
 }
 
 // 检查目录结构
-const requiredDirs = [
-  'apps/frontend',
-  'apps/backend',
-  'packages/common',
-  'docs',
-];
+const requiredDirs = ['apps/frontend', 'apps/backend', 'packages/common', 'docs'];
 
 console.log('\n📁 检查目录结构...');
-requiredDirs.forEach(dir => {
+requiredDirs.forEach((dir) => {
   if (fs.existsSync(path.resolve(dir))) {
     console.log(`✅ ${dir} 存在`);
   } else {
@@ -55,7 +50,11 @@ requiredDirs.forEach(dir => {
 // 检查package.json
 console.log('\n📦 检查package.json...');
 const rootPkg = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
-if (rootPkg.name === 'vidforge' && rootPkg.workspace) {
+if (
+  rootPkg.name === 'vidforge' &&
+  rootPkg.packageManager?.startsWith('pnpm@') &&
+  fs.existsSync('pnpm-workspace.yaml')
+) {
   console.log('✅ 根package.json配置正确');
 } else {
   console.error('❌ 根package.json配置错误');
@@ -88,25 +87,32 @@ const envPath = 'apps/backend/.env';
 if (fs.existsSync(envPath)) {
   console.log('✅ .env 文件存在');
   const envContent = fs.readFileSync(envPath, 'utf-8');
-  const requiredEnvs = [
-    'DATABASE_URL',
+  const requiredEnvs = ['DATABASE_URL', 'JWT_SECRET'];
+  const optionalEnvs = [
     'REDIS_URL',
-    'JWT_SECRET',
-    'VOLC_ENGINE_ACCESS_KEY',
-    'VOLC_ENGINE_SECRET_KEY',
-    'OSS_ACCESS_KEY',
-    'OSS_SECRET_KEY',
+    'ARK_TEXT_PRIMARY_ENDPOINT_ID',
+    'ARK_TEXT_PRIMARY_API_KEY',
+    'ARK_VIDEO_PRIMARY_ENDPOINT_ID',
+    'ARK_VIDEO_PRIMARY_API_KEY',
+    'OSS_ACCESS_KEY_ID',
+    'OSS_ACCESS_KEY_SECRET',
   ];
-  
-  requiredEnvs.forEach(envKey => {
+
+  requiredEnvs.forEach((envKey) => {
     if (envContent.includes(envKey)) {
       console.log(`✅ ${envKey} 配置存在`);
     } else {
-      console.warn(`⚠️  ${envKey} 未配置，开发环境可暂用Mock`);
+      console.warn(`⚠️  ${envKey} 未配置`);
+    }
+  });
+
+  optionalEnvs.forEach((envKey) => {
+    if (envContent.includes(envKey)) {
+      console.log(`✅ ${envKey} 可选配置存在`);
     }
   });
 } else {
-  console.warn('⚠️  .env 文件不存在，可参考apps/backend/.env模板创建');
+  console.warn('⚠️  .env 文件不存在，可参考 apps/backend/.env.example 创建');
 }
 
 console.log('\n🎉 环境检查完成！');
