@@ -27,7 +27,7 @@
     "test:repo": "node --test scripts/*.test.js",
     "test:backend": "pnpm --filter @vidforge/backend test",
     "test": "pnpm test:repo && pnpm test:backend",
-    "verify": "pnpm check:env && pnpm check:hygiene && pnpm docs:check && pnpm test && pnpm lint && pnpm build && pnpm check:bundle",
+    "verify": "pnpm check:env && pnpm check:hygiene && pnpm docs:check && pnpm test && pnpm lint && pnpm stylelint && pnpm build && pnpm check:bundle",
     "start": "cd apps/backend && npm run start:prod",
     "lint": "pnpm --filter @vidforge/frontend lint && pnpm --filter @vidforge/backend lint",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",

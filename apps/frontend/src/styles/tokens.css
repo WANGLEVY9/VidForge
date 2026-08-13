@@ -1,6 +1,7 @@
 /* VidForge Design Tokens - CSS Custom Properties */
 
-:root { /* :root defaults to dark mode */
+:root {
+  /* :root defaults to dark mode */
   --bg-primary: #0f0f13;
   --bg-surface: #1a1a23;
   --bg-surface-2: #24242f;
@@ -13,23 +14,22 @@
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-info: #3b82f6;
-  --text-primary: rgba(255, 255, 255, 0.90);
-  --text-secondary: rgba(255, 255, 255, 0.65);
-  --text-tertiary: rgba(255, 255, 255, 0.40);
-  --text-disabled: rgba(255, 255, 255, 0.20);
-  --border-color: rgba(255, 255, 255, 0.06);
-  --border-color-hover: rgba(255, 255, 255, 0.12);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.4);
-  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --text-primary: rgb(255 255 255 / 90%);
+  --text-secondary: rgb(255 255 255 / 65%);
+  --text-tertiary: rgb(255 255 255 / 40%);
+  --text-disabled: rgb(255 255 255 / 20%);
+  --border-color: rgb(255 255 255 / 6%);
+  --border-color-hover: rgb(255 255 255 / 12%);
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 30%);
+  --shadow-elevated: 0 10px 40px rgb(0 0 0 / 40%);
+  --shadow-modal: 0 20px 60px rgb(0 0 0 / 50%);
+
   /* Layout chrome (顶栏 / 侧栏 / 底部 tab) - 默认深色 */
-  --header-bg: rgba(15, 15, 19, 0.7);
-  --sidebar-bg: rgba(15, 15, 19, 0.85);
-  --tab-bar-bg: rgba(15, 15, 19, 0.85);
-  /* Layout chrome (顶栏 / 侧栏 / 底部 tab) - 默认深色 */
-  --header-bg: rgba(15, 15, 19, 0.7);
-  --sidebar-bg: rgba(15, 15, 19, 0.85);
-  --tab-bar-bg: rgba(15, 15, 19, 0.85);
+  --header-bg: rgb(15 15 19 / 70%);
+  --sidebar-bg: rgb(15 15 19 / 85%);
+  --tab-bar-bg: rgb(15 15 19 / 85%);
+
+  /* Shape and spacing */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -42,7 +42,9 @@
   --spacing-xl: 24px;
   --spacing-xxl: 32px;
   --spacing-xxxl: 48px;
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-family:
+    -apple-system, blinkmacsystemfont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   --font-size-xs: 12px;
   --font-size-sm: 13px;
   --font-size-md: 14px;
@@ -54,29 +56,8 @@
   --duration-fast: 0.15s;
   --duration-normal: 0.3s;
   --duration-slow: 0.5s;
-}
 
-.light-mode {
-  --bg-primary: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-surface-2: #f1f5f9;
-  --bg-elevated: #ffffff;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-tertiary: #94a3b8;
-  --text-disabled: #cbd5e1;
-  --border-color: #e2e8f0;
-  --border-color-hover: #cbd5e1;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.12);
-  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15);
-  --header-bg: rgba(255, 255, 255, 0.85);
-  --sidebar-bg: rgba(255, 255, 255, 0.92);
-  --tab-bar-bg: rgba(255, 255, 255, 0.85);
-}
-
-/* ======== Mobile-specific tokens ======== */
-:root {
+  /* Mobile-specific tokens */
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
@@ -87,4 +68,23 @@
   --fab-size: 56px;
   --fab-bottom: calc(var(--tab-bar-height) + 16px + var(--safe-area-bottom));
   --touch-target-min: 44px;
+}
+
+.light-mode {
+  --bg-primary: #f8fafc;
+  --bg-surface: #fff;
+  --bg-surface-2: #f1f5f9;
+  --bg-elevated: #fff;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --text-disabled: #cbd5e1;
+  --border-color: #e2e8f0;
+  --border-color-hover: #cbd5e1;
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 6%);
+  --shadow-elevated: 0 10px 40px rgb(0 0 0 / 12%);
+  --shadow-modal: 0 20px 60px rgb(0 0 0 / 15%);
+  --header-bg: rgb(255 255 255 / 85%);
+  --sidebar-bg: rgb(255 255 255 / 92%);
+  --tab-bar-bg: rgb(255 255 255 / 85%);
 }

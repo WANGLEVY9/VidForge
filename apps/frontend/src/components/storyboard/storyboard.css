@@ -79,11 +79,11 @@
 }
 
 .shot-item:hover {
-  background: rgba(255,255,255,0.03);
+  background: rgb(255 255 255 / 3%);
 }
 
 .shot-item--active {
-  background: rgba(99,102,241,0.12);
+  background: rgb(99 102 241 / 12%);
   border-left: 3px solid var(--brand-primary);
 }
 
@@ -191,7 +191,7 @@
 }
 
 .video-player__overlay:hover {
-  background: rgba(0,0,0,0.15);
+  background: rgb(0 0 0 / 15%);
 }
 
 /* Shot Detail Panel */
@@ -287,14 +287,16 @@
 
 .timeline-bar__block--active {
   opacity: 1;
-  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--brand-primary);
+  box-shadow:
+    0 0 0 2px var(--bg-primary),
+    0 0 0 4px var(--brand-primary);
 }
 
 .timeline-bar__block-label {
   color: #fff !important;
   font-size: 10px !important;
   font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 50%);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

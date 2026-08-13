@@ -43,6 +43,8 @@ jobs:
         name: Lint frontend
       - run: pnpm --filter @vidforge/backend lint
         name: Lint backend
+      - run: pnpm stylelint
+        name: Lint stylesheets
 
   build-backend:
     runs-on: ubuntu-latest
