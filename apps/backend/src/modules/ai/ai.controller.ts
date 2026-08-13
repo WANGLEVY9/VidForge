@@ -6,17 +6,18 @@ import {
   Delete,
   Body,
   Param,
-  Req,
   HttpException,
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Request } from 'express';
 import { ArkConfigService } from './services/ark-config.service';
 import { ArkTextService } from './services/ark-text.service';
 import { ArkVideoService } from './services/ark-video.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 /**
  * 给一个字符串生成 "指纹" 信息, 用于排查环境变量是否被黏贴时污染
@@ -166,23 +167,20 @@ export class AiController {
     return this.arkVideoService.queryTask(taskId);
   }
 
-  /**
-   * 由前端 API 配置中心写入 override:任意登录用户都可改(项目当前无 admin 角色)
-   * TODO: 后续接入 role 系统,仅 admin 可改
-   */
+  /** Provider override 会影响所有用户，仅允许启用中的管理员修改。 */
+  @UseGuards(AdminGuard)
   @Patch('ark/configs/:key')
   @ApiOperation({ summary: '更新某个模型的 endpoint / apiKey,持久化到 ark_model_overrides' })
   async updateConfig(
     @Param('key') key: string,
     @Body() dto: { endpointId?: string; apiKey?: string },
-    @Req() req: Request
+    @CurrentUser() user: JwtPayload
   ) {
     if (!dto || (dto.endpointId === undefined && dto.apiKey === undefined)) {
       throw new HttpException('请至少提供 endpointId 或 apiKey 之一', HttpStatus.BAD_REQUEST);
     }
-    const userId = (req as any).user?.sub as string | undefined;
     try {
-      const updated = await this.arkConfigService.setOverride(key, dto, userId);
+      const updated = await this.arkConfigService.setOverride(key, dto, user.sub);
       if (!updated) {
         throw new HttpException(`未知模型 key: ${key}`, HttpStatus.NOT_FOUND);
       }
@@ -201,6 +199,7 @@ export class AiController {
     }
   }
 
+  @UseGuards(AdminGuard)
   @Delete('ark/configs/:key/override')
   @ApiOperation({ summary: '清除某个模型的 DB override,回落到 env / builtin' })
   async clearOverride(@Param('key') key: string) {

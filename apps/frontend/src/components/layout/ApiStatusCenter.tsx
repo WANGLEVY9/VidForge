@@ -30,6 +30,7 @@ import {
   ArkDiagnoseResult,
   UpdateArkConfigPayload,
 } from '../../services/ai';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const { Text, Paragraph } = Typography;
 
@@ -74,6 +75,8 @@ interface EditState {
 }
 
 export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
+  const currentUser = useAuthStore((state) => state.user);
+  const isAdmin = currentUser?.role === 'admin';
   const [open, setOpen] = useState(false);
   const [configs, setConfigs] = useState<ArkConfigPublic[]>([]);
   const [loading, setLoading] = useState(false);
@@ -238,7 +241,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
         }
       >
         <Paragraph style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-          管理 VidForge 调用的火山方舟 ARK 模型。修改后会写入数据库 (
+          查看 VidForge 调用的火山方舟 ARK 模型。管理员修改后会写入数据库 (
           <code>ark_model_overrides</code>),立即对所有用户生效;清除则回落到环境变量 /
           环境变量或数据库中的配置。
         </Paragraph>
@@ -295,21 +298,23 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
                         </Button>
                       </Tooltip>
                     )}
-                    <Button
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() =>
-                        setEditing({
-                          modelKey: cfg.key,
-                          endpointId: cfg.endpointId,
-                          apiKey: '',
-                          modelName: cfg.name,
-                        })
-                      }
-                    >
-                      编辑
-                    </Button>
-                    {cfg.apiKeySource === 'db' && (
+                    {isAdmin && (
+                      <Button
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() =>
+                          setEditing({
+                            modelKey: cfg.key,
+                            endpointId: cfg.endpointId,
+                            apiKey: '',
+                            modelName: cfg.name,
+                          })
+                        }
+                      >
+                        编辑
+                      </Button>
+                    )}
+                    {isAdmin && cfg.apiKeySource === 'db' && (
                       <Tooltip title="清除 DB override,回落到 env/builtin">
                         <Button size="small" danger onClick={() => handleClearOverride(cfg.key)}>
                           清除
@@ -364,7 +369,7 @@ export default function ApiStatusCenter({ trigger }: ApiStatusCenterProps) {
               安全提示
             </Text>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              · 当前任意登录用户都可修改 key,后续会接入管理员角色
+              · 只有启用中的管理员可以修改或清除全局 Provider 配置
             </Text>
             <Text type="secondary" style={{ fontSize: 12 }}>
               · DB 中存储为明文,生产环境建议结合 KMS / 密钥管理服务

@@ -6,6 +6,7 @@ import { User } from './entities/user.entity';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { AdminGuard } from './admin.guard';
 import { resolveJwtSecret, shouldSeedDemoUser } from './auth.config';
 
 @Module({
@@ -24,9 +25,9 @@ import { resolveJwtSecret, shouldSeedDemoUser } from './auth.config';
       },
     }),
   ],
-  providers: [AuthService, JwtAuthGuard],
+  providers: [AuthService, JwtAuthGuard, AdminGuard],
   controllers: [AuthController],
-  exports: [AuthService, JwtAuthGuard, JwtModule],
+  exports: [AuthService, JwtAuthGuard, AdminGuard, JwtModule],
 })
 export class AuthModule implements OnModuleInit {
   private readonly logger = new Logger(AuthModule.name);
