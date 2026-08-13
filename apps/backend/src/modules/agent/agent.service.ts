@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AgentResult } from './interfaces/agent-result.interface';
@@ -8,12 +8,46 @@ import { OrchestratorService } from './orchestrator.service';
 import { createAgentTaskId } from './agent-runtime.config';
 
 @Injectable()
-export class AgentService {
+export class AgentService implements OnModuleInit {
+  private readonly logger = new Logger(AgentService.name);
   constructor(
     @InjectRepository(AgentRun)
     private readonly runRepo: Repository<AgentRun>,
     private readonly orchestrator: OrchestratorService
   ) {}
+
+  /**
+   * 恢复上次进程退出前尚未开始的任务；正在运行的任务可能已产生外部副作用，
+   * 因此标记为 interrupted，交给后续显式 replay 流程，而不是自动重复扣费。
+   */
+  async onModuleInit(): Promise<void> {
+    const interrupted = await this.runRepo.find({ where: { status: 'running' }, take: 50 });
+    if (interrupted.length) {
+      await this.runRepo.update(
+        interrupted.map((run) => run.id),
+        {
+          status: 'failed',
+          currentNode: 'interrupted',
+          errorMessage: '服务进程在任务执行期间退出，请通过 replay 流程重新运行',
+          completedAt: new Date(),
+        }
+      );
+      this.logger.warn(`已标记 ${interrupted.length} 个中断中的 Agent 任务，未自动重复执行`);
+    }
+
+    // 先处理遗留的 running，再启动 pending，避免本轮恢复刚启动的任务被误判为中断。
+    const pending = await this.runRepo.find({
+      where: { status: 'pending' },
+      order: { createdAt: 'ASC' },
+      take: 10,
+    });
+    for (const run of pending) {
+      const dto = { ...run.input, userId: run.userId } as RunAgentDto;
+      void this.execute(run.id, dto, run.createdAt ?? new Date()).catch((error) => {
+        this.logger.error(`恢复 Agent 任务失败 ${run.id}: ${error?.message ?? error}`);
+      });
+    }
+  }
 
   /** Start a durable background run and return before model/media work begins. */
   async run(dto: RunAgentDto): Promise<AgentResult> {

@@ -72,3 +72,42 @@ test('agent status is scoped to the authenticated user', async () => {
   assert.equal(result.taskId, 'task_1');
   assert.equal(result.status, 'completed');
 });
+
+test('agent startup marks interrupted runs without replaying them', async () => {
+  const updates: Array<{ id: string; patch: Record<string, unknown> }> = [];
+  const repo = {
+    find: async (options: { where: { status: string } }) =>
+      options.where.status === 'running'
+        ? [
+            {
+              id: 'task-interrupted',
+              status: 'running',
+              userId: 'user-1',
+              input: {},
+              createdAt: new Date('2026-01-01T00:00:00.000Z'),
+            },
+          ]
+        : [],
+    update: async (id: string | string[], patch: Record<string, unknown>) => {
+      updates.push({ id: String(id), patch });
+    },
+  };
+  const service = new AgentService(
+    repo as never,
+    { run: async () => ({}), cancel: () => false } as never
+  );
+
+  await service.onModuleInit();
+
+  assert.deepEqual(updates, [
+    {
+      id: 'task-interrupted',
+      patch: {
+        status: 'failed',
+        currentNode: 'interrupted',
+        errorMessage: '服务进程在任务执行期间退出，请通过 replay 流程重新运行',
+        completedAt: updates[0]?.patch.completedAt,
+      },
+    },
+  ]);
+});

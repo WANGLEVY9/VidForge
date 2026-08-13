@@ -56,7 +56,7 @@ export class ArkTextService implements TextGenerationProvider {
     };
 
     // ── 应用级缓存命中:直接返回,不调 ARK ──
-    const cached = this.cache.get(cacheInput);
+    const cached = await this.cache.get(cacheInput);
     if (cached) {
       this.logger.debug(`[cache HIT] ${endpointId} - skipped ARK call`);
       if (this.traceService && options.traceTaskId) {
@@ -107,7 +107,9 @@ export class ArkTextService implements TextGenerationProvider {
       const cacheHit = cachedTokens > 0;
 
       // 写入应用级缓存
-      this.cache.set(cacheInput, data, promptTokens + completionTokens);
+      void this.cache.set(cacheInput, data, promptTokens + completionTokens).catch((error) => {
+        this.logger.warn(`写入 ARK response cache 失败: ${error?.message ?? error}`);
+      });
 
       // 异步写 trace,不阻塞调用方
       if (this.traceService && options.traceTaskId) {
