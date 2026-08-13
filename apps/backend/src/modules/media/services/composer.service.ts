@@ -33,9 +33,42 @@ export interface ComposeResult {
   finalAbsPath: string;
   durationSec: number;
   fileSize: number;
+  checksumSha256: string;
   hasVoiceover: boolean;
   hasBgm: boolean;
   subtitleBurned: boolean;
+}
+
+export interface MediaMetadata {
+  durationSec: number;
+  width?: number;
+  height?: number;
+}
+
+export const MAX_COMPOSE_MEDIA_DURATION_SEC = 15 * 60;
+export const MAX_COMPOSE_MEDIA_DIMENSION = 8192;
+
+export function validateMediaMetadata(metadata: MediaMetadata, label: string): void {
+  if (!Number.isFinite(metadata.durationSec) || metadata.durationSec <= 0) {
+    throw new Error(`${label} 缺少有效视频时长`);
+  }
+  if (metadata.durationSec > MAX_COMPOSE_MEDIA_DURATION_SEC) {
+    throw new Error(`${label} 视频时长超过 ${MAX_COMPOSE_MEDIA_DURATION_SEC} 秒限制`);
+  }
+  if (
+    !Number.isInteger(metadata.width) ||
+    !Number.isInteger(metadata.height) ||
+    metadata.width <= 0 ||
+    metadata.height <= 0
+  ) {
+    throw new Error(`${label} 缺少有效视频尺寸`);
+  }
+  if (
+    metadata.width > MAX_COMPOSE_MEDIA_DIMENSION ||
+    metadata.height > MAX_COMPOSE_MEDIA_DIMENSION
+  ) {
+    throw new Error(`${label} 视频尺寸超过 ${MAX_COMPOSE_MEDIA_DIMENSION}px 限制`);
+  }
 }
 
 export function validateComposeShots(shots: ComposeShotInput[]): void {
@@ -93,6 +126,8 @@ export class ComposerService {
         const shot = shots[i];
         const local = path.join(segmentsDir, `seg_${String(i).padStart(2, '0')}.mp4`);
         await this.ffmpeg.downloadTo(shot.videoUrl, local);
+        const metadata = await this.ffmpeg.probe(local);
+        validateMediaMetadata(metadata, `分镜 ${shot.index}`);
         localSegments.push(local);
         onProgress(
           Math.round(2 + ((i + 1) / shots.length) * 20),
@@ -174,6 +209,7 @@ export class ComposerService {
         finalAbsPath: published.absPath,
         durationSec: probe.durationSec || 0,
         fileSize: published.size,
+        checksumSha256: published.sha256,
         hasVoiceover: !!voicePath && voiceoverDuration > 0,
         hasBgm: !!bgmPath,
         subtitleBurned,

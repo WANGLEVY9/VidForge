@@ -2,6 +2,8 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { OssService } from './oss.service';
+import { createHash } from 'node:crypto';
+import { createReadStream } from 'node:fs';
 
 /**
  * 文件存储服务
@@ -160,6 +162,7 @@ export class StorageService implements OnModuleInit {
     url: string;
     absPath: string;
     size: number;
+    sha256: string;
   }> {
     const targetDir = path.join(this.outputsRoot, targetSubdir);
     await fs.mkdir(targetDir, { recursive: true });
@@ -177,8 +180,10 @@ export class StorageService implements OnModuleInit {
       }
     }
     const stat = await fs.stat(absPath);
+    const hash = createHash('sha256');
+    for await (const chunk of createReadStream(absPath)) hash.update(chunk);
     const url = `${this.publicBaseUrl}/outputs/${targetSubdir}/${encodeURIComponent(targetName)}`;
-    return { url, absPath, size: stat.size };
+    return { url, absPath, size: stat.size, sha256: hash.digest('hex') };
   }
 
   /** 读 BGM 资源目录(用于风格匹配) */

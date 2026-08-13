@@ -586,6 +586,7 @@ ALTER TABLE materials ADD COLUMN IF NOT EXISTS "embedding" vector(1024);
 
 - **Current**: multer disk storage at `storage/uploads/`, served via `/static/` prefix
 - **Output Videos**: `storage/outputs/creation/<taskId>.mp4`
+- **Artifact integrity**: published outputs include a SHA-256 checksum in the creation result and the corresponding `video_composition` trace metadata.
 - **Temp Files**: `storage/tmp/` (auto-cleaned after video analysis)
 - **BGM Files**: `storage/bgm/` (style-prefixed mp3 files)
 - **Production Target**: Object storage (Aliyun OSS / Volcengine TOS) for scalability

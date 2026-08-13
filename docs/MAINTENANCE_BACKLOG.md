@@ -24,10 +24,10 @@ This is a practical backlog for improving VidForge as a real open-source project
 - [x] Define provider interfaces for text, video, TTS, object storage, and media processing.
 - [x] Add a deterministic local fixture mode for composition without paid providers.
 - [x] Add a minimal end-to-end smoke path from product asset to rendered artifact.
-- [ ] Add media metadata validation before FFmpeg composition.
+- [x] Add media metadata validation before FFmpeg composition.
 - [ ] Add explicit audio, subtitle, aspect-ratio, and duration validation.
 - [ ] Add resumable per-shot generation and failed-shot replay.
-- [ ] Add output artifact checksums and trace links.
+- [x] Add output artifact SHA-256 checksums and trace links.
 - [x] Add a small offline benchmark fixture for cache-key latency and estimated provider cost.
 - [ ] Add quality-agent evaluation criteria with documented limitations.
 - [ ] Add sample product assets and a reproducible example under a clear license.

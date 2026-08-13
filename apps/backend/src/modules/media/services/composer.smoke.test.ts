@@ -55,7 +55,12 @@ test(
           const finalPath = path.join(outputDir, name);
           await rename(localPath, finalPath);
           const file = await stat(finalPath);
-          return { url: `/static/outputs/creation/${name}`, absPath: finalPath, size: file.size };
+          return {
+            url: `/static/outputs/creation/${name}`,
+            absPath: finalPath,
+            size: file.size,
+            sha256: 'fixture-sha256',
+          };
         },
       };
       const subtitle = { buildLinesFromShots: () => [] };
@@ -93,6 +98,7 @@ test(
       assert.equal(result.finalUrl, '/static/outputs/creation/smoke-task.mp4');
       assert.equal(result.finalAbsPath, rendered);
       assert.equal(result.fileSize, artifact.size);
+      assert.equal(result.checksumSha256, 'fixture-sha256');
       assert.ok(artifact.size > 0);
       assert.ok(metadata.durationSec > 0.5);
       assert.equal(metadata.width, 270);

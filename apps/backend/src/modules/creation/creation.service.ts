@@ -8,6 +8,7 @@ import { RegenerateShotDto } from './dto/regenerate-shot.dto';
 import { ArkVideoService, VideoGenerationOptions } from '../ai/services/ark-video.service';
 import { ArkConfigService } from '../ai/services/ark-config.service';
 import { ComposerService, ComposeShotInput } from '../media/services/composer.service';
+import { TraceService } from '../trace/trace.service';
 
 interface ShotState {
   id: string;
@@ -46,7 +47,8 @@ export class CreationService {
     private creationGateway: CreationGateway,
     private readonly arkVideoService: ArkVideoService,
     private readonly arkConfigService: ArkConfigService,
-    private readonly composer: ComposerService
+    private readonly composer: ComposerService,
+    private readonly traceService: TraceService
   ) {}
 
   /**
@@ -243,6 +245,7 @@ export class CreationService {
 
     if (successShots.length > 0) {
       try {
+        const compositionStartedAt = new Date();
         // ComposerService 仅支持 9:16/16:9/1:1,把不支持的画幅归一到 9:16
         const composeRatio: '9:16' | '16:9' | '1:1' =
           aspectRatio === '16:9' || aspectRatio === '9:16' || aspectRatio === '1:1'
@@ -275,10 +278,28 @@ export class CreationService {
         composeMeta = {
           mode: 'composed',
           fileSize: composed.fileSize,
+          checksumSha256: composed.checksumSha256,
+          traceTaskId: taskId,
           hasVoiceover: composed.hasVoiceover,
           hasBgm: composed.hasBgm,
           subtitleBurned: composed.subtitleBurned,
         };
+        void this.traceService.recordSpan({
+          userId: task.userId,
+          taskId,
+          scope: 'creation',
+          span: 'video_composition',
+          startedAt: compositionStartedAt,
+          status: 'ok',
+          model: 'ffmpeg',
+          summary: '视频合片与产物发布完成',
+          metadata: {
+            artifactUrl: composed.finalUrl,
+            artifactSha256: composed.checksumSha256,
+            artifactSizeBytes: composed.fileSize,
+            artifactDurationSec: composed.durationSec,
+          },
+        });
         this.logger.log(`[${taskId}] 合片完成 ${composed.finalUrl} (${composed.fileSize}B)`);
       } catch (err: any) {
         // 合片失败不阻塞整体:回退到"首段视频作预览"
