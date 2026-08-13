@@ -155,7 +155,8 @@ export class MaterialController {
         await this.materialService.analyzeTags(userId, material.id, {
           category: material.category,
         });
-      }
+      },
+      { jobId: `material-analyze:${material.id}`, attempts: 3 }
     );
   }
 

@@ -11,8 +11,8 @@ This is a practical backlog for improving VidForge as a real open-source project
 - [ ] Add request-size and upload-type limits to every media upload path.
 - [ ] Add rate limiting guidance and a deployable default for authentication endpoints.
 - [ ] Add structured error codes for provider, queue, storage, and composition failures.
-- [ ] Add idempotency handling for video-creation requests and retry paths.
-- [ ] Add queue shutdown/drain behavior and a recovery runbook.
+- [x] Add idempotency handling for material-analysis enqueue and retry paths.
+- [x] Add queue health re-checks and shutdown behavior; document recovery runbook next.
 - [ ] Add a security test for path traversal and unsafe media filenames.
 - [ ] Review dependency update PRs in isolated branches before merging.
 

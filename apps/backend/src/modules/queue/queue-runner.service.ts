@@ -1,7 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from './queue.constants';
+
+export interface QueueEnqueueOptions {
+  priority?: number;
+  delay?: number;
+  attempts?: number;
+  jobId?: string;
+}
 
 /**
  * 队列运行器 - 屏蔽"是否真的连得上 Redis"的复杂度。
@@ -15,9 +22,11 @@ import { QUEUE_NAMES } from './queue.constants';
  * 也保留了"开箱即用"的开发体验。
  */
 @Injectable()
-export class QueueRunnerService {
+export class QueueRunnerService implements OnApplicationShutdown {
   private readonly logger = new Logger(QueueRunnerService.name);
   private redisHealthy: boolean | null = null;
+  private healthCheckedAt = 0;
+  private readonly healthCacheTtlMs = 10_000;
 
   constructor(
     @InjectQueue(QUEUE_NAMES.CREATION_SHOT) private readonly shotQueue: Queue,
@@ -31,7 +40,9 @@ export class QueueRunnerService {
    * 任何 BullMQ Queue 都共用同一个 Redis 连接,任选一个 ping 即可。
    */
   async isRedisHealthy(): Promise<boolean> {
-    if (this.redisHealthy !== null) return this.redisHealthy;
+    if (this.redisHealthy !== null && Date.now() - this.healthCheckedAt < this.healthCacheTtlMs) {
+      return this.redisHealthy;
+    }
     try {
       const client: any = await this.shotQueue.client;
       // ioredis 暴露 ping(),IRedisClient 类型未导出 ping;用 any 绕过
@@ -39,9 +50,11 @@ export class QueueRunnerService {
         await client.ping();
       }
       this.redisHealthy = true;
+      this.healthCheckedAt = Date.now();
       this.logger.log('队列 Redis 连接正常,使用 BullMQ 持久化队列');
     } catch (err: any) {
       this.redisHealthy = false;
+      this.healthCheckedAt = Date.now();
       this.logger.warn(
         `队列 Redis 不可达 (${err?.message ?? err}),降级到进程内异步执行。生产环境务必配置 REDIS_URL。`
       );
@@ -62,7 +75,7 @@ export class QueueRunnerService {
     jobName: string,
     data: T,
     fallback: () => Promise<void>,
-    options?: { priority?: number; delay?: number; attempts?: number }
+    options?: QueueEnqueueOptions
   ): Promise<{ jobId?: string; mode: 'queue' | 'inline' }> {
     const healthy = await this.isRedisHealthy();
     if (!healthy) {
@@ -78,6 +91,7 @@ export class QueueRunnerService {
       priority: options?.priority,
       delay: options?.delay,
       attempts: options?.attempts ?? 3,
+      jobId: options?.jobId,
     });
     this.logger.log(`[queue:${queueName}] 入队 ${jobName} jobId=${job.id}`);
     return { jobId: String(job.id), mode: 'queue' };
@@ -108,6 +122,44 @@ export class QueueRunnerService {
       }
     }
     return { mode: 'queue', queues: result };
+  }
+
+  /**
+   * 将失败任务重新放回队列。
+   * 只处理明确处于 failed 状态的任务，避免重复执行 active/waiting 任务。
+   */
+  async retryFailed(
+    queueName: string,
+    limit = 20
+  ): Promise<{ mode: 'queue' | 'inline'; retried: number }> {
+    const healthy = await this.isRedisHealthy();
+    if (!healthy) return { mode: 'inline', retried: 0 };
+
+    const boundedLimit = Math.max(1, Math.min(Math.floor(limit), 100));
+    const jobs = await this.getQueue(queueName).getFailed(0, boundedLimit - 1);
+    let retried = 0;
+    for (const job of jobs) {
+      try {
+        await job.retry('failed');
+        retried += 1;
+      } catch (err: any) {
+        this.logger.warn(`[queue:${queueName}] 重放失败 jobId=${job.id}: ${err?.message ?? err}`);
+      }
+    }
+    return { mode: 'queue', retried };
+  }
+
+  /** 应用退出时关闭 Queue 客户端，避免连接和在途任务泄漏。 */
+  async onApplicationShutdown(signal?: string): Promise<void> {
+    if (this.redisHealthy !== true) return;
+    await Promise.all(
+      [this.shotQueue, this.composeQueue, this.exportQueue, this.materialQueue].map((queue) =>
+        queue.close()
+      )
+    );
+    this.redisHealthy = null;
+    this.healthCheckedAt = 0;
+    this.logger.log(`队列连接已关闭${signal ? ` (${signal})` : ''}`);
   }
 
   private getQueue(name: string): Queue {
