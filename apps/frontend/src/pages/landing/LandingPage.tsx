@@ -160,6 +160,9 @@ export default function LandingPage() {
               从商品素材理解到脚本、编排与合成，一条可观察、可扩展的 AI 视频生产链路。
             </p>
             <div className="landing-hero-actions">
+              <Link className="landing-button landing-button-primary" to="/try">
+                Try the 60-second demo <ArrowIcon />
+              </Link>
               <Link className="landing-button landing-button-primary" to="/workspace">
                 Explore the workspace <ArrowIcon />
               </Link>

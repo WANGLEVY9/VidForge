@@ -18,6 +18,7 @@ const AuthPage = lazy(() => import('@/pages/auth/AuthPage'));
 const ProfilePage = lazy(() => import('@/pages/profile'));
 const WorkspaceListPage = lazy(() => import('@/pages/workspace/WorkspaceListPage'));
 const LandingPage = lazy(() => import('@/pages/landing/LandingPage'));
+const QuickStartPage = lazy(() => import('@/pages/quick-start/QuickStartPage'));
 const BasicLayout = lazy(() => import('./layouts/BasicLayout'));
 const WorkspaceLayout = lazy(() => import('./layouts/WorkspaceLayout'));
 
@@ -78,6 +79,16 @@ function App() {
           element={
             <Suspense fallback={<Loading />}>
               <LandingPage />
+            </Suspense>
+          }
+        />
+
+        {/* 无需登录的快速体验：只在浏览器内运行，不依赖后端或 API Key */}
+        <Route
+          path="/try"
+          element={
+            <Suspense fallback={<Loading />}>
+              <QuickStartPage />
             </Suspense>
           }
         />
