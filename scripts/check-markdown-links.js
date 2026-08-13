@@ -2,7 +2,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const roots = ['README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'SUPPORT.md', 'ROADMAP.md'];
+const roots = [
+  'README.md',
+  'CONTRIBUTING.md',
+  'SECURITY.md',
+  'SUPPORT.md',
+  'ROADMAP.md',
+  'GOVERNANCE.md',
+  'CHANGELOG.md',
+];
 const markdownFiles = [
   ...roots.filter(fs.existsSync),
   ...fs

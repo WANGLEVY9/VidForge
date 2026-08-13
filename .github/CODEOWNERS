@@ -1,0 +1,7 @@
+# Default reviewer for repository-wide changes.
+* @WANGLEVY9
+
+/.github/ @WANGLEVY9
+/apps/backend/src/modules/auth/ @WANGLEVY9
+/apps/backend/src/modules/ai/ @WANGLEVY9
+/apps/backend/src/modules/compliance/ @WANGLEVY9

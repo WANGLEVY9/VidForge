@@ -214,6 +214,7 @@ pnpm verify
 ```
 
 社区计划和待办见 [ROADMAP.md](./ROADMAP.md)，版本变化见 [CHANGELOG.md](./CHANGELOG.md)。
+项目决策与贡献者角色见 [GOVERNANCE.md](./GOVERNANCE.md)。
 
 ## 📜 许可证
 
