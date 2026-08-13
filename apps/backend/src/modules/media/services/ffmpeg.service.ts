@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { createWriteStream } from 'fs';
+import { fileURLToPath } from 'url';
 import axios from 'axios';
 import { MediaProcessingProvider } from '../../../providers/provider.contracts';
 
@@ -46,6 +47,24 @@ export class FfmpegService implements MediaProcessingProvider {
     if (!url) throw new Error('downloadTo: url 为空');
     assertDownloadSize(0, maxBytes);
     this.logger.debug(`下载 ${url} -> ${destPath}`);
+
+    // 本地开发/fixture 模式允许从 backend/storage 读取素材，生产环境仍只接受 HTTP(S)。
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      (url.startsWith('file://') || path.isAbsolute(url))
+    ) {
+      const sourcePath = path.resolve(url.startsWith('file://') ? fileURLToPath(url) : url);
+      const storageRoot = path.resolve(process.cwd(), 'storage');
+      if (sourcePath !== storageRoot && !sourcePath.startsWith(`${storageRoot}${path.sep}`)) {
+        throw new Error('downloadTo: 本地素材必须位于 storage 目录内');
+      }
+      const stat = await fs.stat(sourcePath);
+      assertDownloadSize(stat.size, maxBytes);
+      await fs.mkdir(path.dirname(destPath), { recursive: true });
+      await fs.copyFile(sourcePath, destPath);
+      return destPath;
+    }
+
     const resp = await axios.get(url, {
       responseType: 'stream',
       timeout: 60000,

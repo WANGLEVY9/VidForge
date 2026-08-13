@@ -25,3 +25,7 @@ OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces
 ```
 
 Export is best-effort with a 1.5-second timeout. Collector failures are swallowed so telemetry cannot fail video generation. Do not put API keys in request IDs or trace attributes; sensitive provider credentials are never exported.
+
+## Media smoke test
+
+The backend test suite includes a local Composer smoke test. It generates a one-second color fixture with FFmpeg, runs the real download/concat/audio/publish/probe path, and verifies a non-empty 270×480 MP4. It is skipped when FFmpeg is not installed and never contacts a paid provider.
