@@ -152,6 +152,7 @@ function MaterialPage() {
   const [selectedIds, _setSelectedIds] = useState<string[]>([]);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewItem, setPreviewItem] = useState<MaterialItem | null>(null);
+  const [previewMediaError, setPreviewMediaError] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [queueExpanded, setQueueExpanded] = useState(true);
@@ -363,6 +364,7 @@ function MaterialPage() {
 
   const handlePreview = (item: MaterialItem) => {
     setPreviewItem(item);
+    setPreviewMediaError(false);
     setPreviewVisible(true);
   };
 
@@ -396,6 +398,7 @@ function MaterialPage() {
       });
       // 更新本地状态
       setMaterials((prev) => prev.map((m) => (m.id === item.id ? updated : m)));
+      setPreviewItem((current) => (current?.id === item.id ? updated : current));
       const caption = (updated.metadata as any)?.caption ?? '完成';
       const hasAiTags = !!(updated.productTags || updated.videoTags || updated.clipTags);
       message.success({
@@ -1282,26 +1285,65 @@ function MaterialPage() {
             )}
           </Space>
         }
-        footer={null}
-        onCancel={() => setPreviewVisible(false)}
+        footer={
+          <Space>
+            <Button onClick={() => setPreviewVisible(false)}>关闭</Button>
+            {previewItem && previewItem.type !== 'audio' && (
+              <Button
+                icon={<ExperimentOutlined />}
+                loading={analyzingId === previewItem.id}
+                onClick={() => handleAnalyze(previewItem)}
+              >
+                {isAnalyzed(previewItem) ? '重新分析' : 'AI 分析'}
+              </Button>
+            )}
+            {previewItem && (
+              <Button
+                type="primary"
+                icon={<DownloadOutlined />}
+                onClick={() => handleDownload(previewItem)}
+              >
+                下载素材
+              </Button>
+            )}
+          </Space>
+        }
+        onCancel={() => {
+          setPreviewVisible(false);
+          setPreviewMediaError(false);
+        }}
         width={720}
         destroyOnClose
       >
         <div style={{ padding: 'var(--spacing-md)' }}>
-          {previewItem?.type === 'image' && previewItem.url ? (
+          {previewMediaError ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Empty
+                description="媒体加载失败，请检查地址或重新上传"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            </div>
+          ) : previewItem?.type === 'image' && previewItem.url ? (
             <img
               src={previewItem.url}
               alt={previewItem.name}
+              onError={() => setPreviewMediaError(true)}
               style={{ width: '100%', borderRadius: 8, maxHeight: 480, objectFit: 'contain' }}
             />
           ) : previewItem?.type === 'video' && previewItem.url ? (
             <video
               src={previewItem.url}
               controls
+              onError={() => setPreviewMediaError(true)}
               style={{ width: '100%', borderRadius: 8, maxHeight: 480 }}
             />
           ) : previewItem?.type === 'audio' && previewItem.url ? (
-            <audio src={previewItem.url} controls style={{ width: '100%' }} />
+            <audio
+              src={previewItem.url}
+              controls
+              onError={() => setPreviewMediaError(true)}
+              style={{ width: '100%' }}
+            />
           ) : (
             <div style={{ textAlign: 'center', padding: 40 }}>
               <Empty description="暂无预览" image={Empty.PRESENTED_IMAGE_SIMPLE} />
