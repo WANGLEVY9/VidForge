@@ -6,6 +6,7 @@ This is a practical backlog for improving VidForge as a real open-source project
 
 - [ ] Add integration tests for the health and authentication endpoints.
 - [x] Add database migrations and document the production migration workflow.
+- [x] Add a Docker Compose environment for local PostgreSQL/pgvector and Redis.
 - [ ] Verify production startup fails safely when required secrets are missing.
 - [ ] Add request-size and upload-type limits to every media upload path.
 - [ ] Add rate limiting guidance and a deployable default for authentication endpoints.

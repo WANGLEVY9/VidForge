@@ -77,10 +77,15 @@ cp apps/backend/.env.example apps/backend/.env
 # DATABASE_URL=postgresql://vidforge:vidforge-local@localhost:5432/vidforge
 # REDIS_URL=redis://localhost:6379
 
-# 4. 检查环境并启动前后端
+# 4. 执行数据库迁移
+pnpm --filter @vidforge/backend migration:run
+
+# 5. 检查环境并启动前后端
 pnpm check:env
 pnpm dev
 ```
+
+Compose 只提供本地数据库和 Redis，不会启动应用容器。完整说明见 [`docker/README.md`](./docker/README.md)。
 
 前端默认运行在 `http://localhost:3000`，后端 API 位于
 `http://localhost:3001/api`，Swagger 文档位于 `http://localhost:3001/api/docs`。

@@ -1,0 +1,38 @@
+name: vidforge-local
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vidforge
+      POSTGRES_USER: vidforge
+      POSTGRES_PASSWORD: vidforge-local
+    ports:
+      - '5432:5432'
+    volumes:
+      - vidforge-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/00-extensions.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vidforge -d vidforge']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - vidforge-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  vidforge-postgres-data:
+  vidforge-redis-data:
