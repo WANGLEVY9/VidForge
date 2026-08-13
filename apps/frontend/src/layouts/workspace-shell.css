@@ -196,6 +196,119 @@
   padding: var(--spacing-xl);
 }
 
+.workspace-loading {
+  display: flex;
+  min-height: 260px;
+  align-items: center;
+  justify-content: center;
+}
+
+.workspace-missing {
+  display: flex;
+  min-height: 260px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.workspace-missing-copy {
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+.workspace-context-bar {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 8px 10px 8px 14px;
+  background: color-mix(in srgb, var(--bg-surface) 78%, transparent);
+}
+
+.workspace-context-leading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 16px;
+}
+
+.workspace-space-select {
+  min-width: 240px;
+}
+.workspace-space-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.workspace-space-option .ant-tag {
+  margin-inline-end: 0;
+}
+.workspace-product-note {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-tabs {
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.workspace-tabs .ant-tabs-nav {
+  margin-bottom: 8px;
+}
+.workspace-tabs .ant-tabs-tab {
+  min-height: 42px;
+  border-radius: 8px 8px 0 0;
+  padding: 10px 14px;
+}
+.workspace-tabs .ant-tabs-tab:hover {
+  background: rgb(255 255 255 / 4%);
+}
+.workspace-tabs .ant-tabs-tab-active {
+  background: rgb(124 103 255 / 8%);
+}
+
+@media (width <= 720px) {
+  .workspace-context-bar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 10px;
+  }
+  .workspace-context-leading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .workspace-space-select {
+    width: 100%;
+    min-width: 0;
+  }
+  .workspace-context-bar > .ant-btn {
+    width: 100%;
+  }
+  .workspace-product-note {
+    padding: 0 2px;
+  }
+  .workspace-tabs {
+    overflow-x: auto;
+  }
+  .workspace-tabs .ant-tabs-nav-wrap {
+    overflow: visible;
+  }
+  .workspace-tabs .ant-tabs-tab {
+    padding-inline: 11px;
+  }
+}
+
 @media (width <= 720px) {
   .vidforge-sidebar {
     transform: translateX(-100%);

@@ -10,6 +10,7 @@ import {
   PlusOutlined,
 } from '@ant-design/icons';
 import { useSpaceStore } from '../store/useSpaceStore';
+import './workspace-shell.css';
 
 const { Text } = Typography;
 
@@ -57,7 +58,7 @@ export default function WorkspaceLayout() {
 
   if (!loaded) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
+      <div className="workspace-loading">
         <Spin size="large" />
       </div>
     );
@@ -68,17 +69,8 @@ export default function WorkspaceLayout() {
   // 空间不存在 → 引导回工作台
   if (spaceId && !currentSpace) {
     return (
-      <div className="page-enter" style={{ textAlign: 'center', padding: 60 }}>
-        <Text
-          style={{
-            color: 'var(--text-tertiary)',
-            fontSize: 14,
-            display: 'block',
-            marginBottom: 16,
-          }}
-        >
-          找不到该商品空间，可能已被归档或无权访问
-        </Text>
+      <div className="page-enter workspace-missing">
+        <Text className="workspace-missing-copy">找不到该商品空间，可能已被归档或无权访问</Text>
         <Button type="primary" onClick={() => navigate('/workspace')}>
           返回空间列表
         </Button>
@@ -89,47 +81,30 @@ export default function WorkspaceLayout() {
   return (
     <div className="page-enter">
       {/* Workspace 顶部：空间切换 + 标题 */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 16,
-          marginBottom: 16,
-          flexWrap: 'wrap',
-        }}
-      >
-        <Space size="middle" align="center">
+      <div className="workspace-context-bar">
+        <div className="workspace-context-leading">
           <Select
             value={spaceId}
             onChange={handleSwitchSpace}
-            style={{ minWidth: 240 }}
+            className="workspace-space-select"
             size="large"
             options={spaces.map((s) => ({
               value: s.id,
               label: (
-                <Space>
+                <span className="workspace-space-option">
                   <span>{s.name}</span>
-                  {s.isDefault && (
-                    <Tag color="cyan" style={{ margin: 0 }}>
-                      默认
-                    </Tag>
-                  )}
-                </Space>
+                  {s.isDefault && <Tag color="cyan">默认</Tag>}
+                </span>
               ),
             }))}
           />
           {currentSpace?.productName && (
-            <Text style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>
-              主推：{currentSpace.productName}
-            </Text>
+            <Text className="workspace-product-note">主推：{currentSpace.productName}</Text>
           )}
-        </Space>
-        <Space>
-          <Button icon={<PlusOutlined />} onClick={() => navigate('/workspace')}>
-            管理空间
-          </Button>
-        </Space>
+        </div>
+        <Button icon={<PlusOutlined />} onClick={() => navigate('/workspace')}>
+          管理空间
+        </Button>
       </div>
 
       {/* Workspace Tabs */}
@@ -146,7 +121,7 @@ export default function WorkspaceLayout() {
             </Space>
           ),
         }))}
-        style={{ marginBottom: 8 }}
+        className="workspace-tabs"
       />
 
       {/* Outlet 渲染当前 tab 对应页面 */}
