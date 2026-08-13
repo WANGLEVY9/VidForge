@@ -3,7 +3,25 @@
 import axios from 'axios';
 import { logger } from '../services/logger';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+export function getApiFailureMessage(error: unknown, fallback: string): string {
+  const candidate = (error ?? {}) as {
+    response?: { status?: number; data?: { message?: string | string[] } };
+    message?: string;
+  };
+  const serverMessage = candidate.response?.data?.message;
+  if (Array.isArray(serverMessage)) return serverMessage.join('；');
+  if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;
+
+  if (!candidate.response || candidate.message === 'Network Error') {
+    return '无法连接 VidForge 后端服务，请稍后重试；维护者请检查 VITE_API_BASE_URL 与 /api/health。';
+  }
+  if (candidate.response.status && candidate.response.status >= 500) {
+    return 'VidForge 后端服务暂时不可用，请稍后重试。';
+  }
+  return candidate.message || fallback;
+}
 
 const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api`,

@@ -36,3 +36,12 @@ test('showcase external links use same-tab navigation for embedded browsers', ()
   assert.match(landing, /href=\{repositoryUrl\}/);
   assert.match(quickStart, /href="https:\/\/github\.com\/WANGLEVY9\/VidForge"/);
 });
+
+test('auth surfaces explain unavailable backend services instead of exposing network errors', () => {
+  const api = read('apps/frontend/src/utils/api.ts');
+  const auth = read('apps/frontend/src/pages/auth/AuthPage.tsx');
+
+  assert.match(api, /export function getApiFailureMessage/);
+  assert.match(api, /无法连接 VidForge 后端服务/);
+  assert.match(auth, /getApiFailureMessage\(err/);
+});

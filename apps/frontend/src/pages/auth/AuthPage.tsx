@@ -4,6 +4,7 @@ import { Form, Input, Button, Typography, message, Alert, Divider } from 'antd';
 import { RocketOutlined, MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import { authApi } from '../../services/auth';
 import { useAuthStore } from '../../store/useAuthStore';
+import { getApiFailureMessage } from '../../utils/api';
 
 const { Title, Text } = Typography;
 
@@ -47,11 +48,7 @@ export default function AuthPage({ mode }: LocalProps) {
       const redirect = searchParams.get('redirect') || '/workspace';
       navigate(redirect, { replace: true });
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.message ||
-        (mode === 'login' ? '登录失败' : '注册失败');
-      setError(Array.isArray(msg) ? msg.join('；') : msg);
+      setError(getApiFailureMessage(err, mode === 'login' ? '登录失败' : '注册失败'));
     } finally {
       setLoading(false);
     }
