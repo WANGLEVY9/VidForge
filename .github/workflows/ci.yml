@@ -33,6 +33,8 @@ jobs:
         name: Audit production dependencies
       - run: pnpm docs:check
         name: Check local documentation links
+      - run: pnpm check:hygiene
+        name: Check repository hygiene
       - run: docker compose config --quiet
         name: Validate Docker Compose configuration
       - run: pnpm test
