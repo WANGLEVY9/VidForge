@@ -39,8 +39,9 @@ export function BottomTabBar({ visible }: BottomTabBarProps) {
   const location = useLocation();
 
   return (
-    <div
+    <nav
       className="glass-tab-bar mobile-tab-bar"
+      aria-label="移动端主导航"
       style={{
         position: 'fixed',
         bottom: 0,
@@ -56,12 +57,18 @@ export function BottomTabBar({ visible }: BottomTabBarProps) {
       }}
     >
       {tabs.map((tab) => {
-        const active = location.pathname === tab.href;
+        const canonicalSegment =
+          tab.key === 'dashboard' ? 'data' : tab.key === 'creation' ? 'video' : tab.key;
+        const active =
+          location.pathname === tab.href || location.pathname.endsWith(`/${canonicalSegment}`);
         return (
-          <div
+          <button
             key={tab.key}
+            type="button"
             className="touch-target touch-feedback"
             onClick={() => navigate(tab.href)}
+            aria-label={tab.label}
+            aria-current={active ? 'page' : undefined}
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -74,6 +81,10 @@ export function BottomTabBar({ visible }: BottomTabBarProps) {
               position: 'relative',
               color: active ? 'var(--brand-primary)' : 'var(--text-tertiary)',
               transition: 'color 0.2s',
+              border: 0,
+              padding: 0,
+              background: 'transparent',
+              font: 'inherit',
             }}
           >
             {tab.badge !== undefined ? (
@@ -107,9 +118,9 @@ export function BottomTabBar({ visible }: BottomTabBarProps) {
                 }}
               />
             )}
-          </div>
+          </button>
         );
       })}
-    </div>
+    </nav>
   );
 }

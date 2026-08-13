@@ -18,9 +18,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   playbackState,
   onTogglePlay,
 }) => {
+  const handleKeyboardToggle = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onTogglePlay();
+    }
+  };
+
   if (!videoUrl) {
     return (
-      <div className="video-player video-player--empty" onClick={onTogglePlay}>
+      <div
+        className="video-player video-player--empty"
+        role="button"
+        tabIndex={0}
+        aria-label="切换视频预览"
+        onClick={onTogglePlay}
+        onKeyDown={handleKeyboardToggle}
+      >
         {thumbnailUrl ? (
           <img src={thumbnailUrl} alt="preview" className="video-player__thumb" />
         ) : (
@@ -43,7 +57,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         autoPlay={playbackState === 'playing'}
         onClick={onTogglePlay}
       />
-      <div className="video-player__overlay" onClick={onTogglePlay}>
+      <div
+        className="video-player__overlay"
+        role="button"
+        tabIndex={0}
+        aria-label={playbackState === 'playing' ? '暂停视频' : '播放视频'}
+        onClick={onTogglePlay}
+        onKeyDown={handleKeyboardToggle}
+      >
         {playbackState === 'paused' || playbackState === 'idle' ? (
           <PlayCircleOutlined style={{ fontSize: 56, color: '#fff', opacity: 0.85 }} />
         ) : (

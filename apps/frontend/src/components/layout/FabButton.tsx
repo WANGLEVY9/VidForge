@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { PlusOutlined, ThunderboltOutlined, CloudUploadOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface FabAction {
   key: string;
@@ -9,20 +9,30 @@ interface FabAction {
   onClick: () => void;
 }
 
-const defaultActions: FabAction[] = [
-  { key: 'quick-create', label: '快速创作', icon: <ThunderboltOutlined />, onClick: () => {} },
-  { key: 'upload', label: '上传素材', icon: <CloudUploadOutlined />, onClick: () => {} },
-];
-
 interface FabButtonProps {
   actions?: FabAction[];
   hidden?: boolean;
 }
 
-export function FabButton({ actions = defaultActions, hidden = false }: FabButtonProps) {
+export function FabButton({ actions, hidden = false }: FabButtonProps) {
   const [open, setOpen] = useState(false);
   const fabRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
   const navigate = useNavigate();
+  const resolvedActions = actions ?? [
+    {
+      key: 'quick-create',
+      label: '快速创作',
+      icon: <ThunderboltOutlined />,
+      onClick: () => navigate('/try'),
+    },
+    {
+      key: 'upload',
+      label: '上传素材',
+      icon: <CloudUploadOutlined />,
+      onClick: () => navigate('/workspace'),
+    },
+  ];
 
   useEffect(() => {
     if (!open) return;
@@ -37,7 +47,7 @@ export function FabButton({ actions = defaultActions, hidden = false }: FabButto
 
   useEffect(() => {
     setOpen(false);
-  }, [navigate]);
+  }, [location.pathname]);
 
   if (hidden) return null;
 
@@ -58,7 +68,7 @@ export function FabButton({ actions = defaultActions, hidden = false }: FabButto
             alignItems: 'flex-end',
           }}
         >
-          {actions.map((action, i) => (
+          {resolvedActions.map((action, i) => (
             <div
               key={action.key}
               className="fab-enter"
@@ -72,6 +82,16 @@ export function FabButton({ actions = defaultActions, hidden = false }: FabButto
               onClick={() => {
                 action.onClick();
                 setOpen(false);
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={action.label}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  action.onClick();
+                  setOpen(false);
+                }
               }}
             >
               <span
@@ -111,6 +131,16 @@ export function FabButton({ actions = defaultActions, hidden = false }: FabButto
 
       <div
         onClick={() => setOpen(!open)}
+        role="button"
+        tabIndex={0}
+        aria-label={open ? '关闭快速操作菜单' : '打开快速操作菜单'}
+        aria-expanded={open}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setOpen((current) => !current);
+          }
+        }}
         style={{
           width: 'var(--fab-size)',
           height: 'var(--fab-size)',

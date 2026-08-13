@@ -23,7 +23,12 @@ const BasicLayout = lazy(() => import('./layouts/BasicLayout'));
 const WorkspaceLayout = lazy(() => import('./layouts/WorkspaceLayout'));
 
 const Loading = () => (
-  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+  <div
+    role="status"
+    aria-live="polite"
+    aria-label="正在加载"
+    style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}
+  >
     <Spin size="large" />
   </div>
 );

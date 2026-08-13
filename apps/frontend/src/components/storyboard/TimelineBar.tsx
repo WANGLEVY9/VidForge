@@ -48,7 +48,17 @@ export const TimelineBar: React.FC = () => {
                 width: Math.max(width, 24),
                 background: statusColors[shot.status],
               }}
+              role="button"
+              tabIndex={0}
+              aria-label={`选择第 ${shot.order} 个分镜`}
+              aria-pressed={shot.id === activeShotId}
               onClick={() => setActiveShot(shot.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setActiveShot(shot.id);
+                }
+              }}
             >
               <Text className="timeline-bar__block-label">
                 {shot.order} - {shot.duration}s
