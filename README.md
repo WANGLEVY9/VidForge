@@ -56,6 +56,7 @@
 - PostgreSQL ≥ 14
 - ffmpeg ≥ 4.x(必需,本地 `brew install ffmpeg` 或 `apt install ffmpeg`)
 - Redis ≥ 7(可选,缺失自动降级)
+- Docker + Docker Compose（推荐，用于一键启动 PostgreSQL/pgvector 与 Redis）
 
 ### 本地启动
 
@@ -64,16 +65,24 @@
 corepack enable
 pnpm install --frozen-lockfile
 
-# 2. 创建本地配置，并至少填写 DATABASE_URL 与 JWT_SECRET
+# 2. 启动本地 PostgreSQL/pgvector 与 Redis
+docker compose up -d
+
+# 3. 创建本地配置，并至少填写 DATABASE_URL 与 JWT_SECRET
 cp apps/backend/.env.example apps/backend/.env
 
-# 3. 检查环境并启动前后端
+# Compose 默认连接信息：
+# DATABASE_URL=postgresql://vidforge:vidforge-local@localhost:5432/vidforge
+# REDIS_URL=redis://localhost:6379
+
+# 4. 检查环境并启动前后端
 pnpm check:env
 pnpm dev
 ```
 
 前端默认运行在 `http://localhost:3000`，后端 API 位于
 `http://localhost:3001/api`，Swagger 文档位于 `http://localhost:3001/api/docs`。
+服务就绪探针位于 `http://localhost:3001/api/health/ready`。
 ARK 凭证不会内置在代码中；只有使用对应 AI 功能时才需要配置 ARK 环境变量。
 
 ### 默认账号

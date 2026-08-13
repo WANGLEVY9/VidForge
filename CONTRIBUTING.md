@@ -10,10 +10,12 @@
 
 ## 本地开发
 
-1. 安装 Node.js 18+、pnpm 8+、PostgreSQL 14+ 和 FFmpeg。
-2. 复制 `apps/backend/.env.example` 为 `.env` 并填写本地配置。
-3. 运行 `pnpm install`。
-4. 使用 `pnpm dev` 启动前后端。
+1. 安装 Node.js 18+、pnpm 8+、Docker 和 FFmpeg。
+2. 运行 `docker compose up -d` 启动 PostgreSQL/pgvector 与 Redis。
+3. 复制 `apps/backend/.env.example` 为 `.env` 并填写本地配置。
+4. 运行 `pnpm install --frozen-lockfile`。
+5. 使用 `pnpm dev` 启动前后端。
+6. 提交前运行 `pnpm verify`。
 
 ## Pull Request
 

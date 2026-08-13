@@ -6,6 +6,7 @@ package-lock.json
 # Build outputs
 dist
 build
+storage
 *.tsbuildinfo
 
 # Environment files

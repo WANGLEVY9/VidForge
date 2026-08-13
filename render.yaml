@@ -5,9 +5,9 @@ services:
     env: node
     region: singapore
     plan: starter
-    buildCommand: cd apps/backend && npm install && npm run build
-    startCommand: cd apps/backend && npm run start:prod
-    healthCheckPath: /api/health
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build:backend
+    startCommand: pnpm --filter @vidforge/backend start:prod
+    healthCheckPath: /api/health/ready
     envVars:
       - key: NODE_ENV
         value: production
@@ -24,15 +24,17 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 7d
-      - key: VOLC_ENGINE_ACCESS_KEY
+      - key: ARK_TEXT_PRIMARY_ENDPOINT_ID
         sync: false
-      - key: VOLC_ENGINE_SECRET_KEY
+      - key: ARK_TEXT_PRIMARY_API_KEY
         sync: false
-      - key: VOLC_ENGINE_REGION
-        value: cn-beijing
-      - key: OSS_ACCESS_KEY
+      - key: ARK_VIDEO_PRIMARY_ENDPOINT_ID
         sync: false
-      - key: OSS_SECRET_KEY
+      - key: ARK_VIDEO_PRIMARY_API_KEY
+        sync: false
+      - key: OSS_ACCESS_KEY_ID
+        sync: false
+      - key: OSS_ACCESS_KEY_SECRET
         sync: false
       - key: OSS_BUCKET
         value: vidforge-assets
