@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ObjectStorageProvider } from '../../../providers/provider.contracts';
 
 interface OSSConfig {
   region: string;
@@ -15,7 +16,8 @@ interface OSSConfig {
  * 仅当 OSS_* 环境变量全部配置时激活，否则所有方法静默返回 fallback。
  */
 @Injectable()
-export class OssService {
+export class OssService implements ObjectStorageProvider {
+  readonly capability = 'storage' as const;
   private readonly logger = new Logger(OssService.name);
   private client: any | null = null;
   private bucket = '';

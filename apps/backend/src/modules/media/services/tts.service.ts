@@ -3,6 +3,7 @@ import axios from 'axios';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ArkConfigService } from '../../ai/services/ark-config.service';
+import { TextToSpeechProvider, TtsSynthesisResult } from '../../../providers/provider.contracts';
 
 /**
  * TTS 服务
@@ -20,7 +21,8 @@ import { ArkConfigService } from '../../ai/services/ark-config.service';
  * 配置后无缝升级。
  */
 @Injectable()
-export class TtsService {
+export class TtsService implements TextToSpeechProvider {
+  readonly capability = 'tts' as const;
   private readonly logger = new Logger(TtsService.name);
   private readonly appId: string | undefined;
   private readonly token: string | undefined;
@@ -50,7 +52,7 @@ export class TtsService {
     outPath: string,
     voiceType = 'BV700_streaming',
     speedRatio = 1.0
-  ): Promise<{ outPath: string; durationSec: number; mode: 'real' | 'silence' }> {
+  ): Promise<TtsSynthesisResult> {
     if (!text.trim()) {
       // 没有台词,直接写一段 1s 静音
       await this.writeSilence(outPath, 1);

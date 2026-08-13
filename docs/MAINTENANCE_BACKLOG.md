@@ -18,7 +18,7 @@ This is a practical backlog for improving VidForge as a real open-source project
 
 ## Video pipeline value
 
-- [ ] Define a provider interface for text, vision, video, TTS, and embeddings.
+- [x] Define provider interfaces for text, video, TTS, object storage, and media processing.
 - [ ] Add a deterministic local fixture mode for composition without paid providers.
 - [ ] Add a minimal end-to-end smoke path from product asset to rendered artifact.
 - [ ] Add media metadata validation before FFmpeg composition.

@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import axios from 'axios';
+import { MediaProcessingProvider } from '../../../providers/provider.contracts';
 
 export function assertDownloadSize(bytes: number, maxBytes: number): void {
   if (!Number.isFinite(bytes) || bytes < 0) throw new Error('下载内容大小无效');
@@ -22,7 +23,8 @@ export function assertDownloadSize(bytes: number, maxBytes: number): void {
  * 所有产物先写到 workdir(临时目录),由调用方决定是否 publish 到 outputs。
  */
 @Injectable()
-export class FfmpegService {
+export class FfmpegService implements MediaProcessingProvider {
+  readonly capability = 'media' as const;
   private readonly logger = new Logger(FfmpegService.name);
 
   /** 检测 ffmpeg 是否可用(启动时打日志) */

@@ -2,19 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { ArkConfigService } from './ark-config.service';
 import { ARK_BASE_URL, ARK_API_PATHS } from '../config/ark.config';
+import {
+  VideoGenerationProvider,
+  VideoProviderRequest,
+} from '../../../providers/provider.contracts';
 
-export interface VideoGenerationOptions {
-  prompt: string;
-  firstFrameUrl?: string;
-  lastFrameUrl?: string;
-  ratio?: '16:9' | '9:16' | '4:3' | '3:4' | '1:1' | '21:9';
-  resolution?: '480p' | '720p' | '1080p';
-  duration?: number;
-  modelKey?: string;
-}
+export type VideoGenerationOptions = VideoProviderRequest;
 
 @Injectable()
-export class ArkVideoService {
+export class ArkVideoService implements VideoGenerationProvider {
+  readonly capability = 'video' as const;
   private readonly logger = new Logger(ArkVideoService.name);
 
   constructor(private readonly arkConfigService: ArkConfigService) {}

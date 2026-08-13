@@ -4,26 +4,18 @@ import { ArkConfigService } from './ark-config.service';
 import { ArkResponseCacheService } from './ark-response-cache.service';
 import { ARK_BASE_URL, ARK_API_PATHS } from '../config/ark.config';
 import { TraceService } from '../../trace/trace.service';
+import {
+  TextGenerationProvider,
+  TextProviderMessage,
+  TextProviderRequest,
+} from '../../../providers/provider.contracts';
 
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string | Array<any>;
-}
-
-export interface ChatCompletionOptions {
-  messages: ChatMessage[];
-  temperature?: number;
-  maxTokens?: number;
-  modelKey?: string;
-  /** 用于 trace 关联 */
-  traceTaskId?: string;
-  traceScope?: 'creation' | 'agent' | 'export' | 'material' | 'script';
-  traceSpan?: string;
-  traceUserId?: string;
-}
+export type ChatMessage = TextProviderMessage;
+export type ChatCompletionOptions = TextProviderRequest;
 
 @Injectable()
-export class ArkTextService {
+export class ArkTextService implements TextGenerationProvider {
+  readonly capability = 'text' as const;
   private readonly logger = new Logger(ArkTextService.name);
 
   constructor(

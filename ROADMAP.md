@@ -12,7 +12,7 @@ VidForge 的路线图以可复现、可贡献和可部署为优先级。时间�
 
 ## Next — 可观察、可扩展的视频管线
 
-- [ ] 为 ARK、TTS、OSS 和 FFmpeg 提供统一 provider 接口
+- [x] 为 ARK、TTS、OSS 和 FFmpeg 提供统一 provider 接口
 - [ ] 增加失败任务重放、队列治理和资源配额
 - [ ] 提供 OpenTelemetry 导出与结构化日志
 - [ ] 增加可复现的质量与成本 benchmark
