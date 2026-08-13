@@ -35,7 +35,7 @@ This is a practical backlog for improving VidForge as a real open-source project
 
 - [ ] Document the agent state machine and node contracts.
 - [x] Add trace correlation IDs from HTTP request through async work and optional OTLP export.
-- [ ] Add structured JSON logs with secret and prompt redaction.
+- [x] Add structured JSON HTTP logs with secret and prompt redaction by construction.
 - [ ] Add a provider latency, failure, and cost dashboard contract.
 - [ ] Add human-review checkpoints for policy-sensitive outputs.
 - [ ] Add bounded retry and backoff policies per provider class.
@@ -43,7 +43,7 @@ This is a practical backlog for improving VidForge as a real open-source project
 
 ## Contributor and community experience
 
-- [ ] Add a first-contribution walkthrough that reaches a passing local test.
+- [x] Add a first-contribution walkthrough that reaches a passing local test.
 - [ ] Add labels and milestones for reliability, video, agents, docs, and good-first-issue work.
 - [ ] Add a contributor-facing architecture decision record template.
 - [ ] Publish a short comparison of VidForge boundaries with Remotion, LangGraph, Temporal, and OpenTelemetry patterns.

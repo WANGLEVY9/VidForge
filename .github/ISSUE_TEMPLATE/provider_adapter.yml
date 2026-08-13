@@ -1,0 +1,52 @@
+name: Provider adapter
+description: 提议或贡献一个模型、TTS、存储或媒体处理 provider
+title: '[Provider]: '
+labels: [enhancement, help wanted]
+body:
+  - type: input
+    id: provider
+    attributes:
+      label: Provider / model
+      description: 写明 provider、模型版本和官方文档链接。
+    validations:
+      required: true
+  - type: dropdown
+    id: capability
+    attributes:
+      label: 能力类型
+      options:
+        - text generation
+        - video generation
+        - text to speech
+        - object storage
+        - media processing
+    validations:
+      required: true
+  - type: textarea
+    id: license
+    attributes:
+      label: 许可证与使用条款
+      description: 说明 SDK、模型权重和生成内容条款；不要只填写“开源”。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 适配方案
+      description: 描述配置项、能力差异、错误处理和降级行为。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 至少包括离线单测、无凭据时的行为和文档更新。
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: 安全确认
+      options:
+        - label: 我没有在 Issue 中包含 API Key、密码、令牌或用户数据。
+          required: true

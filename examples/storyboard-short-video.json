@@ -1,0 +1,25 @@
+{
+  "title": "轻量旅行保温杯",
+  "aspectRatio": "9:16",
+  "quality": "720p",
+  "style": "clean-commerce",
+  "burnSubtitle": true,
+  "storyboard": [
+    {
+      "id": "shot-1",
+      "index": 1,
+      "description": "晨光下展示保温杯的轻量杯身与防漏杯盖",
+      "voiceover": "轻装出发，也能安心携带热饮。",
+      "caption": "轻量防漏，随身携带",
+      "duration": 4
+    },
+    {
+      "id": "shot-2",
+      "index": 2,
+      "description": "通勤包侧袋取出保温杯，镜头展示单手开合和饮用体验",
+      "voiceover": "通勤、旅行和日常运动，一杯刚刚好。",
+      "caption": "为每天的移动节奏设计",
+      "duration": 4
+    }
+  ]
+}

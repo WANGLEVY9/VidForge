@@ -17,11 +17,14 @@
 5. 使用 `pnpm dev` 启动前后端。
 6. 提交前运行 `pnpm verify`。
 
+更短的贡献路径见 [`docs/CONTRIBUTOR_QUICKSTART.md`](./docs/CONTRIBUTOR_QUICKSTART.md)，可复制的请求样例见 [`examples/`](./examples/)。
+
 ## Pull Request
 
 - 保持改动聚焦，并说明动机、行为变化和验证方式。
 - 为 bug 修复或新功能补充测试；至少运行相关 lint/build。
 - 不要把部署平台配置、生成物或密钥提交到仓库。
+- 新增 provider 时请使用 [Provider adapter issue](https://github.com/WANGLEVY9/VidForge/issues/new?template=provider_adapter.yml) 先说明许可证、能力差异和离线验收方式。
 
 ## 提交信息
 
