@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Notification } from './entities/notification.entity';
 import { NotificationService } from './notification.service';
 import { NotificationController } from './notification.controller';
+import { resolveJwtSecret } from '../auth/auth.config';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { NotificationController } from './notification.controller';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') || 'vidforge-dev-secret',
+        secret: resolveJwtSecret(config.get<string>('NODE_ENV'), config.get<string>('JWT_SECRET')),
         signOptions: { expiresIn: config.get<string>('JWT_EXPIRES_IN') || '7d' },
       }),
       inject: [ConfigService],

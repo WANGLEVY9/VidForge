@@ -47,13 +47,14 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto): Promise<{ token: string; user: PublicUser }> {
-    const exists = await this.userRepo.findOne({ where: { email: dto.email } });
+    const email = dto.email.toLowerCase().trim();
+    const exists = await this.userRepo.findOne({ where: { email } });
     if (exists) {
       throw new ConflictException('该邮箱已被注册');
     }
     const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
     const user = this.userRepo.create({
-      email: dto.email.toLowerCase().trim(),
+      email,
       username: dto.username.trim(),
       passwordHash,
       role: 'user',
