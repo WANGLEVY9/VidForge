@@ -16,7 +16,7 @@ This is a practical backlog for improving VidForge as a real open-source project
 - [x] Add queue health re-checks and shutdown behavior; document recovery runbook next.
 - [x] Persist deterministic ARK responses in Redis with a bounded in-memory fallback.
 - [x] Recover pending Agent runs on startup and mark interrupted running runs for explicit replay.
-- [ ] Add a security test for path traversal and unsafe media filenames.
+- [x] Add a security test for path traversal and unsafe local media filenames.
 - [ ] Review dependency update PRs in isolated branches before merging.
 
 ## Video pipeline value
