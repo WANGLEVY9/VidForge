@@ -1,5 +1,7 @@
 # VidForge - 电商场景 AIGC 带货视频生成系统
 
+![VidForge open-source AI video production pipeline](./.github/assets/social-preview.jpg)
+
 [![CI](https://github.com/WANGLEVY9/VidForge/actions/workflows/ci.yml/badge.svg)](https://github.com/WANGLEVY9/VidForge/actions/workflows/ci.yml)
 [![Secret scan](https://github.com/WANGLEVY9/VidForge/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/WANGLEVY9/VidForge/actions/workflows/secret-scan.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)

@@ -25,3 +25,5 @@ VidForge 的路线图以可复现、可贡献和可部署为优先级。时间�
 - [ ] 稳定 API 与扩展开发指南
 
 欢迎在 GitHub Issues 提交具体需求。适合首次贡献的任务会使用 `good first issue`，需要设计讨论的任务会使用 `help wanted`。
+
+可直接转化为公开任务的候选见 [Contribution Ideas](./docs/CONTRIBUTION_IDEAS.md)。

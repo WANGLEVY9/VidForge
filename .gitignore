@@ -54,6 +54,7 @@ coverage
 *.png
 *.gif
 *.webp
+!.github/assets/*.jpg
 
 # Local project notes and generated deployment artifacts
 docs/memory/
