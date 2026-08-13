@@ -1,6 +1,6 @@
 # VidForge Open-source Technology Radar
 
-> Research snapshot: 2026-08-13 · 56 official repositories and project docs reviewed for transferable ideas.
+> Research snapshot: 2026-08-13 · 57 official repositories and project docs reviewed for transferable ideas.
 
 This radar is a product and engineering input, not a dependency shopping list. Each project is
 linked to its official repository. The transfer idea describes a bounded capability that can be
