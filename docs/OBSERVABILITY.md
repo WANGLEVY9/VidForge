@@ -1,0 +1,27 @@
+# Observability
+
+VidForge keeps the database trace table as the durable product-level record. It also propagates a bounded `X-Request-Id` through HTTP handlers and async work, stores it in trace metadata, emits one-line JSON HTTP access events, and can optionally export the same span to an OTLP/HTTP collector.
+
+HTTP logs contain only `event`, request ID, method, route path, status, and latency. Query strings, authorization headers, request bodies, and provider credentials are intentionally excluded.
+
+## Local benchmark
+
+The benchmark is deliberately offline: it never calls an AI provider, uploads media, or requires Redis/PostgreSQL.
+
+```bash
+pnpm benchmark:local
+```
+
+The JSON output reports a cache-key hashing latency baseline, estimated text/video costs, and `providerCalls: 0`. It is a regression signal for local changes, not a claim about end-to-end provider latency.
+
+## Optional OTLP export
+
+Set either variable in the backend environment:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+# or use a complete traces endpoint:
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces
+```
+
+Export is best-effort with a 1.5-second timeout. Collector failures are swallowed so telemetry cannot fail video generation. Do not put API keys in request IDs or trace attributes; sensitive provider credentials are never exported.

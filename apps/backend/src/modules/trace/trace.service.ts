@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TraceSpan } from './trace.entity';
+import { getRequestId } from '../../common/observability/request-context';
+import { OtlpTraceExporter } from '../../common/observability/otlp-trace-exporter';
 
 export interface RecordSpanInput {
   userId?: string;
@@ -19,6 +21,7 @@ export interface RecordSpanInput {
   costCents?: number;
   cacheHit?: boolean;
   metadata?: Record<string, any>;
+  requestId?: string;
 }
 
 /**
@@ -34,6 +37,7 @@ export interface RecordSpanInput {
 @Injectable()
 export class TraceService {
   private readonly logger = new Logger(TraceService.name);
+  private readonly otlpExporter = new OtlpTraceExporter();
 
   /** 火山方舟 Doubao-Seed-2.0-pro 的估算价格(每 1k tokens) */
   private readonly TEXT_INPUT_PRICE_PER_1K = 0.0008; // 美元
@@ -61,6 +65,8 @@ export class TraceService {
           metadata: input.metadata,
         });
 
+      const requestId = input.requestId ?? getRequestId();
+      const metadata = requestId ? { ...input.metadata, requestId } : input.metadata;
       await this.repo.save(
         this.repo.create({
           userId: input.userId,
@@ -78,9 +84,27 @@ export class TraceService {
           completionTokens: input.completionTokens ?? 0,
           costCents,
           cacheHit: input.cacheHit ?? false,
-          metadata: input.metadata,
+          metadata,
         })
       );
+      void this.otlpExporter
+        .export({
+          name: `${input.scope}.${input.span}`,
+          startedAt: input.startedAt,
+          endedAt,
+          status: input.status ?? 'ok',
+          traceId: requestId,
+          attributes: {
+            'vidforge.task_id': input.taskId,
+            'vidforge.scope': input.scope,
+            'vidforge.span': input.span,
+            'vidforge.model': input.model,
+            'vidforge.cache_hit': input.cacheHit,
+            'vidforge.cost_cents': costCents,
+            'vidforge.request_id': requestId,
+          },
+        })
+        .catch(() => undefined);
     } catch (err: any) {
       this.logger.warn(`Trace 写入失败: ${err?.message ?? err}`);
     }

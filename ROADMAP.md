@@ -14,8 +14,8 @@ VidForge 的路线图以可复现、可贡献和可部署为优先级。时间�
 
 - [x] 为 ARK、TTS、OSS 和 FFmpeg 提供统一 provider 接口
 - [x] 增加失败任务重放、队列治理和队列健康检查
-- [ ] 提供 OpenTelemetry 导出与结构化日志
-- [ ] 增加可复现的质量与成本 benchmark
+- [x] 提供可选 OpenTelemetry/OTLP 导出与请求级结构化 trace metadata
+- [x] 增加离线可复现的缓存延迟与成本 benchmark 基线
 
 ## Later — 社区生态
 

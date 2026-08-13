@@ -27,14 +27,14 @@ This is a practical backlog for improving VidForge as a real open-source project
 - [ ] Add explicit audio, subtitle, aspect-ratio, and duration validation.
 - [ ] Add resumable per-shot generation and failed-shot replay.
 - [ ] Add output artifact checksums and trace links.
-- [ ] Add a small benchmark fixture for generation latency and estimated cost.
+- [x] Add a small offline benchmark fixture for cache-key latency and estimated provider cost.
 - [ ] Add quality-agent evaluation criteria with documented limitations.
 - [ ] Add sample product assets and a reproducible example under a clear license.
 
 ## Multi-agent and observability
 
 - [ ] Document the agent state machine and node contracts.
-- [ ] Add trace correlation IDs from HTTP request through queue and FFmpeg jobs.
+- [x] Add trace correlation IDs from HTTP request through async work and optional OTLP export.
 - [ ] Add structured JSON logs with secret and prompt redaction.
 - [ ] Add a provider latency, failure, and cost dashboard contract.
 - [ ] Add human-review checkpoints for policy-sensitive outputs.

@@ -23,6 +23,7 @@
     "build:all": "pnpm build:frontend && pnpm build:backend",
     "check:env": "node scripts/check-env.js",
     "check:hygiene": "node scripts/check-repo-hygiene.js",
+    "benchmark:local": "node scripts/benchmark-local.mjs",
     "docs:check": "node scripts/check-markdown-links.js",
     "test:repo": "node --test scripts/*.test.js",
     "test:backend": "pnpm --filter @vidforge/backend test",

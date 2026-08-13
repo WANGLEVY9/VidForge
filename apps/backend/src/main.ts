@@ -4,9 +4,11 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import * as path from 'path';
 import { AppModule } from './app.module';
+import { requestContextMiddleware } from './common/observability/request-context';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.use(requestContextMiddleware);
 
   // 启用CORS
   // 生产环境：从 WEB_BASE_URL 读取允许的来源（支持逗号分隔多个域名，未配置则放开 vercel.app/localhost）
