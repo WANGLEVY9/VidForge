@@ -1,0 +1,230 @@
+.vidforge-shell {
+  --shell-sidebar-width: 240px;
+
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% -10%, rgb(103 84 219 / 11%), transparent 28%), var(--bg-primary);
+}
+
+.vidforge-sidebar {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: var(--shell-sidebar-width);
+  flex-direction: column;
+  border-right: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--sidebar-bg) 94%, transparent);
+  backdrop-filter: blur(22px);
+  transition: width var(--duration-normal) var(--ease-out);
+  overflow: hidden;
+}
+
+.vidforge-shell.is-collapsed {
+  --shell-sidebar-width: 72px;
+}
+
+.vidforge-sidebar-brand {
+  display: flex;
+  height: 64px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 18px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.is-collapsed .vidforge-sidebar-brand {
+  justify-content: center;
+  padding: 0;
+}
+
+.vidforge-brand-mark {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 17%);
+  border-radius: 9px;
+  background: linear-gradient(145deg, #9784ff, #3f309f);
+  box-shadow: 0 8px 28px rgb(101 77 238 / 20%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: -0.08em;
+}
+
+.vidforge-brand-name {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.vidforge-sidebar-menu {
+  flex: 1;
+  border: 0 !important;
+  padding: 12px 8px;
+  background: transparent !important;
+  overflow: auto;
+}
+
+.vidforge-sidebar-menu .ant-menu-item {
+  min-height: 42px;
+  margin: 4px 0;
+}
+.vidforge-sidebar-menu .ant-menu-item-selected {
+  background: linear-gradient(90deg, rgb(122 103 255 / 24%), rgb(122 103 255 / 7%)) !important;
+}
+
+.vidforge-sidebar-note {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  background: rgb(255 255 255 / 3%);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.vidforge-sidebar-note svg {
+  color: var(--brand-primary);
+}
+
+.vidforge-shell-main {
+  min-height: 100vh;
+  margin-left: var(--shell-sidebar-width);
+  transition: margin-left var(--duration-normal) var(--ease-out);
+}
+
+.vidforge-topbar {
+  position: sticky;
+  z-index: 99;
+  top: 0;
+  display: flex;
+  height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 24px;
+  background: color-mix(in srgb, var(--header-bg) 92%, transparent);
+  backdrop-filter: blur(20px);
+}
+
+.vidforge-topbar-leading,
+.vidforge-topbar-actions {
+  display: flex;
+  align-items: center;
+}
+.vidforge-topbar-leading {
+  gap: 14px;
+}
+.vidforge-topbar-actions {
+  gap: 14px;
+}
+
+.vidforge-icon-button {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 17px;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.vidforge-icon-button:hover,
+.vidforge-icon-button:focus-visible {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+}
+.vidforge-breadcrumb {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.vidforge-breadcrumb strong {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+.vidforge-breadcrumb span {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.vidforge-avatar-button {
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.vidforge-avatar-button .ant-avatar {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  font-weight: 700;
+}
+.workspace-user-menu-header {
+  padding: 4px 0;
+}
+.workspace-user-menu-name {
+  font-weight: 600;
+}
+.workspace-user-menu-email {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.vidforge-page-content {
+  min-width: 0;
+  padding: var(--spacing-xl);
+}
+
+@media (width <= 720px) {
+  .vidforge-sidebar {
+    transform: translateX(-100%);
+  }
+  .vidforge-shell-main {
+    margin-left: 0;
+  }
+  .vidforge-topbar {
+    height: 56px;
+    padding: 0 12px;
+  }
+  .vidforge-topbar-actions {
+    gap: 6px;
+  }
+  .vidforge-topbar-actions > :not(.vidforge-avatar-button, .vidforge-icon-button) {
+    display: none;
+  }
+  .vidforge-breadcrumb span {
+    display: none;
+  }
+  .vidforge-page-content {
+    padding: 16px 12px 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vidforge-sidebar,
+  .vidforge-shell-main,
+  .vidforge-icon-button {
+    transition: none;
+  }
+}

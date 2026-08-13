@@ -1,17 +1,16 @@
-import { Avatar, Tooltip, Dropdown, Menu, Modal } from 'antd';
+import { Avatar, Dropdown, Menu, Modal, Tooltip } from 'antd';
 import {
-  RocketOutlined,
   AppstoreOutlined,
-  UserOutlined,
   ExperimentOutlined,
-  SettingOutlined,
+  LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   QuestionCircleOutlined,
-  LogoutOutlined,
+  SettingOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { useState } from 'react';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSpaceStore } from '../store/useSpaceStore';
@@ -21,10 +20,7 @@ import PrivacySettings from '../components/common/PrivacySettings';
 import NotificationCenter from '../components/layout/NotificationCenter';
 import ApiStatusCenter from '../components/layout/ApiStatusCenter';
 import { ShellProvider } from '../components/layout/shell-context';
-
-const SIDEBAR_WIDTH = 240;
-const SIDEBAR_COLLAPSED_WIDTH = 72;
-const TOP_BAR_HEIGHT = 64;
+import './workspace-shell.css';
 
 const menuItems = [
   { key: '/workspace', icon: <AppstoreOutlined />, label: '商品空间' },
@@ -41,8 +37,6 @@ function BasicLayout() {
   const { isDark } = useTheme();
   const [privacySettingsVisible, setPrivacySettingsVisible] = useState(false);
 
-  const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
-
   const handleLogout = () => {
     Modal.confirm({
       title: '确认退出登录？',
@@ -57,24 +51,18 @@ function BasicLayout() {
   };
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
-    if (key === 'logout') {
-      handleLogout();
-    } else if (key === 'profile') {
-      navigate('/profile');
-    } else if (key === 'help') {
-      navigate('/help');
-    }
+    if (key === 'logout') handleLogout();
+    if (key === 'profile') navigate('/profile');
+    if (key === 'help') navigate('/help');
   };
 
   const userMenuItems = [
     {
       key: 'header',
       label: (
-        <div style={{ padding: '4px 0' }}>
-          <div style={{ fontWeight: 600 }}>{user?.username ?? '未登录'}</div>
-          {user?.email && (
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{user.email}</div>
-          )}
+        <div className="workspace-user-menu-header">
+          <div className="workspace-user-menu-name">{user?.username ?? '未登录'}</div>
+          {user?.email && <div className="workspace-user-menu-email">{user.email}</div>}
         </div>
       ),
       disabled: true,
@@ -86,79 +74,30 @@ function BasicLayout() {
     { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', danger: true },
   ];
 
-  // 当前页面显示在面包屑里的标题
-  const breadcrumbLabel = (() => {
-    if (location.pathname.startsWith('/profile')) return '个人中心';
-    if (location.pathname.startsWith('/workspace')) return '商品空间';
-    return 'Studio';
-  })();
-
-  // 侧栏菜单的高亮 key（按前缀匹配）
+  const breadcrumbLabel = location.pathname.startsWith('/profile')
+    ? '个人中心'
+    : location.pathname.startsWith('/workspace')
+      ? '商品空间'
+      : 'Studio';
   const selectedKey =
     menuItems.find((m) => location.pathname.startsWith(m.key))?.key ?? '/workspace';
 
   return (
     <ShellProvider>
-      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
-        {/* === Sidebar === */}
-        <aside
-          className="glass-strong"
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: sidebarWidth,
-            display: 'flex',
-            flexDirection: 'column',
-            zIndex: 100,
-            transition: `width var(--duration-normal) var(--ease-out)`,
-            borderRight: '1px solid var(--border-color)',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Logo */}
-          <div
+      <div className={`vidforge-shell ${collapsed ? 'is-collapsed' : ''}`}>
+        <aside className="vidforge-sidebar" aria-label="主导航">
+          <button
+            type="button"
+            className="vidforge-sidebar-brand"
             onClick={() => navigate('/workspace')}
-            style={{
-              height: TOP_BAR_HEIGHT,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              padding: collapsed ? 0 : '0 20px',
-              borderBottom: '1px solid var(--border-color)',
-              cursor: 'pointer',
-              flexShrink: 0,
-              userSelect: 'none',
-            }}
+            aria-label="返回 VidForge 工作台"
           >
-            <RocketOutlined
-              style={{
-                fontSize: 28,
-                background:
-                  'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            />
-            {!collapsed && (
-              <span
-                style={{
-                  marginLeft: 12,
-                  fontSize: 20,
-                  fontWeight: 700,
-                  letterSpacing: '-0.5px',
-                  background: 'linear-gradient(135deg, var(--brand-primary) 0%, #ec4899 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                VidForge
-              </span>
-            )}
-          </div>
+            <span className="vidforge-brand-mark" aria-hidden="true">
+              VF
+            </span>
+            {!collapsed && <span className="vidforge-brand-name">VidForge</span>}
+          </button>
 
-          {/* Menu */}
           <Menu
             mode="inline"
             theme={isDark ? 'dark' : 'light'}
@@ -166,143 +105,61 @@ function BasicLayout() {
             selectedKeys={[selectedKey]}
             items={menuItems}
             onClick={({ key }) => navigate(key)}
-            style={{
-              flex: 1,
-              border: 'none',
-              padding: '12px 8px',
-              background: 'transparent',
-              overflow: 'auto',
-            }}
+            className="vidforge-sidebar-menu"
           />
 
-          {/* Footer */}
           {!collapsed && (
-            <div
-              style={{
-                margin: '0 12px 16px',
-                padding: '12px 16px',
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-md)',
-                fontSize: 'var(--font-size-xs)',
-                color: 'var(--text-secondary)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                flexShrink: 0,
-              }}
-            >
-              <ExperimentOutlined style={{ color: 'var(--brand-primary)' }} />
+            <div className="vidforge-sidebar-note">
+              <ExperimentOutlined />
               <span>AI 驱动电商视频创作</span>
             </div>
           )}
         </aside>
 
-        {/* === Main column === */}
-        <div
-          style={{
-            marginLeft: sidebarWidth,
-            transition: `margin-left var(--duration-normal) var(--ease-out)`,
-            minHeight: '100vh',
-          }}
-        >
-          {/* Top bar */}
-          <header
-            style={{
-              position: 'sticky',
-              top: 0,
-              zIndex: 99,
-              height: TOP_BAR_HEIGHT,
-              padding: '0 24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: '1px solid var(--border-color)',
-              background: 'var(--header-bg)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div className="vidforge-shell-main">
+          <header className="vidforge-topbar">
+            <div className="vidforge-topbar-leading">
               <button
                 type="button"
+                className="vidforge-icon-button"
                 onClick={toggleSidebar}
                 aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
-                style={{
-                  width: 36,
-                  height: 36,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--text-secondary)',
-                  fontSize: 18,
-                  borderRadius: 'var(--radius-md)',
-                  transition:
-                    'background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--bg-surface-2)';
-                  e.currentTarget.style.color = 'var(--text-primary)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                }}
               >
                 {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               </button>
-
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600 }}>
-                  {breadcrumbLabel}
-                </span>
-                <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
-                  / VidForge Studio
-                </span>
+              <div className="vidforge-breadcrumb" aria-label="当前位置">
+                <strong>{breadcrumbLabel}</strong>
+                <span>/ VidForge Studio</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div className="vidforge-topbar-actions">
               <ThemeToggle />
               <ApiStatusCenter />
               <NotificationCenter />
-              <Tooltip title="设置">
-                <SettingOutlined
-                  style={{ fontSize: 18, color: 'var(--text-secondary)', cursor: 'pointer' }}
+              <Tooltip title="隐私与设置">
+                <button
+                  type="button"
+                  className="vidforge-icon-button"
                   onClick={() => setPrivacySettingsVisible(true)}
-                />
+                  aria-label="打开隐私与设置"
+                >
+                  <SettingOutlined />
+                </button>
               </Tooltip>
               <Dropdown
                 menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
                 placement="bottomRight"
                 trigger={['click']}
               >
-                <Avatar
-                  size={36}
-                  style={{
-                    cursor: 'pointer',
-                    background:
-                      'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)',
-                    fontWeight: 600,
-                  }}
-                >
-                  {(user?.username ?? 'U').charAt(0).toUpperCase()}
-                </Avatar>
+                <button type="button" className="vidforge-avatar-button" aria-label="打开用户菜单">
+                  <Avatar>{(user?.username ?? 'U').charAt(0).toUpperCase()}</Avatar>
+                </button>
               </Dropdown>
             </div>
           </header>
 
-          {/* Page content */}
-          <main
-            data-vidforge-main
-            style={{
-              padding: 'var(--spacing-xl)',
-              boxSizing: 'border-box',
-            }}
-          >
+          <main data-vidforge-main className="vidforge-page-content">
             <Outlet />
           </main>
         </div>
