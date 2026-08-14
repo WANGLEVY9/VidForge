@@ -24,6 +24,12 @@ export class ScriptAgentService {
 
     // 把上一次质量反馈拼到卖点里(简单 self-reflection 实现)
     const feedback = state.qualityControl?.feedback;
+    const memoryHints = (state.memoryContext?.recalled ?? [])
+      .filter((memory) => memory.score >= 0.2)
+      .slice(0, 4)
+      .map((memory) => `- ${memory.content}`)
+      .join('\n');
+    const context = memoryHints ? `\n\n[长期记忆提示，仅作参考]\n${memoryHints}` : '';
     const sellingPoints = feedback
       ? `${state.sellingPoints}\n\n[上次评估反馈,请规避以下问题]\n${feedback}`
       : state.sellingPoints;
@@ -33,7 +39,7 @@ export class ScriptAgentService {
       scriptResult = await this.scriptService.generate(state.userId ?? 'agent', {
         productName: state.productName,
         category: state.category,
-        sellingPoints,
+        sellingPoints: `${sellingPoints}${context}`,
         targetAudience: state.targetAudience,
         style: state.style,
         duration: state.duration,

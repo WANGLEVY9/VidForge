@@ -28,6 +28,17 @@ material_analysis -> script_generation -> video_composition -> quality_control
   status, retry count, final node, quality score, and trace span count.
 - Status reads and cancellation are scoped to the authenticated user, so a task
   ID cannot be used to inspect another user's run.
+- Long-term agent memory is stored separately in `agent_memories`, rather than
+  being mixed into product-space configuration. Memories are scoped by user
+  and optionally product space, carry a source run ID, importance, expiry and
+  access metadata, and can be listed or deleted through `/api/agent/memory`.
+- Workflow startup performs bounded, deterministic retrieval of relevant
+  memories. Retrieved items are hints only; they never replace the current
+  request or bypass authorization. A successful quality-controlled run may
+  write one `success_pattern` memory, making replayed runs idempotent.
+- The initial retriever is lexical and provider-neutral. It is intentionally a
+  stable seam for a later pgvector hybrid retriever or reranker without making
+  the workflow depend on a specific embedding vendor.
 
 ## Tuning
 

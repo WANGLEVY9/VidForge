@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { StateGraph } from '@langchain/langgraph';
 import type { RetryPolicy } from '@langchain/langgraph';
 import { RunnableConfig } from '@langchain/core/runnables';
@@ -11,6 +11,7 @@ import { CompositionAgentService } from './agents/composition-agent.service';
 import { QualityAgentService } from './agents/quality-agent.service';
 import { ProductSpaceService } from '../product-space/product-space.service';
 import { TraceService } from '../trace/trace.service';
+import { AgentMemoryService } from './memory/agent-memory.service';
 import {
   createAgentRetryPolicy,
   createAgentTaskId,
@@ -46,7 +47,8 @@ export class OrchestratorService {
     private readonly compositionAgent: CompositionAgentService,
     private readonly qualityAgent: QualityAgentService,
     private readonly productSpace: ProductSpaceService,
-    private readonly traceService: TraceService
+    private readonly traceService: TraceService,
+    @Optional() private readonly memoryService?: AgentMemoryService
   ) {}
 
   async run(
@@ -58,6 +60,8 @@ export class OrchestratorService {
     const report = async (update: AgentProgressUpdate) => {
       await reportProgress?.(update);
     };
+
+    const memoryContext = await this.recallMemory(dto);
 
     const channels: Record<string, { value: (...args: any[]) => any; default: () => any }> = {
       taskId: { value: (a: any, b: any) => b ?? a, default: () => taskId },
@@ -72,6 +76,10 @@ export class OrchestratorService {
       duration: { value: (a: any, b: any) => b ?? a, default: () => dto.duration },
       userId: { value: (a: any, b: any) => b ?? a, default: () => dto.userId },
       productSpaceId: { value: (a: any, b: any) => b ?? a, default: () => dto.productSpaceId },
+      memoryContext: {
+        value: (a: any, b: any) => b ?? a ?? { recalled: [] },
+        default: () => memoryContext,
+      },
       materialAnalysis: { value: (a: any, b: any) => b ?? a, default: () => undefined },
       scriptGeneration: { value: (a: any, b: any) => b ?? a, default: () => undefined },
       videoComposition: { value: (a: any, b: any) => b ?? a, default: () => undefined },
@@ -179,6 +187,7 @@ export class OrchestratorService {
           duration: dto.duration,
           userId: dto.userId,
           productSpaceId: dto.productSpaceId,
+          memoryContext,
           trace: [],
           errors: [],
           retryCount: 0,
@@ -282,9 +291,45 @@ export class OrchestratorService {
         qualityScore: qc.qualityScore,
         summary,
       });
+      await this.memoryService?.remember({
+        userId: dto.userId,
+        productSpaceId: dto.productSpaceId,
+        sourceRunId: finalState.taskId,
+        kind: 'success_pattern',
+        scope: 'run',
+        semanticKey: `run:${finalState.taskId}:quality-pattern`,
+        content: `${dto.category} / ${dto.style ?? '通用'}：${summary}`,
+        metadata: {
+          source: 'quality_control',
+          qualityScore: qc.qualityScore,
+          tags: [dto.category, dto.style ?? '通用', hookType],
+        },
+        importance: Math.min(1, qc.qualityScore / 100),
+      });
     } catch (err: any) {
       this.logger.warn(`maybeLearn 失败: ${err?.message ?? err}`);
     }
+  }
+
+  private async recallMemory(dto: RunAgentDto): Promise<AgentState['memoryContext']> {
+    if (!this.memoryService || !dto.userId) return { recalled: [] };
+    const query = [dto.productName, dto.category, dto.sellingPoints, dto.targetAudience, dto.style]
+      .filter(Boolean)
+      .join(' ');
+    const recalled = await this.memoryService.recall({
+      userId: dto.userId,
+      productSpaceId: dto.productSpaceId,
+      query,
+      limit: 6,
+    });
+    return {
+      recalled: recalled.map((memory) => ({
+        id: memory.id,
+        kind: memory.kind,
+        content: memory.content,
+        score: memory.score,
+      })),
+    };
   }
 
   getStatus(taskId: string): { status: string } | null {

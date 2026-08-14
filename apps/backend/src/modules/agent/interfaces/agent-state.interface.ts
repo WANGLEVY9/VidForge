@@ -52,6 +52,19 @@ export interface AgentState {
   /** 当前商品空间(用于隔离查询) */
   productSpaceId?: string;
 
+  /**
+   * Retrieved long-term context. Hits are scored and provenance-aware so
+   * downstream agents can treat them as hints, not as untrusted instructions.
+   */
+  memoryContext?: {
+    recalled: Array<{
+      id: string;
+      kind: string;
+      content: string;
+      score: number;
+    }>;
+  };
+
   // Material Analysis output
   materialAnalysis?: {
     matchedMaterials: MaterialItem[];

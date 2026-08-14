@@ -13,6 +13,8 @@ import { ScriptModule } from '../script/script.module';
 import { ProductSpaceModule } from '../product-space/product-space.module';
 import { Material } from '../material/entities/material.entity';
 import { AgentRun } from './entities/agent-run.entity';
+import { AgentMemory } from './memory/agent-memory.entity';
+import { AgentMemoryService } from './memory/agent-memory.service';
 
 @Module({
   imports: [
@@ -20,7 +22,7 @@ import { AgentRun } from './entities/agent-run.entity';
     AiModule,
     ScriptModule,
     ProductSpaceModule,
-    TypeOrmModule.forFeature([Material, AgentRun]),
+    TypeOrmModule.forFeature([Material, AgentRun, AgentMemory]),
   ],
   controllers: [AgentController],
   providers: [
@@ -30,6 +32,7 @@ import { AgentRun } from './entities/agent-run.entity';
     ScriptAgentService,
     CompositionAgentService,
     QualityAgentService,
+    AgentMemoryService,
   ],
   exports: [AgentService, OrchestratorService],
 })
