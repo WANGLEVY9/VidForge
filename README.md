@@ -1,168 +1,345 @@
 <p align="center">
-  <img src="./.github/assets/social-preview.jpg" alt="VidForge open-source AI video production pipeline" width="920" />
+  <img src="./.github/assets/social-preview.jpg" alt="VidForge — Multi-Agent video generation workspace" width="920" />
 </p>
 
 <h1 align="center">VidForge</h1>
 
 <p align="center">
-  <strong>一个面向真实生产的开源 AI 视频创作工作台</strong><br />
-  从商品素材、品牌知识与创意意图，到可播放、可追踪、可复盘的视频成片。
+  <strong>Open-source Multi-Agent infrastructure for knowledge-grounded video generation.</strong><br />
+  将素材理解、品牌知识、上下文工程、剧本规划、视频生成、质量反馈和媒体合成连接成一条可观测的生产流水线。
 </p>
 
 <p align="center">
-  <a href="https://github.com/WANGLEVY9/VidForge/actions/workflows/ci.yml"><img src="https://github.com/WANGLEVY9/VidForge/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-  <a href="https://github.com/WANGLEVY9/VidForge/actions/workflows/codeql.yml"><img src="https://github.com/WANGLEVY9/VidForge/actions/workflows/codeql.yml/badge.svg" alt="CodeQL status" /></a>
-  <a href="https://github.com/WANGLEVY9/VidForge/actions/workflows/secret-scan.yml"><img src="https://github.com/WANGLEVY9/VidForge/actions/workflows/secret-scan.yml/badge.svg" alt="Secret scan status" /></a>
+  <a href="https://github.com/WANGLEVY9/VidForge/actions/workflows/ci.yml"><img src="https://github.com/WANGLEVY9/VidForge/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/WANGLEVY9/VidForge/actions/workflows/codeql.yml"><img src="https://github.com/WANGLEVY9/VidForge/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" /></a>
+  <a href="https://github.com/WANGLEVY9/VidForge/actions/workflows/secret-scan.yml"><img src="https://github.com/WANGLEVY9/VidForge/actions/workflows/secret-scan.yml/badge.svg" alt="Secret scan" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-d6b36a.svg" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/TypeScript-first-3178c6.svg" alt="TypeScript first" />
+  <img src="https://img.shields.io/badge/runtime-LangGraph-1c1c1c.svg" alt="LangGraph runtime" />
+  <img src="https://img.shields.io/badge/stack-TypeScript-3178c6.svg" alt="TypeScript" />
 </p>
 
 <p align="center">
-  <a href="https://vid-forge-frontend-nu.vercel.app/">在线预览（部署实例）</a> ·
-  <a href="./ROADMAP.md">路线图</a> ·
-  <a href="./CONTRIBUTING.md">参与贡献</a> ·
-  <a href="./SUPPORT.md">获得帮助</a>
+  <a href="https://vid-forge-frontend-nu.vercel.app/">Showcase</a> ·
+  <a href="./docs/AGENT_RUNTIME.md">Agent Runtime</a> ·
+  <a href="./docs/TECHNICAL_ARCHITECTURE.md">Architecture</a> ·
+  <a href="./docs/CONTRIBUTOR_QUICKSTART.md">Contributor Quickstart</a> ·
+  <a href="./ROADMAP.md">Roadmap</a>
 </p>
 
-> VidForge 是独立的社区开源项目，不隶属于 OpenAI、火山引擎、TikTok 或任何其他平台。在线预览依赖独立部署实例；如果实例暂时休眠或未配置后端 Provider，请直接按照下方指南在本地运行。
+> **Project status — active development.** VidForge can be built, tested and explored without paid model credentials. Real text, vision, video and TTS generation requires the corresponding providers. The public showcase is an independent deployment and may not always have every provider enabled.
 
-## 项目愿景
+## What is VidForge?
 
-视频生成正在从“单次调用模型”走向“可运营的内容生产系统”。VidForge 希望把这条链路中真正重要、也最容易被 Demo 隐藏的部分开放出来：素材理解、品牌知识、剧本检索、Agent 编排、合规检查、媒体合成、实时任务状态、成本观测和失败回退。
+VidForge is a self-hostable AI video production workspace for commerce and product storytelling. It does not treat video generation as one model call. A generation request becomes a stateful workflow in which specialized agents retrieve assets, assemble bounded context, plan a storyboard, invoke media providers, evaluate the result and feed quality evidence back into the next attempt.
 
-它不是一个只展示 Prompt 的页面，而是一套可以被开发者审阅、替换、测试和自托管的生产型骨架：
+The repository is designed around four technical concerns:
 
-```text
-商品素材与品牌知识
-        ↓
-素材理解 → RAG / Memory 检索 → 多 Agent 剧本规划
-        ↓                                      ↓
-   合规检查 ← 质量评估 ← FFmpeg / TTS / BGM 合成
-        ↓
-可播放成片 + 证据链 + 成本与延迟 Trace
-```
+| System concern                    | VidForge implementation                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Multi-Agent orchestration**     | Explicit LangGraph state, specialized nodes, conditional replanning, bounded retries and cancellation |
+| **Knowledge-grounded generation** | Script RAG, product-space knowledge, material retrieval and provenance-preserving references          |
+| **Context engineering**           | Scoped long-term memory, retrieval scoring, prompt budgets, sanitization and feedback injection       |
+| **Executable video pipeline**     | Parallel shot generation, FFmpeg composition, TTS, BGM, subtitles, storage and real-time progress     |
 
-## 为什么值得开源
+VidForge is useful as an application and as an engineering reference: each layer can be inspected independently, replaced behind a stable contract, or extended through a focused contribution.
 
-VidForge 把“输入一个商品，生成一条视频”背后的完整工程链路公开出来：素材如何被理解，品牌知识如何被检索，多个 Agent 如何协作，质量问题如何触发重规划，媒体任务如何合成，以及一次生成为什么成功或失败。
-
-这使 VidForge 更像一个可以持续演进的**公共生产系统**，而不是一次性的 AI Demo：使用者可以自托管和替换 Provider，贡献者可以从测试、文档或单个模块开始，研究者可以围绕 RAG、Memory、Agent routing、质量评估和成本控制复现实验。
-
-### 一份面向社区的公开工程契约
-
-| 你关心的问题                 | VidForge 公开的答案                                                                                                       |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **能否在本地复现？**         | 可以从 Docker Compose、数据库 Migration、无凭证示例和后端测试开始；不必先购买云端模型才能理解项目。                       |
-| **能否替换供应商？**         | ARK、TTS、Embedding、对象存储、队列和 Trace 都在明确的模块边界后面，Provider 不是业务代码的唯一入口。                     |
-| **模型为什么得到这个结果？** | Agent 状态、RAG 引用、长期记忆命中、质量反馈、成本和延迟都可以进入状态或 Trace，而不是只保留最终视频。                    |
-| **系统能否长期运行？**       | 商品空间提供租户隔离与品牌知识；任务具备状态、重试、队列、缓存和局部失败回退路径。                                        |
-| **社区能改变什么？**         | 路线图、维护 backlog、贡献规范、治理文件和技术雷达公开，新的 Provider、评测方法、交互体验和可靠性改进都可以成为一等贡献。 |
-
-### 开源的价值，落在可参与的下一步
-
-- **想使用**：先启动本地工作台，使用 fallback 和本地媒体 smoke test 理解完整链路，再按需要接入模型、Redis 或对象存储。
-- **想贡献代码**：从 [`docs/CONTRIBUTOR_QUICKSTART.md`](./docs/CONTRIBUTOR_QUICKSTART.md)、[`docs/CONTRIBUTION_IDEAS.md`](./docs/CONTRIBUTION_IDEAS.md) 或 [`docs/MAINTENANCE_BACKLOG.md`](./docs/MAINTENANCE_BACKLOG.md) 选择一个边界清晰的任务。
-- **想做研究**：围绕 [`docs/AGENT_RUNTIME.md`](./docs/AGENT_RUNTIME.md) 中的 Agent、RAG、Memory 和 Trace 接口设计可重复的实验与评测。
-- **想帮助项目成长**：复现问题、补充示例、审核 PR、完善文档、分享真实部署经验，和提交核心代码一样有价值。
-
-### 诚实的能力边界
-
-VidForge 当前处于积极开发阶段。仓库已经提供应用骨架、领域模块、迁移、测试、降级路径和部署配置；真实模型生成、云端 TTS、语义 Embedding、生产队列和对象存储则需要用户配置相应 Provider。我们会明确区分“代码已具备”“需要外部服务”和“路线图中的能力”，不使用虚构的用户数量、性能指标或社区数据来替代可验证的工程结果。
-
-## 核心能力
-
-### 一条面向生产的创作链路
-
-- **素材理解**：上传图片或视频后，生成商品、画面和剪辑维度的结构化信息，并为后续检索准备 caption / embedding。
-- **品牌空间**：为不同商品空间维护卖点、目标人群、品牌语气、自定义词典和高分历史案例。
-- **Agent 编排**：Material → Script → Composition → Quality 四个状态节点由 LangGraph 连接；质量未达标时将反馈带回剧本节点重新规划。
-- **RAG 剧本生成**：从内置的电商脚本种子库中按品类与风格检索参考内容，保留 RAG 引用，方便审计与后续替换检索器。
-- **多分镜视频**：按 Hook / Demo / CTA 等角色组织分镜，调用视频 Provider 后由 FFmpeg 完成拼接、配音、BGM、字幕和导出。
-- **实时创作反馈**：通过 Socket.IO 推送任务进度，前端可以看到从创意到成片的状态变化。
-
-### 面向长期使用的工程能力
-
-- **受控长期记忆**：记忆按用户、商品空间和运行任务隔离；召回结果有 Top-K 和字符预算，并以带来源与分数的 Context Packet 注入模型。
-- **三层合规链路**：本地规则优先，结合广告与平台风险词检查；必要时再进入模型复核，降低不必要的调用成本。
-- **质量与可观测性**：记录 Agent 节点、Provider 调用、FFmpeg 任务、Token、成本、缓存命中率、延迟和最终质量结果。
-- **有边界的降级**：Redis 不可用时可退回进程内队列；模型未配置时剧本可走 fallback；局部视频失败不会让整个任务失去可诊断性。
-- **安全默认值**：凭证只从环境变量读取，生产环境禁止 TypeORM 自动同步，仓库启用 CI、CodeQL、依赖审查和 secret scan。
-
-## 技术架构
+## System architecture
 
 ```mermaid
 flowchart LR
-    U[React 18 创作工作台] --> API[NestJS API]
-    U <--> WS[Socket.IO /creation]
-    API --> G[LangGraph Agent Runtime]
-    G --> M[Material Agent]
-    G --> S[Script Agent]
-    G --> C[Composition Agent]
-    G --> Q[Quality Agent]
-    S --> R[RAG Seed Library]
-    S --> K[Product Space Knowledge]
-    G --> MEM[Scoped Long-term Memory]
-    C --> F[FFmpeg / TTS / BGM / Subtitle]
-    API --> DB[(PostgreSQL + migrations)]
-    API --> REDIS[(Redis / BullMQ / Cache)]
-    API --> TRACE[Trace + Cost Observability]
-    M --> V[ARK Vision / Embedding]
-    S --> T[ARK Text]
-    C --> VIDEO[ARK Video Provider]
+    UI[React Studio] --> API[NestJS API]
+    UI <--> WS[Socket.IO progress]
+
+    API --> RUNS[(Agent run control plane)]
+    API --> GRAPH[LangGraph StateGraph]
+
+    GRAPH --> MATERIAL[Material Agent]
+    MATERIAL --> SCRIPT[Script Agent]
+    SCRIPT --> COMPOSE[Composition Agent]
+    COMPOSE --> QUALITY[Quality Agent]
+    QUALITY -->|quality feedback| SCRIPT
+
+    SCRIPT --> RAG[Script RAG corpus]
+    SCRIPT --> SPACE[Product-space knowledge]
+    GRAPH --> MEMORY[Scoped long-term memory]
+
+    MATERIAL --> VISION[Vision / embedding providers]
+    SCRIPT --> TEXT[Text provider]
+    COMPOSE --> VIDEO[Video provider]
+    COMPOSE --> MEDIA[FFmpeg / TTS / BGM / subtitles]
+
+    GRAPH --> TRACE[(Trace spans / cost / latency)]
+    API --> DB[(PostgreSQL + pgvector)]
+    API --> QUEUE[(Redis + BullMQ)]
+    MEDIA --> STORAGE[Local or object storage]
 ```
 
-### 技术栈
+The graph state carries the request, retrieved memory, material analysis, script plan, RAG evidence, composition result, quality dimensions, errors and node-level trace summaries. PostgreSQL stores the durable run record and final state, while graph execution itself remains in-process. A persistent LangGraph checkpointer and node-level resume after worker restart remain roadmap items.
 
-| 层级           | 选型                                                                 |
-| -------------- | -------------------------------------------------------------------- |
-| Web 应用       | React 18 · TypeScript · Vite · Ant Design 5 · Zustand · ECharts      |
-| API 与领域模块 | NestJS 10 · TypeScript · TypeORM                                     |
-| Agent Runtime  | `@langchain/langgraph` StateGraph · 条件分支 · 有界重试 · 自反思回路 |
-| 数据与检索     | PostgreSQL · pgvector（可选）· RAG seed library · scoped memory      |
-| 媒体流水线     | FFmpeg · BullMQ · Socket.IO · TTS / BGM / 字幕服务                   |
-| AI Provider    | 火山方舟 ARK 文本、视觉与视频接口（按环境变量启用）                  |
-| 生产部署       | Vercel（前端）· Railway / Nixpacks（后端）· PostgreSQL / Redis       |
+## Multi-Agent runtime
 
-## 体验路径
+VidForge uses an explicit workflow rather than an unconstrained agent swarm:
 
-1. **创建商品空间**：定义品牌语气、核心卖点、目标人群和自定义合规词典。
-2. **导入商品素材**：上传图片或视频，并运行智能分析获得结构化标签。
-3. **生成剧本**：选择品类与风格，系统结合空间知识、RAG 参考和 Agent 反馈生成 Hook / Demo / CTA 分镜。
-4. **检查与调整**：查看 RAG 引用、合规结果、质量问题和分镜内容，再进行局部修改或重新生成。
-5. **生成成片**：创建视频任务，实时查看进度，等待 Provider 生成和 FFmpeg 后处理完成。
-6. **复盘结果**：在 Dashboard 中查看任务结果、Token、估算成本、缓存命中和节点延迟。
+```text
+START
+  │
+  ▼
+orchestrator
+  │
+  ▼
+material_analysis ──▶ script_generation ──▶ video_composition ──▶ quality_control
+                             ▲                                         │
+                             └──────── bounded quality replan ─────────┘
+```
 
-## 快速开始
+### Specialized agents
 
-### 环境要求
+| Agent                 | Reads                                                                  | Produces                                     | Actual responsibility                                                                                          |
+| --------------------- | ---------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Material Agent**    | Product, category, selling points, product space                       | Ranked material candidates and captions      | Searches tenant-scoped image assets, applies deterministic relevance scoring and selects up to five candidates |
+| **Script Agent**      | Request, materials, RAG hits, memory packet, previous quality feedback | Three-shot Hook / Demo / CTA plan            | Calls the script service, binds materials to shots and retains RAG provenance                                  |
+| **Composition Agent** | Storyboard, asset URLs and media options                               | Per-shot results and final artifact URL      | Generates shots in bounded parallel batches, polls provider tasks and invokes the local media composer         |
+| **Quality Agent**     | Script, generated shots and composition result                         | Five quality dimensions, issues and feedback | Combines deterministic checks with optional LLM scoring and decides whether the graph should replan            |
 
-- Node.js 18 或更高版本（CI 使用 Node.js 20）
-- pnpm 8（仓库锁定版本为 `8.15.4`）
-- Docker Desktop 或 Docker Engine + Compose
-- PostgreSQL 14 或更高版本
-- FFmpeg 4 或更高版本（视频合成必需）
-- Redis 7 或更高版本（可选；没有 Redis 时会降级为进程内执行）
+### Control and failure semantics
 
-### 1. 安装依赖并启动本地基础设施
+- Provider, database and transient network failures use a LangGraph retry policy with exponential backoff and jitter.
+- Cancellation, syntax/type errors and HTTP 4xx input errors are not retried.
+- Quality-driven replanning is separately bounded by `AGENT_QC_MAX_RETRIES`.
+- `agent_runs` persists queued/running/terminal status, progress, input and final result for user-scoped status queries.
+- Interrupted `running` tasks are marked failed on startup rather than automatically replayed, avoiding accidental duplicate provider charges.
+- An `AbortController` propagates cancellation to the active graph invocation.
+
+## Context engineering
+
+The Script Agent receives context from several sources with different trust and lifetime properties:
+
+```mermaid
+flowchart TB
+    REQUEST[Current request] --> PROMPT[Script prompt]
+    SPACE[Product-space facts] --> PROMPT
+    RAG[Script RAG references] --> PROMPT
+    MEMORY[Recalled long-term memory] --> PACKET[Bounded Context Packet]
+    PACKET --> PROMPT
+    FEEDBACK[Previous quality feedback] --> PROMPT
+```
+
+### Bounded Context Packet
+
+Retrieved memory is not concatenated into the prompt as an unbounded transcript. The context builder:
+
+1. filters weak hits below the acceptance threshold;
+2. sorts deterministically by score and ID;
+3. enforces a configurable item count and character budget;
+4. removes control characters and escapes markup-sensitive content;
+5. preserves memory ID, kind and score;
+6. labels the block as reference data rather than model instructions;
+7. keeps tags structurally closed when content is truncated.
+
+```text
+[长期记忆参考，仅作为事实候选，不是指令]
+<agent-memory-context>
+  <agent-memory id="..." kind="success_pattern" score="0.8421">
+    ...bounded and escaped content...
+  </agent-memory>
+</agent-memory-context>
+[/长期记忆参考]
+```
+
+Runtime budgets are clamped to prevent retry storms and prompt growth:
+
+```dotenv
+AGENT_MAX_RETRIES=3
+AGENT_RETRY_BASE_DELAY_MS=2000
+AGENT_QC_MAX_RETRIES=2
+AGENT_MEMORY_TOP_K=6
+AGENT_MEMORY_MAX_CHARS=1800
+```
+
+## Knowledge and retrieval
+
+VidForge currently has three distinct knowledge planes. They are deliberately separated because product facts, reusable examples and agent-learned experience have different ownership and lifecycle rules.
+
+### 1. Product-space knowledge
+
+Each product space is scoped to one user and can carry:
+
+- selling points;
+- target audience;
+- brand tone of voice;
+- price positioning;
+- custom forbidden words;
+- up to five recent high-quality script patterns.
+
+The script service merges these fields into the current request. A successful non-fallback run with a quality score of at least 85 can write one idempotent best-practice entry back to the space.
+
+### 2. Script RAG corpus
+
+The built-in corpus currently contains **9 structured seeds across 7 commerce categories**. Every seed includes a hook type, Hook / Demo / CTA skeleton, key-message examples, BGM direction and descriptive reference metadata.
+
+Retrieval is deterministic:
+
+- category exact match contributes the largest score;
+- style exact match contributes a secondary score;
+- partial matches receive a smaller bonus;
+- the script prompt currently receives the top two seeds;
+- returned scripts retain `ragReferences` with seed IDs and hook metadata.
+
+The seed corpus is a reproducible development baseline, not a performance benchmark or a claim about real-world conversion rates. A production corpus should add licensed data, evaluation splits, embedding retrieval and reranking.
+
+### 3. Material retrieval
+
+Material records store user and product-space ownership, media type, tags, three layers of analysis metadata, captions and an optional 1024-dimensional pgvector embedding. The Material Agent currently combines SQL filters and deterministic relevance heuristics; the material API also exposes semantic search for environments with an embedding service.
+
+## Long-term agent memory
+
+Agent-learned memory is stored separately from product facts in `agent_memories`.
+
+| Property    | Current behavior                                                       |
+| ----------- | ---------------------------------------------------------------------- |
+| Scope       | `user`, `product_space` or `run`                                       |
+| Kind        | `preference`, `fact`, `success_pattern`, `failure_pattern`, `decision` |
+| Provenance  | Optional source run ID and metadata                                    |
+| Idempotency | Unique `(userId, semanticKey)` writes                                  |
+| Lifecycle   | Importance, expiry, access count and last-accessed timestamp           |
+| Isolation   | User filter plus optional product-space filter on every recall         |
+
+The initial retriever is intentionally provider-neutral and deterministic. Candidate ranking combines:
+
+```text
+score = lexical_match × 0.65 + importance × 0.25 + recency × 0.10
+```
+
+Recall is fail-soft: memory database errors are logged but never allowed to fail video generation. This baseline provides a stable seam for future pgvector hybrid retrieval, reranking, consolidation and memory decay without changing downstream agent contracts.
+
+## Quality-driven generation loop
+
+The Quality Agent evaluates five dimensions:
+
+| Dimension     | Weight | Signal                                                          |
+| ------------- | -----: | --------------------------------------------------------------- |
+| Completeness  |    30% | Successful generated shots relative to the plan                 |
+| Duration      |    15% | Fit to the target 8–20 second range                             |
+| Consistency   |    20% | Optional LLM score for visual-description / voiceover alignment |
+| Compliance    |    20% | Local forbidden-word and risk-phrase checks                     |
+| Hook strength |    15% | Optional LLM score for the opening attention mechanism          |
+
+A run passes when the weighted score is at least 70 and no compliance term is hit. Otherwise, structured issues and natural-language feedback return to the Script Agent. This is a bounded reflection loop: the system changes the plan before paying for another render attempt.
+
+## Video generation and media pipeline
+
+The Composition Agent and ComposerService implement an executable media path:
+
+1. generate text-to-video or image-to-video shots through the configured video provider;
+2. run at most three shot requests in parallel;
+3. poll each provider task with an eight-minute timeout;
+4. retain successful shots even when another shot fails;
+5. normalize and concatenate video segments with FFmpeg;
+6. synthesize voiceover or create a silence fallback;
+7. select optional style-aware BGM and mix audio;
+8. build SRT subtitles and burn them when supported;
+9. publish the artifact to local storage or OSS;
+10. return duration, size, SHA-256 checksum and media-feature flags.
+
+If final composition fails after at least one shot succeeds, the first successful shot remains available as a preview. If the video provider is not configured, the Agent workflow reports a non-real composition result so the Quality Agent can diagnose the missing capability rather than presenting a placeholder as a finished video.
+
+## Provider contracts
+
+External capabilities sit behind business-level TypeScript contracts instead of SDK request shapes:
+
+| Capability       | Contract                  | Current adapter                          |
+| ---------------- | ------------------------- | ---------------------------------------- |
+| Text generation  | `TextGenerationProvider`  | ARK text                                 |
+| Video generation | `VideoGenerationProvider` | ARK video                                |
+| Text to speech   | `TextToSpeechProvider`    | Volcano/OpenSpeech with silence fallback |
+| Object storage   | `ObjectStorageProvider`   | Aliyun OSS with local storage fallback   |
+| Media processing | `MediaProcessingProvider` | FFmpeg                                   |
+
+This separation is the main extension point for community adapters. A new provider should implement the business contract, expose its capability and preserve trace metadata rather than leaking vendor-specific types into agents.
+
+## Queues, caching and observability
+
+### Execution infrastructure
+
+- BullMQ queues cover shot generation, composition, export and material analysis.
+- Redis health is checked and cached; an unavailable Redis falls back to fire-and-forget in-process execution for local development.
+- Queue jobs support bounded attempts, priorities, delays and idempotent job IDs.
+- Deterministic ARK responses use Redis as a cross-process cache with an in-memory LRU fallback.
+
+### Trace model
+
+`trace_spans` captures task ID, scope, span, latency, status, model, token usage, estimated cost, cache hit and arbitrary metadata. The Agent workflow additionally records retry count, trace-span count, memory-hit count, maximum memory score and RAG-reference count.
+
+Trace writes and optional OTLP export are fail-soft: observability failure is not allowed to break the creative workflow. The Dashboard reads these records for waterfalls, cost summaries, cache-hit rate and average latency.
+
+## Capability matrix
+
+| Capability                                         | Repository status            | External requirement                 |
+| -------------------------------------------------- | ---------------------------- | ------------------------------------ |
+| Frontend studio and browser-only `/try` flow       | Implemented                  | None for `/try`                      |
+| Auth, product spaces, materials, scripts and tasks | Implemented                  | PostgreSQL                           |
+| Multi-Agent state graph and quality replan         | Implemented                  | Text/video providers for real output |
+| Script RAG and reference propagation               | Implemented baseline         | None for corpus retrieval            |
+| Scoped long-term memory and Context Packet         | Implemented lexical baseline | PostgreSQL                           |
+| Material semantic search                           | Implemented optional path    | pgvector + embedding endpoint        |
+| FFmpeg composition smoke path                      | Implemented                  | Local FFmpeg                         |
+| Durable queue and cross-process cache              | Implemented optional path    | Redis                                |
+| Object storage                                     | Implemented optional path    | OSS credentials                      |
+| Exact node checkpoint resume                       | Roadmap                      | LangGraph checkpointer design        |
+| Human approval / interrupt-resume                  | Roadmap                      | Checkpoint persistence and review UI |
+| Dynamic subagent router, skills and tool registry  | Roadmap                      | Runtime and permission model         |
+| Hybrid RAG, reranker and evaluation dataset        | Roadmap                      | Corpus and evaluation work           |
+
+## Agent engineering roadmap
+
+VidForge follows several directions visible in modern agent runtimes while keeping a strict distinction between architectural influence and implemented capability:
+
+- **Durable execution and human oversight** — add database-backed LangGraph checkpoints, `interrupt()` approval nodes and trajectory replay.
+- **Context engineering** — evolve from bounded memory packets to query planning, context compression, evidence gating and token-budget allocation per node.
+- **Hierarchical Multi-Agent execution** — introduce a typed router for specialist subagents, explicit delegation budgets and isolated state slices.
+- **Memory lifecycle** — add consolidation, contradiction handling, decay, promotion from run memory to product knowledge and measurable retrieval quality.
+- **Skills and tools** — define discoverable, permission-aware capabilities instead of embedding every action directly in prompts.
+- **Agent evaluation** — evaluate trajectories, RAG evidence, memory usefulness, provider cost and final media quality separately.
+
+Relevant design references include [LangGraph.js](https://github.com/langchain-ai/langgraphjs), [DeerFlow](https://github.com/bytedance/deer-flow), [Letta](https://github.com/letta-ai/letta) and [Claude Code subagents](https://code.claude.com/docs/en/sub-agents). These links describe the broader design space; they do not imply feature parity or code reuse.
+
+## Quick start
+
+### Requirements
+
+- Node.js 20 recommended
+- pnpm `8.15.4`
+- Docker with Compose
+- FFmpeg 4 or newer for media composition
+
+### 1. Install dependencies
 
 ```bash
+git clone https://github.com/WANGLEVY9/VidForge.git
+cd VidForge
+
 corepack enable
 corepack prepare pnpm@8.15.4 --activate
 pnpm install --frozen-lockfile
-
-docker compose up -d
 ```
 
-Compose 只启动 PostgreSQL / pgvector 与 Redis，不启动应用容器，也不会接触生产凭证。依赖说明见 [`docker/README.md`](./docker/README.md)。
+### 2. Start PostgreSQL and Redis
 
-### 2. 配置环境变量
+```bash
+docker compose up -d
+docker compose ps
+```
+
+Compose starts local PostgreSQL/pgvector and Redis only. It does not start the application containers or load production credentials.
+
+### 3. Configure the applications
 
 ```bash
 cp apps/backend/.env.example apps/backend/.env
 cp apps/frontend/.env.example apps/frontend/.env.local
 ```
 
-本地默认值已经对应 Compose：
+The local defaults match Docker Compose:
 
 ```dotenv
 # apps/backend/.env
@@ -175,9 +352,9 @@ API_BASE_URL=http://localhost:3001
 VITE_API_BASE_URL=http://localhost:3001
 ```
 
-ARK、TTS、Embedding 和对象存储凭证均为可选配置，但真实的模型生成、语义检索、云端 TTS 或生产级文件持久化需要对应 Provider。任何 `VITE_*` 变量都会进入浏览器产物，不能放入私人凭证。
+For a provider-free local run, remove or comment the placeholder `ARK_*` credentials after copying the example. Real ARK text/video generation requires valid endpoint IDs and API keys.
 
-### 3. 执行迁移并启动应用
+### 4. Migrate and run
 
 ```bash
 pnpm --filter @vidforge/backend migration:run
@@ -185,182 +362,145 @@ pnpm check:env
 pnpm dev
 ```
 
-启动后：
+| Surface                  | Local URL                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------- |
+| Landing page             | [`http://localhost:3000`](http://localhost:3000)                                   |
+| Browser-only guided flow | [`http://localhost:3000/try`](http://localhost:3000/try)                           |
+| Workspace                | [`http://localhost:3000/workspace`](http://localhost:3000/workspace)               |
+| REST API                 | [`http://localhost:3001/api`](http://localhost:3001/api)                           |
+| Swagger                  | [`http://localhost:3001/api/docs`](http://localhost:3001/api/docs)                 |
+| Liveness                 | [`http://localhost:3001/api/health`](http://localhost:3001/api/health)             |
+| Readiness                | [`http://localhost:3001/api/health/ready`](http://localhost:3001/api/health/ready) |
 
-| 服务       | 地址                                                                               |
-| ---------- | ---------------------------------------------------------------------------------- |
-| 前端工作台 | [`http://localhost:3000`](http://localhost:3000)                                   |
-| 后端 API   | [`http://localhost:3001/api`](http://localhost:3001/api)                           |
-| Swagger    | [`http://localhost:3001/api/docs`](http://localhost:3001/api/docs)                 |
-| Liveness   | [`http://localhost:3001/api/health`](http://localhost:3001/api/health)             |
-| Readiness  | [`http://localhost:3001/api/health/ready`](http://localhost:3001/api/health/ready) |
+## Configuration
 
-开发环境可以通过 `SEED_DEMO_USER=true` 创建演示账号。公开部署不要启用演示账号，也不要复用仓库中的示例密码。
+| Variable                            | Required         | Purpose                                                |
+| ----------------------------------- | ---------------- | ------------------------------------------------------ |
+| `DATABASE_URL`                      | Yes              | PostgreSQL connection                                  |
+| `JWT_SECRET`                        | Production       | At least 32 characters in production                   |
+| `WEB_BASE_URL`                      | Production       | HTTP and WebSocket CORS allowlist                      |
+| `API_BASE_URL`                      | Production       | Public media and export URL prefix                     |
+| `ARK_TEXT_PRIMARY_*`                | Optional         | Real text and quality-model calls                      |
+| `ARK_VIDEO_PRIMARY_*`               | Optional         | Real shot generation                                   |
+| `EMBEDDING_API_URL`                 | Optional         | Material embeddings; defaults to local Ollama endpoint |
+| `REDIS_URL`                         | Optional locally | BullMQ and cross-process response cache                |
+| `VOLC_TTS_APPID` / `VOLC_TTS_TOKEN` | Optional         | Real TTS instead of silence fallback                   |
+| `OSS_*`                             | Optional         | Object storage instead of local disk                   |
+| `OTEL_EXPORTER_OTLP_*`              | Optional         | External OTLP/HTTP trace collector                     |
+| `VITE_API_BASE_URL`                 | Frontend         | Browser-visible backend origin                         |
+| `VITE_WS_URL`                       | Optional         | WebSocket origin override                              |
 
-## Provider 与降级边界
+Never place secrets in `VITE_*` variables: Vite embeds them in browser assets.
 
-VidForge 可以在没有完整云端 Provider 的情况下完成代码审阅、单元测试、数据库迁移验证和本地媒体 smoke test；但“真实 AI 成片”仍需要配置模型和基础设施。
+## API map
 
-| 能力     | 无 Provider 时                  | 配置后                                |
-| -------- | ------------------------------- | ------------------------------------- |
-| 剧本     | 使用内置 fallback，保持接口可用 | ARK 文本模型生成并保留 RAG 引用       |
-| 素材理解 | 保留上传与基础流程              | ARK Vision / Embedding 生成语义信息   |
-| 视频生成 | 只能运行本地 fixture 或回退路径 | 调用视频模型生成真实分镜              |
-| TTS      | 生成静音占位，便于合片验证      | 使用 OpenSpeech / TTS Provider        |
-| 队列     | 进程内执行                      | Redis + BullMQ 持久化队列、重试与 DLQ |
-| 文件存储 | 本地 `storage/`                 | OSS 等对象存储，支持生产级持久化      |
+All business endpoints except health and authentication require a JWT. Swagger is the canonical request/response reference.
 
-这一区分是项目设计的一部分：贡献者可以先在无密钥环境中理解和测试系统，再按需要接入 Provider，而不是被凭证或商业 API 阻断。
+| Domain         | Representative endpoints                                                                             |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| Auth           | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`                                |
+| Product spaces | `GET /api/spaces`, `POST /api/spaces`, `PATCH /api/spaces/:id`                                       |
+| Materials      | `POST /api/material/upload`, `PATCH /api/material/:id/analyze`, `POST /api/material/search/semantic` |
+| Scripts        | `POST /api/script/generate`, `GET /api/script/inspire`, `PATCH /api/script/:id/shots`                |
+| Agent runtime  | `POST /api/agent/run`, `GET /api/agent/status/:taskId`, `POST /api/agent/cancel/:taskId`             |
+| Agent memory   | `GET /api/agent/memory`, `DELETE /api/agent/memory/:id`                                              |
+| Video tasks    | `POST /api/creation/task`, `GET /api/creation/task/:id`, `PATCH /api/creation/task/:id/shot`         |
+| Analytics      | `GET /api/analytics/overview`, `GET /api/analytics/traces`, `GET /api/analytics/cost`                |
 
-## API 入口
+Provider-neutral request fixtures are available in [`examples/`](./examples).
 
-认证后可以通过 Swagger 查看完整契约。常用入口包括：
-
-| 入口                                               | 用途                        |
-| -------------------------------------------------- | --------------------------- |
-| `POST /api/auth/register` / `POST /api/auth/login` | 注册与登录                  |
-| `GET /api/product-space`                           | 商品空间与品牌知识          |
-| `POST /api/material/upload`                        | 上传素材                    |
-| `PATCH /api/material/:id/analyze`                  | 运行素材理解                |
-| `POST /api/script/generate`                        | 生成带 RAG 与合规结果的剧本 |
-| `POST /api/agent/run`                              | 启动多 Agent 全链路任务     |
-| `POST /api/creation/task`                          | 创建视频合成任务            |
-| `GET /api/creation/task/:id`                       | 查询任务与产物状态          |
-| `GET /api/health/ready`                            | 检查服务与数据库就绪状态    |
-
-Provider-neutral 的请求样例位于 [`examples/`](./examples)，不要把真实 token 写进示例或 Issue。
-
-## 项目结构
+## Repository map
 
 ```text
 VidForge/
 ├── apps/
-│   ├── frontend/                 # React/Vite 创作工作台
-│   │   ├── src/pages/             # workspace / material / script / creation / dashboard
-│   │   ├── src/components/        # storyboard / studio / dashboard / common
-│   │   ├── src/services/          # API 与 Socket.IO 客户端
-│   │   └── src/store/             # Zustand 状态层
-│   └── backend/                  # NestJS API 与媒体服务
-│       └── src/modules/
-│           ├── agent/             # LangGraph 编排、Memory、Context Packet
-│           ├── ai/                # ARK Provider 与响应缓存
-│           ├── material/          # 上传、分析、语义检索
-│           ├── product-space/     # 品牌知识与空间隔离
-│           ├── script/            # 剧本、RAG、合规前置
-│           ├── creation/          # 视频任务与实时进度
-│           ├── media/             # FFmpeg、TTS、BGM、字幕、存储
-│           ├── queue/             # BullMQ 与进程内降级
-│           ├── trace/             # Trace、Token、成本与延迟
-│           └── compliance/        # 规则与模型复核
-├── docs/                         # 架构、部署、运行时与贡献文档
-├── examples/                     # 可复现、无凭证的 API 样例
-├── docker/                       # 本地基础设施说明
-├── .github/                      # CI、CodeQL、依赖审查、secret scan
-└── ROADMAP.md                    # 社区路线图
+│   ├── frontend/                     # React/Vite studio
+│   │   └── src/
+│   │       ├── pages/                 # landing, try, workspace, material, script, video, data
+│   │       ├── components/            # storyboard, studio, dashboard and shared UI
+│   │       ├── services/              # REST and Socket.IO clients
+│   │       └── store/                 # Zustand application state
+│   └── backend/
+│       └── src/
+│           ├── modules/agent/         # graph, agents, durable runs, memory, context packet
+│           ├── modules/rag/           # structured script seed corpus
+│           ├── modules/product-space/ # tenant-scoped product knowledge
+│           ├── modules/material/      # upload, analysis and semantic retrieval
+│           ├── modules/script/        # knowledge enrichment, RAG and script generation
+│           ├── modules/creation/      # asynchronous video tasks and WebSocket progress
+│           ├── modules/media/         # FFmpeg, TTS, BGM, subtitles and storage
+│           ├── modules/queue/         # BullMQ and local fallback
+│           ├── modules/trace/         # spans, tokens, cost and latency
+│           └── providers/             # stable provider contracts
+├── docs/                              # architecture, runtime, deployment and maintenance
+├── examples/                          # credential-free request fixtures
+├── docker/                            # local infrastructure documentation
+├── scripts/                           # validation, benchmark and repository checks
+└── .github/                           # CI, CodeQL, templates and dependency automation
 ```
 
-## 测试与质量门槛
+## Verification
 
-本地提交前建议按由快到慢的顺序运行：
+The repository includes unit, contract, migration, security-policy and FFmpeg smoke tests. CI also checks repository hygiene, Markdown links, dependency risk, linting, styles, builds and frontend bundle budgets.
 
 ```bash
-# 文档、仓库卫生与仓库级测试
-pnpm check:hygiene
+# Fast documentation and repository checks
 pnpm docs:check
+pnpm check:hygiene
 pnpm test:repo
 
-# 后端类型检查与测试
-pnpm --filter @vidforge/backend build
+# Backend and frontend validation
 pnpm test:backend
-
-# 前端构建与全量验证
-pnpm --filter @vidforge/frontend lint
+pnpm lint
+pnpm stylelint
 pnpm build
+
+# Complete local quality gate
 pnpm verify
 ```
 
-CI 会在 Pull Request 和 `main` 推送上执行依赖审计、文档链接检查、仓库卫生检查、Docker Compose 配置校验、测试、前后端 lint、样式检查和构建。CodeQL、依赖审查与 secret scan 独立运行，帮助把安全问题尽量拦在合并之前。
+## Contributing
 
-## 部署
+Useful contribution areas include:
 
-推荐将前端和后端拆分部署：
+- provider adapters and contract tests;
+- hybrid retrieval, reranking and RAG evaluation;
+- memory consolidation and retrieval metrics;
+- checkpoint persistence and human approval nodes;
+- video quality, subtitle and audio pipelines;
+- accessibility, mobile interaction and storyboard editing;
+- deployment reliability, examples and documentation.
 
-- **Frontend**：Vercel，Root Directory 指向 `apps/frontend`，配置 `VITE_API_BASE_URL` 和可选的 `VITE_WS_URL`。
-- **Backend**：Railway 或兼容 Nixpacks 的平台，使用根目录的 `railway.json` / `nixpacks.toml`。
-- **Database**：生产 PostgreSQL；启用 pgvector 时使用对应扩展能力。
-- **Queue / Cache**：生产环境建议配置 Redis，并使用持久化 BullMQ 队列。
-- **Storage**：生产环境建议配置 OSS 或其他对象存储，避免依赖实例本地磁盘。
+Start with:
 
-后端生产环境至少需要：
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md)
+- [`docs/CONTRIBUTOR_QUICKSTART.md`](./docs/CONTRIBUTOR_QUICKSTART.md)
+- [`docs/CONTRIBUTION_IDEAS.md`](./docs/CONTRIBUTION_IDEAS.md)
+- [`docs/MAINTENANCE_BACKLOG.md`](./docs/MAINTENANCE_BACKLOG.md)
+- [`GOVERNANCE.md`](./GOVERNANCE.md)
+- [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
 
-```dotenv
-NODE_ENV=production
-DATABASE_URL=...
-JWT_SECRET=一个长度至少为 32 个字符的随机密钥
-WEB_BASE_URL=https://你的前端域名
-API_BASE_URL=https://你的后端域名
-```
+Keep pull requests focused. State the problem, design, verification commands, provider requirements and known limitations. Tests, examples, issue reproduction and documentation are first-class contributions.
 
-生产环境不会执行 TypeORM `synchronize`。首次部署和每次 schema 变更都应先执行 migration。完整步骤见 [`docs/生产部署方案.md`](./docs/生产部署方案.md)、[`docs/部署文档.md`](./docs/部署文档.md) 与 [`docker/README.md`](./docker/README.md)。
+## Documentation
 
-## Agent、RAG 与 Memory 文档
+| Document                                                             | Focus                                                |
+| -------------------------------------------------------------------- | ---------------------------------------------------- |
+| [`docs/AGENT_RUNTIME.md`](./docs/AGENT_RUNTIME.md)                   | Graph lifecycle, retries, memory and context budgets |
+| [`docs/TECHNICAL_ARCHITECTURE.md`](./docs/TECHNICAL_ARCHITECTURE.md) | System boundaries and technology decisions           |
+| [`docs/OBSERVABILITY.md`](./docs/OBSERVABILITY.md)                   | Trace, cost, latency and OTLP export                 |
+| [`docs/PROVIDER_CONTRACTS.md`](./docs/PROVIDER_CONTRACTS.md)         | Provider replacement contracts                       |
+| [`docs/生产部署方案.md`](./docs/生产部署方案.md)                     | Production deployment                                |
+| [`docs/OPEN_SOURCE_TECH_RADAR.md`](./docs/OPEN_SOURCE_TECH_RADAR.md) | Technologies under evaluation                        |
+| [`ROADMAP.md`](./ROADMAP.md)                                         | Planned work and project direction                   |
+| [`CHANGELOG.md`](./CHANGELOG.md)                                     | Version history                                      |
 
-如果你关心 AI 应用的工程化实现，可以从这些文档开始：
+## Security
 
-- [`docs/AGENT_RUNTIME.md`](./docs/AGENT_RUNTIME.md)：LangGraph 状态机、重试、质量重规划、长期记忆与 Context Packet。
-- [`docs/OBSERVABILITY.md`](./docs/OBSERVABILITY.md)：Trace、Token、成本、延迟与 Provider 调用。
-- [`docs/TECHNICAL_ARCHITECTURE.md`](./docs/TECHNICAL_ARCHITECTURE.md)：系统边界与技术决策。
-- [`docs/PROVIDER_CONTRACTS.md`](./docs/PROVIDER_CONTRACTS.md)：Provider 能力契约与替换边界。
-- [`docs/OPEN_SOURCE_TECH_RADAR.md`](./docs/OPEN_SOURCE_TECH_RADAR.md)：值得跟踪的开源技术方向。
-- [`docs/MAINTENANCE_BACKLOG.md`](./docs/MAINTENANCE_BACKLOG.md)：可认领的维护任务。
+Do not commit API keys, JWT secrets, database credentials, production media or user data. Inject secrets through local `.env` files, deployment-platform secrets or CI secrets. Public vulnerabilities should be reported through the process in [`SECURITY.md`](./SECURITY.md), not through a disclosure containing live credentials.
 
-当前长期记忆检索采用稳定、可测试的 lexical seam；后续可以在不改动媒体管线契约的前提下接入 hybrid retrieval、pgvector、reranker、router 或人工审批节点。
+## License
 
-## 如何参与社区
+VidForge is available under the [MIT License](./LICENSE).
 
-VidForge 欢迎三类贡献：
-
-1. **让核心链路更可靠**：测试、迁移、队列、媒体处理、错误恢复、性能和安全。
-2. **让创作体验更好**：信息架构、可访问性、移动端交互、分镜编辑、可观测反馈。
-3. **让 AI 能力更可研究**：RAG 评测、Memory 设计、Agent routing、Provider adapter、质量指标和成本控制。
-
-推荐流程：
-
-```bash
-git clone https://github.com/WANGLEVY9/VidForge.git
-cd VidForge
-corepack prepare pnpm@8.15.4 --activate
-pnpm install --frozen-lockfile
-git checkout -b feat/your-contribution
-```
-
-提交 Pull Request 前请阅读 [`CONTRIBUTING.md`](./CONTRIBUTING.md) 和 [`docs/CONTRIBUTOR_QUICKSTART.md`](./docs/CONTRIBUTOR_QUICKSTART.md)。请使用 Conventional Commits，保持每个 PR 聚焦，并在描述中写清楚：问题、设计、验证命令、已知限制和是否需要第三方 Provider。
-
-适合新贡献者的方向可以在 [`docs/CONTRIBUTION_IDEAS.md`](./docs/CONTRIBUTION_IDEAS.md) 和 [`ROADMAP.md`](./ROADMAP.md) 中找到。行为规范见 [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)，项目决策和维护角色见 [`GOVERNANCE.md`](./GOVERNANCE.md)。
-
-## 安全与凭证
-
-请勿提交 API Key、JWT secret、数据库密码、对象存储密钥、个人素材或生产日志。所有凭证必须通过本地 `.env`、部署平台 Secret 或 CI Secret 注入。
-
-如果发现安全问题，请优先阅读 [`SECURITY.md`](./SECURITY.md)，不要在公开 Issue 中粘贴可利用的凭证或完整攻击细节。
-
-## 路线图
-
-项目的下一步围绕四条主线展开：
-
-- **Production**：更稳健的 checkpoint resume、持久化 worker、对象存储与部署可观测性。
-- **Intelligence**：hybrid RAG、reranker、Agent router、可评测的 Memory 与质量反馈闭环。
-- **Creative UX**：更强的分镜编辑、移动端体验、品牌模板和多平台输出规格。
-- **Community**：更完整的 examples、贡献者工具、评测数据集、Provider adapter 和公开技术记录。
-
-详细任务与状态以 [`ROADMAP.md`](./ROADMAP.md) 和 [`CHANGELOG.md`](./CHANGELOG.md) 为准。
-
-## 许可证与商标
-
-VidForge 以 [MIT License](./LICENSE) 发布。VidForge、OpenAI、ARK、TikTok 等名称和标识分别属于其各自权利人；本项目不代表这些组织，也不构成任何商业合作或官方支持关系。
-
----
-
-<p align="center">
-  <sub>Build openly. Measure honestly. Make every generated frame worth keeping.</sub>
-</p>
+VidForge is an independent open-source project. It is not affiliated with or endorsed by OpenAI, Anthropic, ByteDance, Volcano Engine, TikTok, LangChain or the other projects referenced above. Product and company names belong to their respective owners.
