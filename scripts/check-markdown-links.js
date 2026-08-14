@@ -4,6 +4,11 @@ import path from 'node:path';
 
 const roots = [
   'README.md',
+  'README.zh-CN.md',
+  'README.ja.md',
+  'README.fr.md',
+  'README.de.md',
+  'README.ru.md',
   'CONTRIBUTING.md',
   'SECURITY.md',
   'SUPPORT.md',
