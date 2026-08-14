@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentState, ShotOutput } from '../interfaces/agent-state.interface';
 import { ScriptService } from '../../script/script.service';
+import { buildMemoryContextPacket } from '../context/agent-context';
 
 /**
  * 剧本生成 Agent
@@ -24,12 +25,12 @@ export class ScriptAgentService {
 
     // 把上一次质量反馈拼到卖点里(简单 self-reflection 实现)
     const feedback = state.qualityControl?.feedback;
-    const memoryHints = (state.memoryContext?.recalled ?? [])
-      .filter((memory) => memory.score >= 0.2)
-      .slice(0, 4)
-      .map((memory) => `- ${memory.content}`)
-      .join('\n');
-    const context = memoryHints ? `\n\n[长期记忆提示，仅作参考]\n${memoryHints}` : '';
+    const memoryPacket = buildMemoryContextPacket(
+      state.memoryContext?.recalled ?? [],
+      state.memoryContext?.recalled.length ?? 0,
+      state.memoryContext?.maxChars ?? 1_800
+    );
+    const context = memoryPacket.memoryBlock ? `\n\n${memoryPacket.memoryBlock}` : '';
     const sellingPoints = feedback
       ? `${state.sellingPoints}\n\n[上次评估反馈,请规避以下问题]\n${feedback}`
       : state.sellingPoints;
@@ -83,7 +84,7 @@ export class ScriptAgentService {
       endedAt: endedAt.toISOString(),
       latencyMs: endedAt.getTime() - startedAt.getTime(),
       status: 'ok',
-      summary: `剧本来源 ${scriptResult.source},${shots.length} 个分镜,${shots.filter((x) => x.type === 'image-to-video').length} 个绑定素材`,
+      summary: `剧本来源 ${scriptResult.source},${shots.length} 个分镜,${shots.filter((x) => x.type === 'image-to-video').length} 个绑定素材,RAG证据 ${scriptResult.ragReferences?.length ?? 0} 条,记忆命中 ${memoryPacket.memoryHitCount} 条`,
     });
 
     return {
@@ -93,6 +94,7 @@ export class ScriptAgentService {
         style: scriptResult.style ?? state.style ?? 'professional',
         source: scriptResult.source,
         fallbackReason: scriptResult.fallbackReason,
+        ragReferences: scriptResult.ragReferences ?? [],
       },
       trace,
     };

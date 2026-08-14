@@ -7,12 +7,18 @@ export interface AgentRuntimeConfig {
   retryBaseDelayMs: number;
   /** Maximum number of quality-driven replans. */
   qcMaxRetries: number;
+  /** Maximum number of long-term memory hits retrieved per run. */
+  memoryTopK: number;
+  /** Maximum characters allocated to serialized memory context. */
+  memoryMaxChars: number;
 }
 
 const DEFAULTS: AgentRuntimeConfig = {
   maxRetries: 3,
   retryBaseDelayMs: 2000,
   qcMaxRetries: 2,
+  memoryTopK: 6,
+  memoryMaxChars: 1800,
 };
 
 function boundedInteger(
@@ -36,6 +42,8 @@ export function readAgentRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Ag
       60_000
     ),
     qcMaxRetries: boundedInteger(env.AGENT_QC_MAX_RETRIES, DEFAULTS.qcMaxRetries, 0, 3),
+    memoryTopK: boundedInteger(env.AGENT_MEMORY_TOP_K, DEFAULTS.memoryTopK, 1, 12),
+    memoryMaxChars: boundedInteger(env.AGENT_MEMORY_MAX_CHARS, DEFAULTS.memoryMaxChars, 400, 6_000),
   };
 }
 

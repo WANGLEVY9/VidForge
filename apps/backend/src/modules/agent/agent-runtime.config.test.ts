@@ -13,12 +13,16 @@ test('agent runtime config clamps unsafe environment values', () => {
     AGENT_MAX_RETRIES: '99',
     AGENT_RETRY_BASE_DELAY_MS: '-1',
     AGENT_QC_MAX_RETRIES: 'not-a-number',
+    AGENT_MEMORY_TOP_K: '99',
+    AGENT_MEMORY_MAX_CHARS: '100',
   });
 
   assert.deepEqual(config, {
     maxRetries: 5,
     retryBaseDelayMs: 100,
     qcMaxRetries: 2,
+    memoryTopK: 12,
+    memoryMaxChars: 400,
   });
 });
 

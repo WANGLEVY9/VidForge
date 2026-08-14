@@ -264,6 +264,12 @@ export class OrchestratorService {
         progress: result.progress,
         retryCount: finalState?.retryCount ?? 0,
         traceSpanCount: finalState?.trace?.length ?? 0,
+        memoryHitCount: finalState?.memoryContext?.recalled.length ?? 0,
+        memoryMaxScore: Math.max(
+          0,
+          ...(finalState?.memoryContext?.recalled.map((memory) => memory.score) ?? [])
+        ),
+        ragReferenceCount: finalState?.scriptGeneration?.ragReferences?.length ?? 0,
       },
     });
   }
@@ -320,7 +326,7 @@ export class OrchestratorService {
       userId: dto.userId,
       productSpaceId: dto.productSpaceId,
       query,
-      limit: 6,
+      limit: this.runtime.memoryTopK,
     });
     return {
       recalled: recalled.map((memory) => ({
@@ -329,6 +335,7 @@ export class OrchestratorService {
         content: memory.content,
         score: memory.score,
       })),
+      maxChars: this.runtime.memoryMaxChars,
     };
   }
 

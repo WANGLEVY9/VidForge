@@ -63,6 +63,8 @@ export interface AgentState {
       content: string;
       score: number;
     }>;
+    /** Serialized context budget used by downstream prompt builders. */
+    maxChars?: number;
   };
 
   // Material Analysis output
@@ -82,6 +84,8 @@ export interface AgentState {
     /** 模型来源 */
     source: 'ark' | 'fallback';
     fallbackReason?: string;
+    /** RAG evidence retained for auditability and downstream routing. */
+    ragReferences?: Array<{ id: string; hookType: string; performance: string }>;
   };
 
   // Video Composition output

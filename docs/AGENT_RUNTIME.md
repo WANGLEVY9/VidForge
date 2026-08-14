@@ -36,6 +36,13 @@ material_analysis -> script_generation -> video_composition -> quality_control
   memories. Retrieved items are hints only; they never replace the current
   request or bypass authorization. A successful quality-controlled run may
   write one `success_pattern` memory, making replayed runs idempotent.
+- Retrieved memories enter the script prompt through a bounded context packet.
+  The packet keeps hit IDs, kinds and scores, escapes control/markup characters,
+  labels the content as reference data rather than instructions, and enforces
+  `AGENT_MEMORY_MAX_CHARS` before model invocation.
+- Script generation retains the seed RAG references in `scriptGeneration` and
+  the workflow trace metadata, so a future hybrid retriever or reranker can be
+  evaluated against evidence instead of only the final text.
 - The initial retriever is lexical and provider-neutral. It is intentionally a
   stable seam for a later pgvector hybrid retriever or reranker without making
   the workflow depend on a specific embedding vendor.
@@ -46,9 +53,12 @@ material_analysis -> script_generation -> video_composition -> quality_control
 AGENT_MAX_RETRIES=3
 AGENT_RETRY_BASE_DELAY_MS=2000
 AGENT_QC_MAX_RETRIES=2
+AGENT_MEMORY_TOP_K=6
+AGENT_MEMORY_MAX_CHARS=1800
 ```
 
-Values are clamped by the runtime to prevent accidental retry storms. The
+Values are clamped by the runtime to prevent accidental retry storms or
+unbounded prompt growth. The
 workflow remains deterministic at the graph level; model calls are isolated in
 specialized nodes so later work can replace one node with a router, subagent,
 or human approval step without changing the media pipeline contract.
