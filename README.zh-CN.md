@@ -20,6 +20,8 @@
 
 <p align="center">
   <a href="https://github.com/WANGLEVY9/VidForge/actions/workflows/ci.yml"><img src="https://github.com/WANGLEVY9/VidForge/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/WANGLEVY9/VidForge/actions/workflows/codeql.yml"><img src="https://github.com/WANGLEVY9/VidForge/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" /></a>
+  <a href="https://github.com/WANGLEVY9/VidForge/actions/workflows/secret-scan.yml"><img src="https://github.com/WANGLEVY9/VidForge/actions/workflows/secret-scan.yml/badge.svg" alt="Secret scan" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-d6b36a.svg" alt="MIT License" /></a>
   <img src="https://img.shields.io/badge/stack-TypeScript-3178c6.svg" alt="TypeScript" />
 </p>
@@ -67,6 +69,42 @@ material_analysis ──▶ script_generation ──▶ video_composition ──
 
 系统使用显式工作流而非不可控的 Agent 群体。Provider 或瞬时网络错误使用带指数退避和抖动的有限重试；取消、输入错误和 HTTP 4xx 不重试；质量重规划由 `AGENT_QC_MAX_RETRIES` 单独限制。
 
+## 系统架构
+
+```mermaid
+flowchart LR
+    UI[React Studio] --> API[NestJS API]
+    UI <--> WS[Socket.IO 进度]
+    API --> RUNS[(Agent 运行控制面)]
+    API --> GRAPH[LangGraph StateGraph]
+    GRAPH --> MATERIAL[Material Agent]
+    MATERIAL --> SCRIPT[Script Agent]
+    SCRIPT --> COMPOSE[Composition Agent]
+    COMPOSE --> QUALITY[Quality Agent]
+    QUALITY -->|质量反馈| SCRIPT
+    SCRIPT --> RAG[Script RAG 语料]
+    SCRIPT --> SPACE[商品空间知识]
+    GRAPH --> MEMORY[分作用域长期记忆]
+    MATERIAL --> VISION[视觉 / Embedding Provider]
+    SCRIPT --> TEXT[文本 Provider]
+    COMPOSE --> VIDEO[视频 Provider]
+    COMPOSE --> MEDIA[FFmpeg / TTS / BGM / 字幕]
+    GRAPH --> TRACE[(Trace / 成本 / 延迟)]
+    API --> DB[(PostgreSQL + pgvector)]
+    API --> QUEUE[(Redis + BullMQ)]
+    MEDIA --> STORAGE[本地或对象存储]
+```
+
+图状态携带请求、检索记忆、素材分析、脚本方案、RAG 证据、合成结果、质量维度、错误和节点级 trace 摘要。PostgreSQL 保存持久化运行记录与最终状态；图执行目前仍在进程内，持久化 LangGraph checkpointer 和 Worker 重启后的节点恢复属于路线图。
+
+### 控制与失败语义
+
+- Provider、数据库和瞬时网络错误采用指数退避与抖动的 LangGraph 重试策略。
+- 取消、语法/类型错误和 HTTP 4xx 输入错误不会重试。
+- `agent_runs` 保存排队、运行中和终态，包含进度、输入、结果以及用户作用域查询所需的状态。
+- 服务启动时会把中断的 `running` 任务标记为失败，不自动重放，避免重复产生 Provider 费用。
+- `AbortController` 将取消信号传播到当前图执行。
+
 ## 知识库与检索
 
 VidForge 将三类知识分开管理，以区分所有权、生命周期和可信度：
@@ -81,12 +119,24 @@ Script RAG 当前采用可复现的确定性检索：类别精确匹配权重最
 
 Script Agent 接收当前请求、商品空间事实、RAG 引用、历史质量反馈和记忆包。记忆不会以无限对话形式拼入 Prompt，而是经过 Context Packet：
 
+```mermaid
+flowchart TB
+    REQUEST[当前请求] --> PROMPT[脚本 Prompt]
+    SPACE[商品空间事实] --> PROMPT
+    RAG[Script RAG 引用] --> PROMPT
+    MEMORY[召回的长期记忆] --> PACKET[有界 Context Packet]
+    PACKET --> PROMPT
+    FEEDBACK[上一轮质量反馈] --> PROMPT
+```
+
 - 过滤低于阈值的命中；
 - 按得分和 ID 稳定排序；
 - 限制条数与字符预算；
 - 删除控制字符并转义敏感标记；
 - 保留记忆 ID、类型、得分和来源；
 - 将内容标记为参考数据而非模型指令。
+
+Context Packet 还会在截断时保持标签结构闭合，并以记忆 ID、类型、得分和来源保留可追溯性。它不是无限历史对话拼接，而是一个带预算和来源信息的中间表示。
 
 长期记忆位于 `agent_memories`，支持 `user`、`product_space`、`run` 三类作用域，以及 `preference`、`fact`、`success_pattern`、`failure_pattern`、`decision` 五种类型。初始检索器保持 Provider-neutral：
 
@@ -128,6 +178,33 @@ Composition Agent 的实际路径包括：
 
 路线图参考了 [LangGraph.js](https://github.com/langchain-ai/langgraphjs)、[DeerFlow](https://github.com/bytedance/deer-flow)、[Letta](https://github.com/letta-ai/letta) 和 [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents) 所代表的设计方向，但不宣称功能对等或代码复用。
 
+### 能力矩阵
+
+| 能力                                  | 仓库状态       | 外部要求                       |
+| ------------------------------------- | -------------- | ------------------------------ |
+| 前端工作台与浏览器体验 `/try`         | 已实现         | `/try` 无额外要求              |
+| 认证、商品空间、素材、脚本和任务      | 已实现         | PostgreSQL                     |
+| Multi-Agent 状态图与质量重规划        | 已实现         | 真实输出需要文本/视频 Provider |
+| Script RAG 与引用传播                 | 已实现基线     | 语料检索无需额外服务           |
+| 分作用域长期记忆与 Context Packet     | 已实现词法基线 | PostgreSQL                     |
+| 素材语义检索                          | 已实现可选路径 | pgvector 与 Embedding 端点     |
+| FFmpeg 合成 smoke path                | 已实现         | 本地 FFmpeg                    |
+| 持久化队列与跨进程缓存                | 已实现可选路径 | Redis                          |
+| 对象存储                              | 已实现可选路径 | OSS 凭据                       |
+| 精确节点 checkpoint 恢复              | 路线图         | LangGraph checkpointer 设计    |
+| 人机审批 / interrupt-resume           | 路线图         | Checkpoint 持久化与审核 UI     |
+| 动态子 Agent 路由、Skills、工具注册表 | 路线图         | 运行时与权限模型               |
+| Hybrid RAG、Reranker 与评测数据集     | 路线图         | 语料和评测工作                 |
+
+### Agent 工程路线
+
+- **持久执行与人机协作**：加入数据库级 LangGraph checkpoint、`interrupt()` 审批节点和轨迹回放。
+- **上下文工程**：从有界记忆包演进到查询规划、上下文压缩、证据门控和节点级 Token 预算。
+- **分层 Multi-Agent**：引入类型化专家路由、委派预算和隔离的状态切片。
+- **记忆生命周期**：加入合并、矛盾处理、衰减、从运行记忆晋升为商品知识以及检索质量指标。
+- **Skills 与工具**：定义可发现、可授权的能力，避免把所有动作直接嵌入 Prompt。
+- **Agent 评测**：分别评估轨迹、RAG 证据、记忆效用、Provider 成本和最终媒体质量。
+
 ## 快速开始
 
 ### 环境要求
@@ -165,6 +242,36 @@ pnpm build
 pnpm verify
 ```
 
+### 配置与本地服务
+
+| 变量                                | 要求         | 用途                            |
+| ----------------------------------- | ------------ | ------------------------------- |
+| `DATABASE_URL`                      | 必需         | PostgreSQL 连接                 |
+| `JWT_SECRET`                        | 生产环境必需 | 生产环境至少 32 个字符          |
+| `WEB_BASE_URL`                      | 生产环境     | HTTP 与 WebSocket CORS 白名单   |
+| `API_BASE_URL`                      | 生产环境     | 公共媒体与导出 URL 前缀         |
+| `ARK_TEXT_PRIMARY_*`                | 可选         | 真实文本和质量模型调用          |
+| `ARK_VIDEO_PRIMARY_*`               | 可选         | 真实镜头生成                    |
+| `EMBEDDING_API_URL`                 | 可选         | 素材 Embedding，默认本地 Ollama |
+| `REDIS_URL`                         | 本地可选     | BullMQ 与跨进程响应缓存         |
+| `VOLC_TTS_APPID` / `VOLC_TTS_TOKEN` | 可选         | 真实 TTS，否则使用静音 fallback |
+| `OSS_*`                             | 可选         | 使用对象存储替代本地磁盘        |
+| `OTEL_EXPORTER_OTLP_*`              | 可选         | OTLP/HTTP Trace Collector       |
+| `VITE_API_BASE_URL`                 | 前端         | 浏览器可访问的后端地址          |
+| `VITE_WS_URL`                       | 可选         | WebSocket 地址覆盖              |
+
+不要把 Secret 放在 `VITE_*` 中，因为 Vite 会将它们打包到浏览器资源。
+
+| 服务           | 本地地址                                                                           |
+| -------------- | ---------------------------------------------------------------------------------- |
+| Landing page   | [`http://localhost:3000`](http://localhost:3000)                                   |
+| 浏览器体验流程 | [`http://localhost:3000/try`](http://localhost:3000/try)                           |
+| 工作台         | [`http://localhost:3000/workspace`](http://localhost:3000/workspace)               |
+| REST API       | [`http://localhost:3001/api`](http://localhost:3001/api)                           |
+| Swagger        | [`http://localhost:3001/api/docs`](http://localhost:3001/api/docs)                 |
+| Liveness       | [`http://localhost:3001/api/health`](http://localhost:3001/api/health)             |
+| Readiness      | [`http://localhost:3001/api/health/ready`](http://localhost:3001/api/health/ready) |
+
 ## API 导航
 
 | 领域     | 示例端点                                                                                             |
@@ -193,6 +300,40 @@ scripts/                        # 文档、环境、基准和仓库检查
 ```
 
 欢迎贡献 Provider 适配器、混合检索与 RAG 评测、记忆合并、checkpoint、人机审批、视频质量、字幕音频、无障碍和部署可靠性。请先阅读 [`CONTRIBUTING.md`](./CONTRIBUTING.md)、[`docs/CONTRIBUTOR_QUICKSTART.md`](./docs/CONTRIBUTOR_QUICKSTART.md) 和 [`GOVERNANCE.md`](./GOVERNANCE.md)。
+
+## 验证
+
+仓库包含单元、契约、Migration、安全策略和 FFmpeg smoke 测试。CI 还会检查仓库卫生、Markdown 链接、依赖风险、Lint、样式、构建和前端 Bundle 预算。
+
+```bash
+# 文档与仓库检查
+pnpm docs:check
+pnpm check:hygiene
+pnpm test:repo
+
+# 后端、前端和构建验证
+pnpm test:backend
+pnpm lint
+pnpm stylelint
+pnpm build
+
+# 完整质量门禁
+pnpm verify
+```
+
+## 文档索引
+
+| 文档                                                                 | 内容                               |
+| -------------------------------------------------------------------- | ---------------------------------- |
+| [`docs/AGENT_RUNTIME.md`](./docs/AGENT_RUNTIME.md)                   | 图生命周期、重试、记忆和上下文预算 |
+| [`docs/TECHNICAL_ARCHITECTURE.md`](./docs/TECHNICAL_ARCHITECTURE.md) | 系统边界与技术决策                 |
+| [`docs/OBSERVABILITY.md`](./docs/OBSERVABILITY.md)                   | Trace、成本、延迟与 OTLP 导出      |
+| [`docs/PROVIDER_CONTRACTS.md`](./docs/PROVIDER_CONTRACTS.md)         | Provider 替换契约                  |
+| [`docs/生产部署方案.md`](./docs/生产部署方案.md)                     | 生产部署                           |
+| [`docs/OPEN_SOURCE_TECH_RADAR.md`](./docs/OPEN_SOURCE_TECH_RADAR.md) | 评估中的技术方向                   |
+| [`ROADMAP.md`](./ROADMAP.md)                                         | 计划工作与项目方向                 |
+| [`CHANGELOG.md`](./CHANGELOG.md)                                     | 版本历史                           |
+| [`examples/`](./examples)                                            | 无凭据请求样例                     |
 
 请勿提交 API Key、JWT Secret、数据库凭据、生产媒体或用户数据。通过本地 `.env`、部署平台 Secret 或 CI Secret 注入凭据。安全问题请遵循 [`SECURITY.md`](./SECURITY.md) 的披露流程。
 
