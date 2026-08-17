@@ -4,6 +4,11 @@ export type AgentRunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'c
 
 /** Durable control-plane record for a LangGraph workflow run. */
 @Entity('agent_runs')
+@Index('IDX_agent_runs_user_idempotency', ['userId', 'idempotencyKey'], {
+  unique: true,
+  where: '"idempotencyKey" IS NOT NULL',
+})
+@Index('IDX_agent_runs_lease', ['status', 'leaseUntil'])
 export class AgentRun {
   @PrimaryColumn()
   id: string;
@@ -11,6 +16,10 @@ export class AgentRun {
   @Index()
   @Column()
   userId: string;
+
+  /** Client supplied key used to safely retry the create request. */
+  @Column({ length: 200, nullable: true })
+  idempotencyKey: string | null;
 
   @Column({ default: 'pending' })
   status: AgentRunStatus;
@@ -20,6 +29,27 @@ export class AgentRun {
 
   @Column({ default: 0 })
   progress: number;
+
+  /** Number of worker attempts, including the current attempt. */
+  @Column({ default: 0 })
+  attempt: number;
+
+  /** Worker ownership metadata for atomic claim/lease based execution. */
+  @Column({ length: 160, nullable: true })
+  workerId: string | null;
+
+  @Column({ nullable: true })
+  leaseUntil: Date | null;
+
+  @Column({ nullable: true })
+  heartbeatAt: Date | null;
+
+  /** Reserved for the LangGraph checkpointer rollout. */
+  @Column({ length: 220, nullable: true })
+  graphThreadId: string | null;
+
+  @Column({ length: 220, nullable: true })
+  checkpointId: string | null;
 
   @Column('json')
   input: Record<string, unknown>;

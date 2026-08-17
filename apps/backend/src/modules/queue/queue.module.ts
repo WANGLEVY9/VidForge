@@ -8,17 +8,18 @@ import {
   ExportEncodeProcessor,
   MaterialAnalyzeProcessor,
 } from './queue.processors';
+import { readQueueRuntimeConfig } from './queue-runtime.config';
 
 /**
  * 全局队列基础设施(条件加载版本)
  *
  * 设计:
  * - 当环境变量 REDIS_URL 配置存在时,加载完整的 BullMQ 体系(Queue + Worker)
- * - 当 REDIS_URL 不存在时,只暴露 QueueRunnerService 的 stub 实现,
- *   业务侧调 enqueue() 会直接走进程内 fallback,不会触发任何 Redis 连接尝试
+ * - 当 REDIS_URL 不存在时,只暴露 QueueRunnerService 的 stub 实现;
+ *   本地开发可走进程内 fallback,生产-like 环境则拒绝队列任务
  *
- * 这避免了在没有 Redis 的环境(本地零依赖 / Railway 未配置 Redis 服务)
- * 下应用启动被 ioredis 重连风暴卡死。
+ * 这避免了在没有 Redis 的本地环境下应用启动被 ioredis 重连风暴卡死,
+ * 同时避免生产环境把长任务静默放回 API 进程。
  *
  * 启动后 QueueRunnerService 会通过 isRedisHealthy() 决定具体执行路径。
  */
@@ -27,6 +28,7 @@ import {
 export class QueueModule {
   static forRoot(): DynamicModule {
     const redisUrl = process.env.REDIS_URL;
+    const runtime = readQueueRuntimeConfig();
     const useRealQueue =
       !!redisUrl && (redisUrl.startsWith('redis://') || redisUrl.startsWith('rediss://'));
 
@@ -38,7 +40,7 @@ export class QueueModule {
         providers: [
           {
             provide: QueueRunnerService,
-            useValue: createInlineRunner(),
+            useValue: createInlineRunner(runtime.allowInlineFallback),
           },
         ],
         exports: [QueueRunnerService],
@@ -91,7 +93,7 @@ export class QueueModule {
 }
 
 /** 不依赖 BullMQ 的 inline 版 QueueRunnerService(Redis 未配置时使用) */
-function createInlineRunner(): QueueRunnerService {
+function createInlineRunner(allowInlineFallback: boolean): QueueRunnerService {
   // 用 Object.create 绕过构造函数(它要求 4 个 @InjectQueue 参数)
   const stub = Object.create(QueueRunnerService.prototype) as QueueRunnerService;
   // 把内部状态置为"健康检测已完成,Redis 不可用"
@@ -105,6 +107,11 @@ function createInlineRunner(): QueueRunnerService {
   // 重写 isRedisHealthy / enqueue / getCounts 为 inline 实现
   stub.isRedisHealthy = async () => false;
   stub.enqueue = async (_q, _name, _data, fallback) => {
+    if (!allowInlineFallback) {
+      throw new Error(
+        'Redis is required in this environment. Configure REDIS_URL or explicitly set QUEUE_INLINE_FALLBACK=true.'
+      );
+    }
     void fallback().catch((err) => {
       console.error(`[inline-fallback] ${err?.message ?? err}`);
     });

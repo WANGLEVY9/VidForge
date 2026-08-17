@@ -1,4 +1,14 @@
-import { Controller, Post, Get, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Delete,
+  Param,
+  Body,
+  Query,
+  Headers,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AgentService } from './agent.service';
 import { RunAgentDto } from './dto/run-agent.dto';
@@ -18,9 +28,13 @@ export class AgentController {
   ) {}
 
   @Post('run')
-  @ApiOperation({ summary: '创建并异步启动完整 Agent 工作流' })
-  run(@CurrentUser() user: JwtPayload, @Body() dto: RunAgentDto) {
-    return this.agentService.run({ ...dto, userId: user.sub });
+  @ApiOperation({ summary: '创建并异步启动完整 Agent 工作流（支持 Idempotency-Key）' })
+  run(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: RunAgentDto,
+    @Headers('idempotency-key') idempotencyKey?: string
+  ) {
+    return this.agentService.run({ ...dto, userId: user.sub }, idempotencyKey);
   }
 
   @Get('status/:taskId')

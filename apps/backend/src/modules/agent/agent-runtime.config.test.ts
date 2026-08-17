@@ -23,6 +23,7 @@ test('agent runtime config clamps unsafe environment values', () => {
     qcMaxRetries: 2,
     memoryTopK: 12,
     memoryMaxChars: 400,
+    leaseDurationMs: 120000,
   });
 });
 

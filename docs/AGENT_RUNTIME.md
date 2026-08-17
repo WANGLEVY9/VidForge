@@ -14,10 +14,22 @@ material_analysis -> script_generation -> video_composition -> quality_control
 - `POST /api/agent/run` creates a durable `agent_runs` control-plane record and
   returns a task ID immediately; `GET /api/agent/status/:taskId` reads the
   latest state from PostgreSQL rather than process memory.
-- The database record is the durable control plane for status and final output;
-  the current LangGraph checkpoint is still process-local, so a worker restart
-  does not yet resume from an exact node checkpoint; recovery policy remains a
-  follow-up area.
+- The database record is the durable control plane for status and final output.
+  It also carries an optional idempotency key, worker ownership, attempt count,
+  lease expiry, heartbeat, graph thread ID and a reserved checkpoint ID. The
+  metadata prevents two API processes from claiming the same pending run and
+  makes the missing checkpoint boundary explicit.
+- `Idempotency-Key` can be sent with `POST /api/agent/run`. Repeating the same
+  key for the same authenticated user returns the existing run instead of
+  creating another provider-consuming task. The key is capped at 200
+  characters and is backed by a database unique index.
+- A worker claims a pending run with a conditional status update. Progress
+  updates renew its lease and heartbeat. On startup, only runs with no lease
+  or an expired lease are marked interrupted; a run with a live lease is left
+  to its current worker.
+- The current LangGraph checkpoint is still not persisted. A worker restart
+  does not yet resume from an exact node checkpoint; `graphThreadId` and
+  `checkpointId` are compatibility fields for the Checkpointer rollout.
 - Provider, database, and transient network failures use LangGraph retry
   policies with exponential backoff.
 - Cancellation, syntax/type errors, and HTTP 4xx input errors are not retried.
@@ -35,7 +47,8 @@ material_analysis -> script_generation -> video_composition -> quality_control
 - Workflow startup performs bounded, deterministic retrieval of relevant
   memories. Retrieved items are hints only; they never replace the current
   request or bypass authorization. A successful quality-controlled run may
-  write one `success_pattern` memory, making replayed runs idempotent.
+  write one `success_pattern` memory. Memory-write idempotency and HTTP run
+  idempotency are separate concerns.
 - Retrieved memories enter the script prompt through a bounded context packet.
   The packet keeps hit IDs, kinds and scores, escapes control/markup characters,
   labels the content as reference data rather than instructions, and enforces
@@ -55,6 +68,8 @@ AGENT_RETRY_BASE_DELAY_MS=2000
 AGENT_QC_MAX_RETRIES=2
 AGENT_MEMORY_TOP_K=6
 AGENT_MEMORY_MAX_CHARS=1800
+AGENT_LEASE_DURATION_MS=120000
+# AGENT_WORKER_ID=api-1
 ```
 
 Values are clamped by the runtime to prevent accidental retry storms or
@@ -62,3 +77,19 @@ unbounded prompt growth. The
 workflow remains deterministic at the graph level; model calls are isolated in
 specialized nodes so later work can replace one node with a router, subagent,
 or human approval step without changing the media pipeline contract.
+
+## Reliability boundary
+
+The current release deliberately stops short of claiming durable Agent
+execution. The next reliability milestone is to connect `graphThreadId` to a
+real LangGraph checkpointer and run orchestration from a dedicated worker
+queue. That milestone must include node-level replay tests, provider operation
+idempotency, a lease reclaimer, human approval checkpoints and a cost guard.
+
+Until then:
+
+- PostgreSQL protects the run record and duplicate create requests;
+- the conditional claim protects a pending run from double dispatch;
+- the lease is ownership metadata and a stale-run signal, not a checkpoint;
+- production deployments must configure Redis and should not enable inline
+  fallback except for a deliberate emergency override.

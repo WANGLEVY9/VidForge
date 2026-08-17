@@ -11,6 +11,8 @@ export interface AgentRuntimeConfig {
   memoryTopK: number;
   /** Maximum characters allocated to serialized memory context. */
   memoryMaxChars: number;
+  /** How long a worker owns a running task before it must renew its lease. */
+  leaseDurationMs: number;
 }
 
 const DEFAULTS: AgentRuntimeConfig = {
@@ -19,6 +21,7 @@ const DEFAULTS: AgentRuntimeConfig = {
   qcMaxRetries: 2,
   memoryTopK: 6,
   memoryMaxChars: 1800,
+  leaseDurationMs: 120_000,
 };
 
 function boundedInteger(
@@ -44,6 +47,12 @@ export function readAgentRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Ag
     qcMaxRetries: boundedInteger(env.AGENT_QC_MAX_RETRIES, DEFAULTS.qcMaxRetries, 0, 3),
     memoryTopK: boundedInteger(env.AGENT_MEMORY_TOP_K, DEFAULTS.memoryTopK, 1, 12),
     memoryMaxChars: boundedInteger(env.AGENT_MEMORY_MAX_CHARS, DEFAULTS.memoryMaxChars, 400, 6_000),
+    leaseDurationMs: boundedInteger(
+      env.AGENT_LEASE_DURATION_MS,
+      DEFAULTS.leaseDurationMs,
+      10_000,
+      900_000
+    ),
   };
 }
 

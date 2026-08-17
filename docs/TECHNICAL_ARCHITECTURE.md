@@ -93,10 +93,10 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 │  │  Conditional retry (max 2) with self-reflection feedback     │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Queue System (BullMQ dual-mode)                             │   │
+│  │  Queue System (BullMQ + explicit dev fallback)                │   │
 │  │  4 queues: creation-shot / creation-compose / export-encode  │   │
 │  │            / material-analyze                                │   │
-│  │  Redis available → persistent queue; No Redis → in-process   │   │
+│  │  Redis available → persistent queue; dev-only fallback         │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
                                 │
@@ -125,7 +125,7 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 - **Separation of Concerns**: Frontend (React) and Backend (NestJS) communicate via REST API + WebSocket
 - **Modular Design**: Business logic is organized into independent feature modules
 - **Graceful Degradation**: All AI/ML integrations have fallback mechanisms; no single dependency is critical
-- **Async Processing**: Long-running tasks use BullMQ dual-mode queue (Redis → persistent; no Redis → in-process)
+- **Async Processing**: Long-running media tasks use BullMQ; inline fallback is development-only and production-like environments fail closed by default
 - **Agent-Driven Pipeline**: LangGraph orchestrates multi-step AI workflows with self-reflection and feedback loops
 - **Observability First**: All AI calls and agent steps emit structured traces for cost monitoring and debugging
 
@@ -241,7 +241,8 @@ Material URL → downloadFile() (supports data:/http/https/local)
 
 - Queue name: `material-analyze`
 - Processor: `MaterialAnalyzeProcessor` (via `ModuleRef` lazy resolution to avoid circular deps)
-- Auto-enqueue after upload; fallback to inline execution when Redis unavailable
+- Auto-enqueue after upload; local development may fall back to inline execution when Redis is unavailable
+- Staging and production require `REDIS_URL`, unless `QUEUE_INLINE_FALLBACK=true` is explicitly set as an emergency override
 - BullMQ retry policy: 3 attempts with exponential backoff
 
 ---
@@ -326,12 +327,13 @@ Knowledge: Product space selling points, brand voice, best practices
 - Per-shot status tracking with detailed progress messages
 
 **Export Capabilities**:
-| Format | Resolution | Aspect Ratio | Channel |
-|--------|-----------|--------------|---------|
-| MP4 H.264 | 480p / 720p / 1080p / 4K | 9:16, 16:9, 1:1 | All |
-| MOV ProRes | 1080p | 9:16, 16:9 | Professional |
-| WebM | 720p | 16:9 | Web |
-| GIF | 480p | 9:16 | Social |
+
+| Format     | Resolution               | Aspect Ratio    | Channel      |
+| ---------- | ------------------------ | --------------- | ------------ |
+| MP4 H.264  | 480p / 720p / 1080p / 4K | 9:16, 16:9, 1:1 | All          |
+| MOV ProRes | 1080p                    | 9:16, 16:9      | Professional |
+| WebM       | 720p                     | 16:9            | Web          |
+| GIF        | 480p                     | 9:16            | Social       |
 
 **Error Handling**:
 
@@ -616,23 +618,23 @@ ALTER TABLE materials ADD COLUMN IF NOT EXISTS "embedding" vector(1024);
 
 ### Environment Variables
 
-| Variable                        | Required                      | Purpose               |
-| ------------------------------- | ----------------------------- | --------------------- |
-| `DATABASE_URL`                  | Yes                           | PostgreSQL connection |
-| `REDIS_URL`                     | No (falls back to in-process) | Queue/cache           |
-| `JWT_SECRET`                    | Yes                           | Auth signing          |
-| `ARK_TEXT_PRIMARY_ENDPOINT_ID`  | No (has builtin)              | Text model endpoint   |
-| `ARK_TEXT_PRIMARY_API_KEY`      | No (has builtin)              | Text model API key    |
-| `ARK_VIDEO_PRIMARY_ENDPOINT_ID` | No (has builtin)              | Video model endpoint  |
-| `ARK_VIDEO_PRIMARY_API_KEY`     | No (has builtin)              | Video model API key   |
-| `WEB_BASE_URL`                  | Yes                           | CORS allowed origin   |
-| `NODE_ENV`                      | Yes                           | Environment flag      |
+| Variable                        | Required                                                 | Purpose               |
+| ------------------------------- | -------------------------------------------------------- | --------------------- |
+| `DATABASE_URL`                  | Yes                                                      | PostgreSQL connection |
+| `REDIS_URL`                     | Yes in staging/production; local development may omit it | Queue/cache           |
+| `JWT_SECRET`                    | Yes                                                      | Auth signing          |
+| `ARK_TEXT_PRIMARY_ENDPOINT_ID`  | No (has builtin)                                         | Text model endpoint   |
+| `ARK_TEXT_PRIMARY_API_KEY`      | No (has builtin)                                         | Text model API key    |
+| `ARK_VIDEO_PRIMARY_ENDPOINT_ID` | No (has builtin)                                         | Video model endpoint  |
+| `ARK_VIDEO_PRIMARY_API_KEY`     | No (has builtin)                                         | Video model API key   |
+| `WEB_BASE_URL`                  | Yes                                                      | CORS allowed origin   |
+| `NODE_ENV`                      | Yes                                                      | Environment flag      |
 
 ### Graceful Degradation
 
 The system auto-detects missing dependencies and degrades gracefully:
 
-- **No Redis**: BullMQ falls back to in-process task execution (4 queues all covered)
+- **No Redis**: local development can use in-process task execution; staging/production reject queue-backed work by default
 - **No ARK API key**: Script generation returns template-based fallback; material analysis returns heuristic tags
 - **No pgvector**: Vector search falls back to `ILIKE` text search
 - **No TTS**: Falls back to silent placeholder audio (ffmpeg anullsrc)

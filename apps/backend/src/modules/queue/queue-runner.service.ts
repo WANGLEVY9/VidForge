@@ -2,6 +2,7 @@ import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from './queue.constants';
+import { readQueueRuntimeConfig } from './queue-runtime.config';
 
 export interface QueueEnqueueOptions {
   priority?: number;
@@ -16,10 +17,10 @@ export interface QueueEnqueueOptions {
  * - 启动时 ping Redis,确认 BullMQ 队列可用
  * - 业务 Service 通过 enqueue() 调用,内部判断:
  *    - 队列连接 OK → 投递到 BullMQ
- *    - 队列连接坏 → 在当前进程异步执行 fallback(便于本地零依赖体验)
+ *    - 队列连接坏 → 仅在允许 inline fallback 时在当前进程异步执行
  *
- * 这样既具备生产级队列能力(重启不丢、可水平扩展、可观测),
- * 也保留了"开箱即用"的开发体验。
+ * 这样保留了本地"开箱即用"体验，同时让生产-like 环境在 Redis 缺失时
+ * 明确失败，而不是把长任务静默塞进 API 进程。
  */
 @Injectable()
 export class QueueRunnerService implements OnApplicationShutdown {
@@ -27,6 +28,7 @@ export class QueueRunnerService implements OnApplicationShutdown {
   private redisHealthy: boolean | null = null;
   private healthCheckedAt = 0;
   private readonly healthCacheTtlMs = 10_000;
+  private readonly runtime = readQueueRuntimeConfig();
 
   constructor(
     @InjectQueue(QUEUE_NAMES.CREATION_SHOT) private readonly shotQueue: Queue,
@@ -79,6 +81,11 @@ export class QueueRunnerService implements OnApplicationShutdown {
   ): Promise<{ jobId?: string; mode: 'queue' | 'inline' }> {
     const healthy = await this.isRedisHealthy();
     if (!healthy) {
+      if (!this.runtime.allowInlineFallback) {
+        throw new Error(
+          'Redis is required in this environment. Configure REDIS_URL or explicitly set QUEUE_INLINE_FALLBACK=true.'
+        );
+      }
       // 进程内 fire-and-forget
       void fallback().catch((err) => {
         this.logger.error(`[inline:${queueName}] ${err?.message ?? err}`);
