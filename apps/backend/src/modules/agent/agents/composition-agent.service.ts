@@ -93,19 +93,31 @@ export class CompositionAgentService {
       const results = await Promise.all(
         batch.map(async (shot) => {
           try {
-            const ratio = '9:16';
-            const resolution = '720p';
-            const created = await this.arkVideo.createTask({
-              prompt: this.buildShotPrompt(shot.description, shot.script, shot.cameraMovement),
-              ratio: ratio as any,
-              resolution: resolution as any,
-              firstFrameUrl: shot.materialId
-                ? this.materialUrlOf(state, shot.materialId)
-                : undefined,
-              duration: shot.duration,
-            });
-            shot.arkTaskId = created.id;
-            const final = await this.poll(created.id);
+            // A resumed LangGraph node should not regenerate completed shots.
+            // If only the remote task ID was checkpointed, continue polling it.
+            if (shot.videoUrl) {
+              return { shotId: shot.id, videoUrl: shot.videoUrl };
+            }
+
+            let arkTaskId = shot.arkTaskId;
+            if (!arkTaskId) {
+              const ratio = '9:16';
+              const resolution = '720p';
+              const created = await this.arkVideo.createTask({
+                prompt: this.buildShotPrompt(shot.description, shot.script, shot.cameraMovement),
+                idempotencyKey: `${state.taskId}:shot:${shot.id}`,
+                ratio: ratio as any,
+                resolution: resolution as any,
+                firstFrameUrl: shot.materialId
+                  ? this.materialUrlOf(state, shot.materialId)
+                  : undefined,
+                duration: shot.duration,
+              });
+              arkTaskId = created.id;
+              shot.arkTaskId = arkTaskId;
+            }
+
+            const final = await this.poll(arkTaskId);
             shot.videoUrl = final.videoUrl;
             return { shotId: shot.id, videoUrl: final.videoUrl };
           } catch (err: any) {
@@ -172,6 +184,11 @@ export class CompositionAgentService {
         composed,
         shotResults,
       },
+      // Persist remote task IDs and completed URLs in the graph checkpoint so
+      // a later worker can continue polling or skip finished shots.
+      scriptGeneration: state.scriptGeneration
+        ? { ...state.scriptGeneration, shots }
+        : state.scriptGeneration,
       trace,
     };
   }

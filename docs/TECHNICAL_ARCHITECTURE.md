@@ -1,6 +1,6 @@
 # VidForge Technical Architecture
 
-> **Version**: 2.2 | **Last Updated**: 2026-06-06
+> **Version**: 2.3 | **Last Updated**: 2026-08-18
 > **Project**: E-commerce AIGC Video Generation System
 
 ---
@@ -94,8 +94,9 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 │  └──────────────────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  Queue System (BullMQ + explicit dev fallback)                │   │
-│  │  4 queues: creation-shot / creation-compose / export-encode  │   │
-│  │            / material-analyze                                │   │
+│  │  5 queues: creation-shot / creation-compose / export-encode  │   │
+│  │            / material-analyze / agent-run                     │   │
+│  │  agent-run is consumed by a dedicated Agent Worker            │   │
 │  │  Redis available → persistent queue; dev-only fallback         │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
@@ -105,8 +106,9 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
 │   PostgreSQL     │ │      Redis       │ │  File Storage    │
 │  + pgvector      │ │  (BullMQ Queue)  │ │  (Local Disk)    │
-│  (Entities +     │ │  (Cache/Session) │ │  /static/uploads │
-│   Vector Search) │ │  (WS Pub/Sub)    │ │  /static/outputs │
+│  (Entities +     │ │  (LangGraph     │ │  /static/uploads │
+│   Vector Search + │ │   checkpoints)  │ │  /static/outputs │
+│   checkpoints)   │ │  (Cache/WS)      │ │                  │
 └──────────────────┘ └──────────────────┘ └──────────────────┘
                                 │
                                 ▼
@@ -125,7 +127,8 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 - **Separation of Concerns**: Frontend (React) and Backend (NestJS) communicate via REST API + WebSocket
 - **Modular Design**: Business logic is organized into independent feature modules
 - **Graceful Degradation**: All AI/ML integrations have fallback mechanisms; no single dependency is critical
-- **Async Processing**: Long-running media tasks use BullMQ; inline fallback is development-only and production-like environments fail closed by default
+- **Async Processing**: Long-running media tasks use BullMQ; the Agent workflow is consumed by an independent worker, while inline fallback is development-only and production-like environments fail closed by default
+- **Durable Graph State**: LangGraph `PostgresSaver` persists super-step checkpoints under a stable `thread_id`; stale leases are requeued and resumed with null input
 - **Agent-Driven Pipeline**: LangGraph orchestrates multi-step AI workflows with self-reflection and feedback loops
 - **Observability First**: All AI calls and agent steps emit structured traces for cost monitoring and debugging
 
@@ -149,7 +152,7 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 |              | PostgreSQL                             | 14+     | Primary database                          |
 |              | pgvector                               | -       | Vector similarity search                  |
 |              | Redis                                  | 7+      | Cache / Queue / PubSub                    |
-|              | BullMQ                                 | 5.x     | Task queue (4 queues, dual-mode)          |
+|              | BullMQ                                 | 5.x     | Task queue (5 queues, dual-mode)          |
 |              | Socket.IO                              | 4.x     | WebSocket                                 |
 |              | LangChain / LangGraph                  | 1.x     | Agent orchestration                       |
 |              | FFmpeg                                 | 5+      | Media processing (spawn-based)            |
@@ -579,7 +582,8 @@ ALTER TABLE materials ADD COLUMN IF NOT EXISTS "embedding" vector(1024);
 
 ### Redis
 
-- **BullMQ Queues**: 4 queues (creation-shot, creation-compose, export-encode, material-analyze) with delayed retry
+- **BullMQ Queues**: 5 queues (creation-shot, creation-compose, export-encode, material-analyze, agent-run) with delayed retry; `agent-run` is consumed by the independent Agent Worker
+- **LangGraph Checkpoints**: `PostgresSaver` stores graph super-steps in PostgreSQL. A stable `thread_id` allows a requeued worker to resume from the unfinished node.
 - **Cache**: Hot data caching (material lists, dashboard aggregation)
 - **Session**: WebSocket session mapping for real-time progress
 - **Pub/Sub**: Cross-instance event broadcasting

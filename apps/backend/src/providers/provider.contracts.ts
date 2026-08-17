@@ -31,6 +31,8 @@ export interface TextGenerationProvider {
 
 export interface VideoProviderRequest {
   prompt: string;
+  /** Stable operation key used by providers that support request idempotency. */
+  idempotencyKey?: string;
   firstFrameUrl?: string;
   lastFrameUrl?: string;
   ratio?: '16:9' | '9:16' | '4:3' | '3:4' | '1:1' | '21:9';

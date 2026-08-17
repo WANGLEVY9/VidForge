@@ -22,6 +22,8 @@
     "check:bundle": "node scripts/check-bundle-size.js",
     "build:all": "pnpm build:frontend && pnpm build:backend",
     "check:env": "node scripts/check-env.js",
+    "checkpointer:setup": "node scripts/setup-agent-checkpointer.mjs",
+    "checkpointer:smoke": "node scripts/checkpointer-smoke.mjs",
     "check:hygiene": "node scripts/check-repo-hygiene.js",
     "benchmark:local": "node scripts/benchmark-local.mjs",
     "docs:check": "node scripts/check-markdown-links.js",

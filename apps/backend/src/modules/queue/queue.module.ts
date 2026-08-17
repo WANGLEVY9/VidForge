@@ -7,6 +7,7 @@ import {
   CreationComposeProcessor,
   ExportEncodeProcessor,
   MaterialAnalyzeProcessor,
+  AgentRunProcessor,
 } from './queue.processors';
 import { readQueueRuntimeConfig } from './queue-runtime.config';
 
@@ -77,7 +78,8 @@ export class QueueModule {
           { name: QUEUE_NAMES.CREATION_SHOT },
           { name: QUEUE_NAMES.CREATION_COMPOSE },
           { name: QUEUE_NAMES.EXPORT_ENCODE },
-          { name: QUEUE_NAMES.MATERIAL_ANALYZE }
+          { name: QUEUE_NAMES.MATERIAL_ANALYZE },
+          { name: QUEUE_NAMES.AGENT_RUN }
         ),
       ],
       providers: [
@@ -86,6 +88,7 @@ export class QueueModule {
         CreationComposeProcessor,
         ExportEncodeProcessor,
         MaterialAnalyzeProcessor,
+        ...(process.env.PROCESS_ROLE === 'agent-worker' ? [AgentRunProcessor] : []),
       ],
       exports: [BullModule, QueueRunnerService],
     };
@@ -94,7 +97,7 @@ export class QueueModule {
 
 /** 不依赖 BullMQ 的 inline 版 QueueRunnerService(Redis 未配置时使用) */
 function createInlineRunner(allowInlineFallback: boolean): QueueRunnerService {
-  // 用 Object.create 绕过构造函数(它要求 4 个 @InjectQueue 参数)
+  // 用 Object.create 绕过构造函数(它要求 5 个 @InjectQueue 参数)
   const stub = Object.create(QueueRunnerService.prototype) as QueueRunnerService;
   // 把内部状态置为"健康检测已完成,Redis 不可用"
   (stub as any).redisHealthy = false;
@@ -103,6 +106,7 @@ function createInlineRunner(allowInlineFallback: boolean): QueueRunnerService {
   (stub as any).composeQueue = null;
   (stub as any).exportQueue = null;
   (stub as any).materialQueue = null;
+  (stub as any).agentQueue = null;
 
   // 重写 isRedisHealthy / enqueue / getCounts 为 inline 实现
   stub.isRedisHealthy = async () => false;

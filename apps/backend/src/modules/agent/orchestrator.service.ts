@@ -12,6 +12,7 @@ import { QualityAgentService } from './agents/quality-agent.service';
 import { ProductSpaceService } from '../product-space/product-space.service';
 import { TraceService } from '../trace/trace.service';
 import { AgentMemoryService } from './memory/agent-memory.service';
+import { AgentCheckpointService } from './checkpoint/agent-checkpoint.service';
 import {
   createAgentRetryPolicy,
   createAgentTaskId,
@@ -48,7 +49,8 @@ export class OrchestratorService {
     private readonly qualityAgent: QualityAgentService,
     private readonly productSpace: ProductSpaceService,
     private readonly traceService: TraceService,
-    @Optional() private readonly memoryService?: AgentMemoryService
+    @Optional() private readonly memoryService?: AgentMemoryService,
+    @Optional() private readonly checkpointService?: AgentCheckpointService
   ) {}
 
   async run(
@@ -61,7 +63,11 @@ export class OrchestratorService {
       await reportProgress?.(update);
     };
 
-    const memoryContext = await this.recallMemory(dto);
+    // A worker restart resumes the last committed super-step. In that case
+    // LangGraph must receive null input; supplying the original input would
+    // start a fresh run instead of replaying only the unfinished node.
+    const hasCheckpoint = (await this.checkpointService?.hasCheckpoint(taskId)) ?? false;
+    const memoryContext = hasCheckpoint ? { recalled: [] } : await this.recallMemory(dto);
 
     const channels: Record<string, { value: (...args: any[]) => any; default: () => any }> = {
       taskId: { value: (a: any, b: any) => b ?? a, default: () => taskId },
@@ -167,33 +173,38 @@ export class OrchestratorService {
         );
       });
 
-    const app = workflow.compile();
+    const app = workflow.compile({
+      checkpointer: this.checkpointService?.get(),
+    });
 
     const controller = new AbortController();
     this.activeRuns.set(taskId, { abort: () => controller.abort() });
 
     try {
-      const finalState = await app.invoke(
-        {
-          taskId,
-          status: 'pending',
-          currentNode: '',
-          progress: 0,
-          productName: dto.productName,
-          category: dto.category,
-          sellingPoints: dto.sellingPoints,
-          targetAudience: dto.targetAudience,
-          style: dto.style,
-          duration: dto.duration,
-          userId: dto.userId,
-          productSpaceId: dto.productSpaceId,
-          memoryContext,
-          trace: [],
-          errors: [],
-          retryCount: 0,
-        } as any,
-        { signal: controller.signal } as RunnableConfig
-      );
+      const initialState = {
+        taskId,
+        status: 'pending',
+        currentNode: '',
+        progress: 0,
+        productName: dto.productName,
+        category: dto.category,
+        sellingPoints: dto.sellingPoints,
+        targetAudience: dto.targetAudience,
+        style: dto.style,
+        duration: dto.duration,
+        userId: dto.userId,
+        productSpaceId: dto.productSpaceId,
+        memoryContext,
+        trace: [],
+        errors: [],
+        retryCount: 0,
+      } as any;
+      const config: RunnableConfig = {
+        signal: controller.signal,
+        configurable: { thread_id: taskId },
+        metadata: { taskId, userId: dto.userId },
+      };
+      const finalState = await app.invoke(hasCheckpoint ? null : initialState, config);
 
       // ── 自学习闭环 ───────────────────────────────────────
       // 当本轮综合分 ≥85 + 通过合规,把核心信息沉淀到商品空间知识库,

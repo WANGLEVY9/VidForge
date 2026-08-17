@@ -18,7 +18,13 @@ function createQueue() {
 
 function createRunner() {
   const queue = createQueue();
-  return new QueueRunnerService(queue as never, queue as never, queue as never, queue as never);
+  return new QueueRunnerService(
+    queue as never,
+    queue as never,
+    queue as never,
+    queue as never,
+    queue as never
+  );
 }
 
 test('queue runner preserves idempotency job IDs when Redis is available', async () => {

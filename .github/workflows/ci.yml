@@ -77,3 +77,36 @@ jobs:
         name: Build frontend
       - run: pnpm check:bundle
         name: Enforce frontend bundle budgets
+
+  checkpointer:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vidforge
+          POSTGRES_PASSWORD: vidforge
+          POSTGRES_DB: vidforge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vidforge -d vidforge"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://vidforge:vidforge@localhost:5432/vidforge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        name: Install dependencies
+      - run: pnpm checkpointer:setup
+        name: Initialize LangGraph checkpoint schema
+      - run: pnpm checkpointer:smoke
+        name: Verify node-level resume

@@ -8,6 +8,9 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
+    "start:worker": "node dist/worker-main",
+    "start:worker:dev": "PROCESS_ROLE=agent-worker nest start --entryFile worker-main --watch",
+    "checkpointer:setup": "node ../../scripts/setup-agent-checkpointer.mjs",
     "migration:show": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:show",
     "migration:run": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:run",
     "migration:revert": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:revert",
@@ -18,6 +21,7 @@
   "dependencies": {
     "@langchain/core": "^1.1.0",
     "@langchain/langgraph": "^1.3.0",
+    "@langchain/langgraph-checkpoint-postgres": "^1.0.4",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/bullmq": "^10.2.0",
     "@nestjs/common": "^10.0.0",

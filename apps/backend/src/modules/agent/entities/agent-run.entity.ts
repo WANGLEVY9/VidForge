@@ -44,7 +44,7 @@ export class AgentRun {
   @Column({ nullable: true })
   heartbeatAt: Date | null;
 
-  /** Reserved for the LangGraph checkpointer rollout. */
+  /** Stable LangGraph thread used for durable node-level resume. */
   @Column({ length: 220, nullable: true })
   graphThreadId: string | null;
 

@@ -4,6 +4,7 @@ import { ModuleRef } from '@nestjs/core';
 import { Job } from 'bullmq';
 import { QUEUE_NAMES } from './queue.constants';
 import { MaterialService } from '../material/material.service';
+import { AgentService } from '../agent/agent.service';
 
 /**
  * 通用日志 Processor 基类(暂不绑定具体业务逻辑)
@@ -93,5 +94,33 @@ export class MaterialAnalyzeProcessor extends WorkerHost {
       this.logger.error(`[material:analyze] failed ${materialId}: ${err.message}`);
       throw err; // BullMQ 自动重试
     }
+  }
+}
+
+/**
+ * Agent workflow worker.
+ *
+ * This processor is registered only when PROCESS_ROLE=agent-worker. The API
+ * process can therefore enqueue durable runs without also consuming them.
+ * ModuleRef keeps QueueModule independent from AgentModule's provider graph.
+ */
+@Processor(QUEUE_NAMES.AGENT_RUN)
+export class AgentRunProcessor extends WorkerHost {
+  private readonly logger = new Logger(AgentRunProcessor.name);
+  private agentService: AgentService | null = null;
+
+  constructor(private readonly moduleRef: ModuleRef) {
+    super();
+  }
+
+  async process(job: Job<{ taskId: string }>): Promise<{ ok: true; taskId: string }> {
+    if (!this.agentService) {
+      this.agentService = this.moduleRef.get(AgentService, { strict: false });
+    }
+    const { taskId } = job.data;
+    if (!taskId) throw new Error('Agent worker job 缺少 taskId');
+    this.logger.log(`[agent] processing task=${taskId} job=${job.id}`);
+    await this.agentService.executeQueuedRun(taskId);
+    return { ok: true, taskId };
   }
 }

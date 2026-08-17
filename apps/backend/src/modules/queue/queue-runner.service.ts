@@ -34,7 +34,8 @@ export class QueueRunnerService implements OnApplicationShutdown {
     @InjectQueue(QUEUE_NAMES.CREATION_SHOT) private readonly shotQueue: Queue,
     @InjectQueue(QUEUE_NAMES.CREATION_COMPOSE) private readonly composeQueue: Queue,
     @InjectQueue(QUEUE_NAMES.EXPORT_ENCODE) private readonly exportQueue: Queue,
-    @InjectQueue(QUEUE_NAMES.MATERIAL_ANALYZE) private readonly materialQueue: Queue
+    @InjectQueue(QUEUE_NAMES.MATERIAL_ANALYZE) private readonly materialQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.AGENT_RUN) private readonly agentQueue: Queue
   ) {}
 
   /**
@@ -118,6 +119,7 @@ export class QueueRunnerService implements OnApplicationShutdown {
       { name: QUEUE_NAMES.CREATION_COMPOSE, q: this.composeQueue },
       { name: QUEUE_NAMES.EXPORT_ENCODE, q: this.exportQueue },
       { name: QUEUE_NAMES.MATERIAL_ANALYZE, q: this.materialQueue },
+      { name: QUEUE_NAMES.AGENT_RUN, q: this.agentQueue },
     ];
 
     const result: Record<string, any> = {};
@@ -160,9 +162,13 @@ export class QueueRunnerService implements OnApplicationShutdown {
   async onApplicationShutdown(signal?: string): Promise<void> {
     if (this.redisHealthy !== true) return;
     await Promise.all(
-      [this.shotQueue, this.composeQueue, this.exportQueue, this.materialQueue].map((queue) =>
-        queue.close()
-      )
+      [
+        this.shotQueue,
+        this.composeQueue,
+        this.exportQueue,
+        this.materialQueue,
+        this.agentQueue,
+      ].map((queue) => queue.close())
     );
     this.redisHealthy = null;
     this.healthCheckedAt = 0;
@@ -179,6 +185,8 @@ export class QueueRunnerService implements OnApplicationShutdown {
         return this.exportQueue;
       case QUEUE_NAMES.MATERIAL_ANALYZE:
         return this.materialQueue;
+      case QUEUE_NAMES.AGENT_RUN:
+        return this.agentQueue;
       default:
         throw new Error(`未知队列: ${name}`);
     }

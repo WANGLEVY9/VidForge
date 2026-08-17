@@ -15,6 +15,7 @@ import { Material } from '../material/entities/material.entity';
 import { AgentRun } from './entities/agent-run.entity';
 import { AgentMemory } from './memory/agent-memory.entity';
 import { AgentMemoryService } from './memory/agent-memory.service';
+import { AgentCheckpointService } from './checkpoint/agent-checkpoint.service';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AgentMemoryService } from './memory/agent-memory.service';
     CompositionAgentService,
     QualityAgentService,
     AgentMemoryService,
+    AgentCheckpointService,
   ],
   exports: [AgentService, OrchestratorService],
 })

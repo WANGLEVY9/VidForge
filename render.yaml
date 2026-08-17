@@ -41,6 +41,40 @@ services:
       - key: OSS_ENDPOINT
         value: oss-cn-beijing.aliyuncs.com
 
+  # Dedicated LangGraph/BullMQ consumer. Keep this process separate from the
+  # API so provider work survives API restarts and can be scaled independently.
+  - type: worker
+    name: vidforge-agent-worker
+    env: node
+    region: singapore
+    plan: starter
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build:backend
+    startCommand: pnpm --filter @vidforge/backend start:worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PROCESS_ROLE
+        value: agent-worker
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vidforge-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: vidforge-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        sync: false
+      - key: ARK_TEXT_PRIMARY_ENDPOINT_ID
+        sync: false
+      - key: ARK_TEXT_PRIMARY_API_KEY
+        sync: false
+      - key: ARK_VIDEO_PRIMARY_ENDPOINT_ID
+        sync: false
+      - key: ARK_VIDEO_PRIMARY_API_KEY
+        sync: false
+
   # Redis
   - type: redis
     name: vidforge-redis

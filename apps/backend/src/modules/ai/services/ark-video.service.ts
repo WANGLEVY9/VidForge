@@ -58,6 +58,7 @@ export class ArkVideoService implements VideoGenerationProvider {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
+          ...(options.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
         },
         timeout: 30000,
       });

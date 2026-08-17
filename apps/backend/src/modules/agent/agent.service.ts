@@ -4,61 +4,102 @@ import {
   Logger,
   NotFoundException,
   OnModuleInit,
+  OnModuleDestroy,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { AgentResult } from './interfaces/agent-result.interface';
 import { RunAgentDto } from './dto/run-agent.dto';
 import { AgentRun, AgentRunStatus } from './entities/agent-run.entity';
 import { OrchestratorService } from './orchestrator.service';
 import { createAgentTaskId, readAgentRuntimeConfig } from './agent-runtime.config';
+import { QueueRunnerService } from '../queue/queue-runner.service';
+import { JOB_NAMES, QUEUE_NAMES } from '../queue/queue.constants';
+import { AgentCheckpointService } from './checkpoint/agent-checkpoint.service';
 
 @Injectable()
-export class AgentService implements OnModuleInit {
+export class AgentService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(AgentService.name);
   private readonly runtime = readAgentRuntimeConfig();
+  private readonly isWorker = process.env.PROCESS_ROLE === 'agent-worker';
   private readonly workerId =
-    process.env.AGENT_WORKER_ID?.trim().slice(0, 160) || `api-${process.pid}`;
+    process.env.AGENT_WORKER_ID?.trim().slice(0, 160) ||
+    `${this.isWorker ? 'agent' : 'api'}-${process.pid}`;
+  private recoveryTimer: ReturnType<typeof setInterval> | undefined;
   constructor(
     @InjectRepository(AgentRun)
     private readonly runRepo: Repository<AgentRun>,
-    private readonly orchestrator: OrchestratorService
+    private readonly orchestrator: OrchestratorService,
+    @Optional() private readonly queueRunner?: QueueRunnerService,
+    @Optional() private readonly checkpointService?: AgentCheckpointService
   ) {}
 
   /**
-   * 恢复上次进程退出前尚未开始的任务；正在运行的任务可能已产生外部副作用，
-   * 因此标记为 interrupted，交给后续显式 replay 流程，而不是自动重复扣费。
+   * Only the dedicated worker performs recovery and dispatch. The API process
+   * never executes a long-running graph and never turns an expired lease into
+   * a terminal failure, so a worker restart can resume its LangGraph thread.
    */
   async onModuleInit(): Promise<void> {
+    if (!this.isWorker) return;
+
+    await this.recoverAndDispatch();
+    this.recoveryTimer = setInterval(
+      () => {
+        void this.recoverAndDispatch().catch((error) => {
+          this.logger.error(`Agent worker recovery 失败: ${error?.message ?? error}`);
+        });
+      },
+      Math.max(10_000, Math.floor(this.runtime.leaseDurationMs / 2))
+    );
+    this.recoveryTimer.unref?.();
+  }
+
+  onModuleDestroy(): void {
+    if (this.recoveryTimer) clearInterval(this.recoveryTimer);
+  }
+
+  private async recoverAndDispatch(): Promise<void> {
     const running = await this.runRepo.find({ where: { status: 'running' }, take: 50 });
     const now = Date.now();
-    const interrupted = running.filter(
+    const stale = running.filter(
       (run) => !run.leaseUntil || new Date(run.leaseUntil).getTime() <= now
     );
-    if (interrupted.length) {
-      await this.runRepo.update(
-        interrupted.map((run) => run.id),
+    let reclaimed = 0;
+    for (const run of stale) {
+      const result = await this.runRepo.update(
         {
-          status: 'failed',
-          currentNode: 'interrupted',
-          errorMessage: '服务进程在任务执行期间退出，请通过 replay 流程重新运行',
-          completedAt: new Date(),
+          id: run.id,
+          status: 'running',
+          leaseUntil: run.leaseUntil ? run.leaseUntil : IsNull(),
+        },
+        {
+          status: 'pending',
+          currentNode: 'recovery_pending',
+          errorMessage: 'worker lease expired; resuming from the latest LangGraph checkpoint',
+          workerId: null,
+          leaseUntil: null,
+          heartbeatAt: null,
+          completedAt: null,
         }
       );
-      this.logger.warn(`已标记 ${interrupted.length} 个中断中的 Agent 任务，未自动重复执行`);
+      if (!result || result.affected === undefined || result.affected > 0) reclaimed += 1;
+    }
+    if (reclaimed > 0) {
+      this.logger.warn(`已回收 ${reclaimed} 个过期 Agent lease，准备从图 checkpoint 恢复`);
     }
 
-    // 先处理遗留的 running，再启动 pending，避免本轮恢复刚启动的任务被误判为中断。
     const pending = await this.runRepo.find({
       where: { status: 'pending' },
       order: { createdAt: 'ASC' },
       take: 10,
     });
     for (const run of pending) {
-      const dto = { ...run.input, userId: run.userId } as RunAgentDto;
-      void this.execute(run.id, dto, run.createdAt ?? new Date()).catch((error) => {
-        this.logger.error(`恢复 Agent 任务失败 ${run.id}: ${error?.message ?? error}`);
-      });
+      try {
+        await this.dispatch(run.id);
+      } catch (error: any) {
+        this.logger.error(`恢复 Agent 任务入队失败 ${run.id}: ${error?.message ?? error}`);
+      }
     }
   }
 
@@ -106,7 +147,17 @@ export class AgentService implements OnModuleInit {
       throw error;
     }
 
-    void this.execute(taskId, dto, startedAt);
+    try {
+      await this.dispatch(taskId);
+    } catch (error: any) {
+      await this.runRepo.update(taskId, {
+        status: 'failed',
+        currentNode: 'queue_dispatch_failed',
+        errorMessage: String(error?.message ?? error).slice(0, 500),
+        completedAt: new Date(),
+      });
+      throw error;
+    }
     return {
       taskId,
       status: 'pending',
@@ -140,9 +191,12 @@ export class AgentService implements OnModuleInit {
     return { cancelled: cancelled || run.status === 'pending' };
   }
 
-  private async execute(taskId: string, dto: RunAgentDto, startedAt: Date): Promise<void> {
+  /** Entry point used by BullMQ's independent AgentRunProcessor. */
+  async executeQueuedRun(taskId: string): Promise<void> {
     const queued = await this.runRepo.findOne({ where: { id: taskId } });
-    if (!queued || queued.status === 'cancelled') return;
+    if (!queued || this.isTerminal(queued.status)) return;
+
+    const startedAt = queued.startedAt ?? queued.createdAt ?? new Date();
 
     const claimed = await this.runRepo.update(
       { id: taskId, status: 'pending' },
@@ -162,6 +216,7 @@ export class AgentService implements OnModuleInit {
     }
 
     try {
+      const dto = { ...queued.input, userId: queued.userId } as RunAgentDto;
       const result = await this.orchestrator.run(dto, taskId, async (update) => {
         await this.runRepo.update(taskId, {
           status: update.status,
@@ -172,6 +227,14 @@ export class AgentService implements OnModuleInit {
           heartbeatAt: new Date(),
         });
       });
+      let checkpointId: string | null = null;
+      try {
+        checkpointId = await this.checkpointService?.latestCheckpointId(
+          queued.graphThreadId ?? taskId
+        );
+      } catch (error: any) {
+        this.logger.warn(`读取 Agent checkpoint ID 失败 ${taskId}: ${error?.message ?? error}`);
+      }
       await this.runRepo.update(taskId, {
         status: result.status as AgentRunStatus,
         currentNode: result.currentNode,
@@ -181,18 +244,39 @@ export class AgentService implements OnModuleInit {
         completedAt: result.completedAt ?? new Date(),
         leaseUntil: null,
         heartbeatAt: new Date(),
+        checkpointId,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await this.runRepo.update(taskId, {
-        status: 'failed',
-        currentNode: 'failed',
+        status: 'pending',
+        currentNode: 'worker_retry_pending',
         errorMessage: message.slice(0, 500),
-        completedAt: new Date(),
+        workerId: null,
         leaseUntil: null,
         heartbeatAt: new Date(),
       });
+      throw error;
     }
+  }
+
+  private async dispatch(taskId: string): Promise<void> {
+    const fallback = () => this.executeQueuedRun(taskId);
+    if (!this.queueRunner) {
+      // Unit-test / minimal embedding fallback. The real Nest application
+      // always receives QueueRunnerService from the global QueueModule.
+      void fallback().catch((error) => {
+        this.logger.error(`[agent:inline] ${taskId}: ${error?.message ?? error}`);
+      });
+      return;
+    }
+    await this.queueRunner.enqueue(
+      QUEUE_NAMES.AGENT_RUN,
+      JOB_NAMES.RUN_AGENT,
+      { taskId },
+      fallback,
+      { jobId: `agent-run:${taskId}`, attempts: 3 }
+    );
   }
 
   private toResult(run: AgentRun): AgentResult {

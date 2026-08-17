@@ -16,20 +16,26 @@ material_analysis -> script_generation -> video_composition -> quality_control
   latest state from PostgreSQL rather than process memory.
 - The database record is the durable control plane for status and final output.
   It also carries an optional idempotency key, worker ownership, attempt count,
-  lease expiry, heartbeat, graph thread ID and a reserved checkpoint ID. The
-  metadata prevents two API processes from claiming the same pending run and
-  makes the missing checkpoint boundary explicit.
+  lease expiry, heartbeat, graph thread ID and the latest checkpoint ID. The
+  metadata prevents two workers from claiming the same pending run and links
+  the control-plane record to LangGraph's persisted state.
 - `Idempotency-Key` can be sent with `POST /api/agent/run`. Repeating the same
   key for the same authenticated user returns the existing run instead of
   creating another provider-consuming task. The key is capped at 200
   characters and is backed by a database unique index.
-- A worker claims a pending run with a conditional status update. Progress
-  updates renew its lease and heartbeat. On startup, only runs with no lease
-  or an expired lease are marked interrupted; a run with a live lease is left
-  to its current worker.
-- The current LangGraph checkpoint is still not persisted. A worker restart
-  does not yet resume from an exact node checkpoint; `graphThreadId` and
-  `checkpointId` are compatibility fields for the Checkpointer rollout.
+- The API process only writes the run record and enqueues an `agent-run` job.
+  `PROCESS_ROLE=agent-worker` starts a separate Nest application context with
+  the BullMQ consumer; the worker claims a pending run with a conditional
+  status update. Progress updates renew its lease and heartbeat.
+- LangGraph is compiled with `PostgresSaver` and invoked with the run's stable
+  `thread_id`. Each graph super-step is persisted. When a worker lease expires,
+  the next worker changes the run back to `pending` and invokes the same thread
+  with `null` input, so LangGraph resumes from the latest unfinished node
+  rather than replaying completed nodes.
+- Checkpointer tables are initialized explicitly with
+  `pnpm checkpointer:setup`; schema setup is never hidden in a request path.
+  The CI PostgreSQL job runs a failure-and-resume smoke test that asserts the
+  completed predecessor node executes exactly once.
 - Provider, database, and transient network failures use LangGraph retry
   policies with exponential backoff.
 - Cancellation, syntax/type errors, and HTTP 4xx input errors are not retried.
@@ -69,7 +75,9 @@ AGENT_QC_MAX_RETRIES=2
 AGENT_MEMORY_TOP_K=6
 AGENT_MEMORY_MAX_CHARS=1800
 AGENT_LEASE_DURATION_MS=120000
-# AGENT_WORKER_ID=api-1
+# PROCESS_ROLE=api                 # agent-worker on the dedicated consumer
+# AGENT_WORKER_ID=agent-worker-1
+# QUEUE_INLINE_FALLBACK=false      # production default
 ```
 
 Values are clamped by the runtime to prevent accidental retry storms or
@@ -80,16 +88,43 @@ or human approval step without changing the media pipeline contract.
 
 ## Reliability boundary
 
-The current release deliberately stops short of claiming durable Agent
-execution. The next reliability milestone is to connect `graphThreadId` to a
-real LangGraph checkpointer and run orchestration from a dedicated worker
-queue. That milestone must include node-level replay tests, provider operation
-idempotency, a lease reclaimer, human approval checkpoints and a cost guard.
+The durable execution boundary is now implemented for the LangGraph workflow:
 
-Until then:
+- PostgreSQL protects the run record, duplicate create requests and graph
+  checkpoints;
+- BullMQ + Redis provides durable dispatch, retry and independent worker
+  execution;
+- the conditional claim and lease reclaimer protect a run from concurrent
+  ownership and recover stale workers;
+- the composition node stores stable ARK operation keys and reuses checkpointed
+  remote task IDs or completed URLs where possible. A provider must honor the
+  `Idempotency-Key` header for provider-side deduplication; the graph's own
+  state and the run control plane remain the source of truth;
+- PostgreSQL/Redis must be configured in production. Inline execution is only
+  a development fallback and should not be enabled for a production API.
 
-- PostgreSQL protects the run record and duplicate create requests;
-- the conditional claim protects a pending run from double dispatch;
-- the lease is ownership metadata and a stale-run signal, not a checkpoint;
-- production deployments must configure Redis and should not enable inline
-  fallback except for a deliberate emergency override.
+Human approval checkpoints, cost budgets and richer provider operation ledgers
+remain follow-up milestones rather than undocumented guarantees.
+
+## Deployment checklist
+
+Run the TypeORM migrations and initialize the LangGraph tables against the same
+PostgreSQL instance before accepting Agent traffic:
+
+```bash
+pnpm --filter @vidforge/backend migration:run
+pnpm checkpointer:setup
+```
+
+Run the API and Agent Worker as separate processes with the same
+`DATABASE_URL`, `REDIS_URL`, and provider credentials:
+
+```bash
+PROCESS_ROLE=api pnpm --filter @vidforge/backend start:prod
+PROCESS_ROLE=agent-worker pnpm --filter @vidforge/backend start:worker
+```
+
+`render.yaml` contains both service definitions. For Railway, deploy the
+normal `railway.json` as the API service and use `railway.worker.json` for a
+second service. The worker does not expose HTTP; its health is represented by
+BullMQ activity and the AgentRun lease heartbeat.

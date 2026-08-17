@@ -13,6 +13,8 @@ export const QUEUE_NAMES = {
   EXPORT_ENCODE: 'export-encode',
   /** 素材自动打标 (ARK 视觉理解) */
   MATERIAL_ANALYZE: 'material-analyze',
+  /** 独立 Agent Worker 消费的 LangGraph 工作流 */
+  AGENT_RUN: 'agent-run',
 } as const;
 
 export const JOB_NAMES = {
@@ -20,6 +22,7 @@ export const JOB_NAMES = {
   COMPOSE_VIDEO: 'compose-video',
   ENCODE_EXPORT: 'encode-export',
   ANALYZE_MATERIAL: 'analyze-material',
+  RUN_AGENT: 'run-agent',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

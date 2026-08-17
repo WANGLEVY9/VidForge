@@ -14,8 +14,23 @@ function createRepo() {
       updates.push({ id: String(id), patch });
       return { affected: 1 };
     },
-    findOne: async (options: { where?: { idempotencyKey?: string } }) => {
+    findOne: async (options: {
+      where?: { id?: string; userId?: string; idempotencyKey?: string };
+    }) => {
       if (options.where?.idempotencyKey) return null;
+      if (options.where?.id && !options.where?.userId) {
+        return {
+          id: 'task_1',
+          userId: 'user-1',
+          status: 'pending',
+          currentNode: 'queued',
+          progress: 0,
+          input: { productName: '商品', category: '家居', sellingPoints: '轻便' },
+          graphThreadId: 'task_1',
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          startedAt: null,
+        };
+      }
       return {
         id: 'task_1',
         userId: 'user-1',
@@ -135,8 +150,10 @@ test('agent status is scoped to the authenticated user', async () => {
   assert.equal(result.status, 'completed');
 });
 
-test('agent startup marks interrupted runs without replaying them', async () => {
-  const updates: Array<{ id: string; patch: Record<string, unknown> }> = [];
+test('agent worker requeues expired leases for checkpoint resume', async () => {
+  const previousRole = process.env.PROCESS_ROLE;
+  process.env.PROCESS_ROLE = 'agent-worker';
+  const updates: Array<{ id: unknown; patch: Record<string, unknown> }> = [];
   const repo = {
     find: async (options: { where: { status: string } }) =>
       options.where.status === 'running'
@@ -150,8 +167,8 @@ test('agent startup marks interrupted runs without replaying them', async () => 
             },
           ]
         : [],
-    update: async (id: string | string[], patch: Record<string, unknown>) => {
-      updates.push({ id: String(id), patch });
+    update: async (id: unknown, patch: Record<string, unknown>) => {
+      updates.push({ id, patch });
     },
   };
   const service = new AgentService(
@@ -160,18 +177,20 @@ test('agent startup marks interrupted runs without replaying them', async () => 
   );
 
   await service.onModuleInit();
+  service.onModuleDestroy();
+  if (previousRole === undefined) delete process.env.PROCESS_ROLE;
+  else process.env.PROCESS_ROLE = previousRole;
 
-  assert.deepEqual(updates, [
-    {
-      id: 'task-interrupted',
-      patch: {
-        status: 'failed',
-        currentNode: 'interrupted',
-        errorMessage: '服务进程在任务执行期间退出，请通过 replay 流程重新运行',
-        completedAt: updates[0]?.patch.completedAt,
-      },
-    },
-  ]);
+  assert.equal(updates.length, 1);
+  assert.deepEqual(updates[0]?.patch, {
+    status: 'pending',
+    currentNode: 'recovery_pending',
+    errorMessage: 'worker lease expired; resuming from the latest LangGraph checkpoint',
+    workerId: null,
+    leaseUntil: null,
+    heartbeatAt: null,
+    completedAt: null,
+  });
 });
 
 test('agent startup leaves a worker-owned run alone while its lease is valid', async () => {
