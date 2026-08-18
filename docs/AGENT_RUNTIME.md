@@ -4,7 +4,7 @@ VidForge uses a deterministic LangGraph workflow with specialized agents. The
 graph keeps the high-cost media steps behind explicit state boundaries:
 
 ```text
-material_analysis -> script_generation -> video_composition -> quality_control
+material_analysis -> script_generation -> [human_review] -> video_composition -> quality_control
                                       ^                         |
                                       |----- quality replan ----|
 ```
@@ -14,6 +14,9 @@ material_analysis -> script_generation -> video_composition -> quality_control
 - `POST /api/agent/run` creates a durable `agent_runs` control-plane record and
   returns a task ID immediately; `GET /api/agent/status/:taskId` reads the
   latest state from PostgreSQL rather than process memory.
+- If `requireHumanReview=true`, the graph persists a LangGraph `interrupt()`
+  after script generation. The owner resumes it with
+  `POST /api/agent/runs/:taskId/resume` and an approval decision.
 - The database record is the durable control plane for status and final output.
   It also carries an optional idempotency key, worker ownership, attempt count,
   lease expiry, heartbeat, graph thread ID and the latest checkpoint ID. The
@@ -23,10 +26,11 @@ material_analysis -> script_generation -> video_composition -> quality_control
   key for the same authenticated user returns the existing run instead of
   creating another provider-consuming task. The key is capped at 200
   characters and is backed by a database unique index.
-- The API process only writes the run record and enqueues an `agent-run` job.
-  `PROCESS_ROLE=agent-worker` starts a separate Nest application context with
-  the BullMQ consumer; the worker claims a pending run with a conditional
-  status update. Progress updates renew its lease and heartbeat.
+- The API process writes the run and its `agent_outbox_events` dispatch intent
+  in one transaction. The outbox dispatcher retries BullMQ delivery. The
+  `PROCESS_ROLE=agent-worker` process starts a separate Nest application
+  context with the Agent consumer; the worker claims a pending run with a
+  conditional status update. Progress updates renew its lease and heartbeat.
 - LangGraph is compiled with `PostgresSaver` and invoked with the run's stable
   `thread_id`. Each graph super-step is persisted. When a worker lease expires,
   the next worker changes the run back to `pending` and invokes the same thread
@@ -44,6 +48,9 @@ material_analysis -> script_generation -> video_composition -> quality_control
   run control plane, a compact checkpoint timeline and sanitized Provider
   operation records. It deliberately excludes raw prompts and checkpoint
   channel values.
+- Checkpoint inspection is deliberately redacted. `replay` resumes the same
+  thread; `fork` copies the selected checkpoint into a new thread so the
+  parent latest checkpoint cannot be mutated by the child.
 - Provider, database, and transient network failures use LangGraph retry
   policies with exponential backoff.
 - Cancellation, syntax/type errors, and HTTP 4xx input errors are not retried.
@@ -83,8 +90,11 @@ AGENT_QC_MAX_RETRIES=2
 AGENT_MEMORY_TOP_K=6
 AGENT_MEMORY_MAX_CHARS=1800
 AGENT_LEASE_DURATION_MS=120000
-# PROCESS_ROLE=api                 # agent-worker on the dedicated consumer
+# PROCESS_ROLE=api                 # no long-task consumer
+# PROCESS_ROLE=agent-worker        # dedicated LangGraph consumer
+# PROCESS_ROLE=media-worker        # material/media queue consumer
 # AGENT_WORKER_ID=agent-worker-1
+# AGENT_WORKER_CONCURRENCY=2       # bounded 1..16 per process
 # QUEUE_INLINE_FALLBACK=false      # production default
 ```
 
@@ -112,9 +122,9 @@ The durable execution boundary is now implemented for the LangGraph workflow:
 - PostgreSQL/Redis must be configured in production. Inline execution is only
   a development fallback and should not be enabled for a production API.
 
-Human approval checkpoints, a transactional outbox, workflow code versioning
-and a complete cross-queue Worker split remain follow-up milestones rather than
-undocumented guarantees. See [the reliability model](./RELIABILITY_MODEL.md)
+Workflow code versioning, event-sourced history, provider-independent
+exactly-once semantics and full business implementations for every reserved
+media queue remain follow-up milestones. See [the reliability model](./RELIABILITY_MODEL.md)
 for the current guarantee and failure boundary.
 
 ## Deployment checklist
@@ -132,10 +142,12 @@ Run the API and Agent Worker as separate processes with the same
 
 ```bash
 PROCESS_ROLE=api pnpm --filter @vidforge/backend start:prod
-PROCESS_ROLE=agent-worker pnpm --filter @vidforge/backend start:worker
+PROCESS_ROLE=agent-worker AGENT_WORKER_CONCURRENCY=2 pnpm --filter @vidforge/backend start:worker
+PROCESS_ROLE=media-worker pnpm --filter @vidforge/backend start:media-worker
 ```
 
-`render.yaml` contains both service definitions. For Railway, deploy the
-normal `railway.json` as the API service and use `railway.worker.json` for a
-second service. The worker does not expose HTTP; its health is represented by
-BullMQ activity and the AgentRun lease heartbeat.
+`render.yaml` contains the API and Agent Worker definitions. For Railway,
+deploy the normal `railway.json` as the API service, `railway.worker.json` for
+the Agent Worker, and `railway.media-worker.json` for the optional Media
+Worker. Workers do not expose HTTP; health is represented by BullMQ activity
+and AgentRun lease heartbeats.

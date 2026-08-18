@@ -1,0 +1,13 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @vidforge/backend build"
+  },
+  "deploy": {
+    "startCommand": "cd apps/backend && npm run start:media-worker",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10,
+    "healthcheckPath": null
+  }
+}

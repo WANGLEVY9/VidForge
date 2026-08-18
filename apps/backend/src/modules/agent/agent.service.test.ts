@@ -266,3 +266,49 @@ test('agent startup leaves a worker-owned run alone while its lease is valid', a
 
   assert.deepEqual(updates, []);
 });
+
+test('two workers racing for one pending run execute the graph only once', async () => {
+  let claimAttempts = 0;
+  let graphExecutions = 0;
+  const queued = {
+    id: 'task-race',
+    userId: 'user-1',
+    status: 'pending',
+    input: { productName: '商品', category: '家居', sellingPoints: '轻便' },
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    startedAt: null,
+    graphThreadId: 'task-race',
+  };
+  const repo = {
+    findOne: async () => queued,
+    update: async (_criteria: unknown, patch: Record<string, unknown>) => {
+      if (patch.status === 'running') {
+        claimAttempts += 1;
+        return { affected: claimAttempts === 1 ? 1 : 0 };
+      }
+      return { affected: 1 };
+    },
+  };
+  const orchestrator = {
+    run: async () => {
+      graphExecutions += 1;
+      return {
+        taskId: 'task-race',
+        status: 'completed' as const,
+        progress: 100,
+        currentNode: '__end__',
+        result: {},
+        startedAt: new Date(),
+        completedAt: new Date(),
+      };
+    },
+    cancel: () => false,
+  };
+  const workerA = new AgentService(repo as never, orchestrator as never);
+  const workerB = new AgentService(repo as never, orchestrator as never);
+
+  await Promise.all([workerA.executeQueuedRun('task-race'), workerB.executeQueuedRun('task-race')]);
+
+  assert.equal(claimAttempts, 2);
+  assert.equal(graphExecutions, 1);
+});

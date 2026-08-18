@@ -414,16 +414,20 @@ User Input → Orchestrator → Material Analysis → Script Generation → Vide
 
 **Available Endpoints**:
 
-| Method | Path                            | Description                                                                              |
-| ------ | ------------------------------- | ---------------------------------------------------------------------------------------- |
-| GET    | `/api/analytics/overview`       | Summary cards (totals, trends, MoM changes)                                              |
-| GET    | `/api/analytics/trends`         | Time-series production data (7/30/90 days)                                               |
-| GET    | `/api/analytics/distribution`   | Category/style distribution                                                              |
-| GET    | `/api/analytics/queue`          | BullMQ queue status (depth, throughput)                                                  |
-| GET    | `/api/analytics/attribution`    | Factor attribution analysis (style × status heatmap)                                     |
-| GET    | `/api/analytics/traces`         | Agent execution traces (waterfall)                                                       |
-| GET    | `/api/analytics/cost`           | AI cost overview (tokens, cache hit rate, latency)                                       |
-| GET    | `/api/agent/runs/:taskId/audit` | Owner-scoped Agent control plane, checkpoint summaries and sanitized Provider operations |
+| Method | Path                                                | Description                                                                              |
+| ------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| GET    | `/api/analytics/overview`                           | Summary cards (totals, trends, MoM changes)                                              |
+| GET    | `/api/analytics/trends`                             | Time-series production data (7/30/90 days)                                               |
+| GET    | `/api/analytics/distribution`                       | Category/style distribution                                                              |
+| GET    | `/api/analytics/queue`                              | BullMQ queue status (depth, throughput)                                                  |
+| GET    | `/api/analytics/attribution`                        | Factor attribution analysis (style × status heatmap)                                     |
+| GET    | `/api/analytics/traces`                             | Agent execution traces (waterfall)                                                       |
+| GET    | `/api/analytics/cost`                               | AI cost overview (tokens, cache hit rate, latency)                                       |
+| GET    | `/api/agent/runs/:taskId/audit`                     | Owner-scoped Agent control plane, checkpoint summaries and sanitized Provider operations |
+| GET    | `/api/agent/runs/:taskId/checkpoints/:checkpointId` | Redacted checkpoint state inspection                                                     |
+| POST   | `/api/agent/runs/:taskId/resume`                    | Resume an opt-in human review interrupt                                                  |
+| POST   | `/api/agent/runs/:taskId/replay`                    | Resume the latest checkpoint on the same thread                                          |
+| POST   | `/api/agent/runs/:taskId/fork`                      | Create an isolated child run from a checkpoint                                           |
 
 All endpoints return empty fallbacks on failure (soft-fail pattern).
 AnalyticsService injects `QueueRunnerService` and `TraceService` — both from `@Global()` modules.
@@ -588,6 +592,7 @@ ALTER TABLE materials ADD COLUMN IF NOT EXISTS "embedding" vector(1024);
 - **BullMQ Queues**: 5 queues (creation-shot, creation-compose, export-encode, material-analyze, agent-run) with delayed retry; `agent-run` is consumed by the independent Agent Worker
 - **LangGraph Checkpoints**: `PostgresSaver` stores graph super-steps in PostgreSQL. A stable `thread_id` allows a requeued worker to resume from the unfinished node.
 - **Provider Operations**: `provider_operations` stores the external video-operation lifecycle independently from graph state. It links a run to a remote task ID without storing credentials or raw prompts.
+- **Transactional Agent Dispatch**: `agent_outbox_events` records the BullMQ dispatch intent in the same transaction as `agent_runs`; a dispatcher retries delivery with a stable job identity and stale-lock recovery.
 - **Cache**: Hot data caching (material lists, dashboard aggregation)
 - **Session**: WebSocket session mapping for real-time progress
 - **Pub/Sub**: Cross-instance event broadcasting

@@ -14,6 +14,8 @@
 - Agent Provider 操作账本：稳定幂等键、远端任务 ID、尝试次数和终态审计
 - Agent 运行审计接口：用户可查看控制面、紧凑 checkpoint 时间线和脱敏 Provider 操作
 - LangGraph PostgreSQL checkpoint、节点级恢复和独立 Agent Worker
+- Agent transactional outbox、HITL interrupt/resume、checkpoint inspection、replay/fork API
+- API、Agent Worker 与 Media Worker 的角色隔离，以及可配置 Agent Worker 并发度
 
 ### Changed
 

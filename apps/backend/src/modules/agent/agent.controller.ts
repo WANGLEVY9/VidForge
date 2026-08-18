@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { AgentMemoryService } from './memory/agent-memory.service';
+import { ReviewAgentDto } from './dto/review-agent.dto';
 
 @ApiTags('Agent 编排')
 @ApiBearerAuth()
@@ -47,6 +48,42 @@ export class AgentController {
   @ApiOperation({ summary: '查看 Agent 运行控制面、checkpoint 时间线与 Provider 操作账本' })
   getAudit(@CurrentUser() user: JwtPayload, @Param('taskId') taskId: string) {
     return this.agentService.getAudit(user.sub, taskId);
+  }
+
+  @Post('runs/:taskId/resume')
+  @ApiOperation({ summary: '提交人工审核决定并恢复被 interrupt 暂停的 Agent 工作流' })
+  resume(
+    @CurrentUser() user: JwtPayload,
+    @Param('taskId') taskId: string,
+    @Body() dto: ReviewAgentDto
+  ) {
+    return this.agentService.resumeWithHumanReview(user.sub, taskId, dto);
+  }
+
+  @Get('runs/:taskId/checkpoints/:checkpointId')
+  @ApiOperation({ summary: '读取单个 checkpoint 的脱敏状态投影' })
+  inspectCheckpoint(
+    @CurrentUser() user: JwtPayload,
+    @Param('taskId') taskId: string,
+    @Param('checkpointId') checkpointId: string
+  ) {
+    return this.agentService.inspectCheckpoint(user.sub, taskId, checkpointId);
+  }
+
+  @Post('runs/:taskId/replay')
+  @ApiOperation({ summary: '从该运行最新 checkpoint 继续执行' })
+  replay(@CurrentUser() user: JwtPayload, @Param('taskId') taskId: string) {
+    return this.agentService.replay(user.sub, taskId);
+  }
+
+  @Post('runs/:taskId/fork')
+  @ApiOperation({ summary: '从指定 checkpoint 创建一个新的 Agent 分支运行' })
+  fork(
+    @CurrentUser() user: JwtPayload,
+    @Param('taskId') taskId: string,
+    @Query('checkpointId') checkpointId?: string
+  ) {
+    return this.agentService.fork(user.sub, taskId, checkpointId);
   }
 
   @Post('cancel/:taskId')

@@ -169,7 +169,7 @@ Les jobs BullMQ supportent attempts, priorités, délais et identifiants idempot
 
 Implémenté : workspace frontend, authentification, espaces produit, médias, scripts, tâches, graphe Multi-Agent, replanification qualité, RAG de base, mémoire scopée, composition FFmpeg, checkpoints PostgreSQL avec reprise de nœud, Agent Worker séparé, ledger d’opérations Provider et chemins Redis/BullMQ optionnels.
 
-Feuille de route : approbation humaine et interrupt-resume, replay/fork de checkpoints, versioning de workflow, outbox transactionnelle, vrais Workers séparés pour création/composition/export, routeur de subagents, registre de skills/tools, RAG hybride avec reranker et évaluation des trajectoires Agent.
+Sont également implémentés : HITL optionnel avec `interrupt()`/resume, inspection de checkpoint redigée, replay/fork sur des threads isolés, outbox transactionnelle Agent et rôles séparés Agent/Media Worker. Restent dans la feuille de route : versioning du workflow, implémentations métier complètes des Workers création/composition/export, routeur de subagents, registre skills/tools, RAG hybride avec reranker et évaluation des trajectoires Agent.
 
 Références de conception : [LangGraph.js](https://github.com/langchain-ai/langgraphjs), [DeerFlow](https://github.com/bytedance/deer-flow), [Letta](https://github.com/letta-ai/letta) et [Claude Code subagents](https://code.claude.com/docs/en/sub-agents). Ces liens n’impliquent ni parité fonctionnelle ni réutilisation de code.
 
@@ -187,13 +187,14 @@ Références de conception : [LangGraph.js](https://github.com/langchain-ai/lang
 | Queue durable et cache inter-processus         | Chemin optionnel implémenté   | Redis                                                       |
 | Checkpoint PostgreSQL et reprise de nœud       | Implémenté                    | PostgreSQL + Agent Worker séparé                            |
 | Ledger Provider et audit du propriétaire       | Implémenté                    | PostgreSQL; idempotence Provider dépendante de l’adaptateur |
-| Approbation humaine / interrupt-resume         | Feuille de route              | Checkpoint persistant et UI de revue                        |
+| Approbation humaine / interrupt-resume         | Implémenté optionnel          | Checkpoint persistant ; UI via API                          |
+| Outbox Agent et replay/fork isolé              | Implémenté                    | PostgreSQL + Redis                                          |
 | Routeur dynamique, skills et registry tools    | Feuille de route              | Modèle runtime et permissions                               |
 | RAG hybride, reranker et dataset d’évaluation  | Feuille de route              | Corpus et protocole d’évaluation                            |
 
 ### Feuille de route Agent
 
-- **Exécution durable et supervision humaine** : sur la base checkpoint/lease déjà implémentée, ajouter des nœuds `interrupt()`, replay/fork, versioning de workflow et outbox transactionnelle.
+- **Exécution durable et supervision humaine** : les nœuds `interrupt()`, l’inspection redigée, replay/fork et l’outbox Agent sont implémentés ; le versioning du workflow reste ouvert.
 - **Context engineering** : query planning, compression, evidence gating et budget Token par nœud.
 - **Multi-Agent hiérarchique** : routeur typé, budgets de délégation et slices d’état isolés.
 - **Cycle de vie mémoire** : consolidation, contradictions, decay, promotion vers la connaissance produit et métriques de retrieval.

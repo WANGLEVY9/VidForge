@@ -18,7 +18,7 @@
 1. 实现 runtime provider registry，让 provider 能按 workspace 配置切换并保留能力声明。
 2. 为 HLS/WebRTC/file preview 设计统一的 `PreviewTransport` 合同和 capability matrix。
 3. 为 FFmpeg 合成路径增加超时、资源限制和大文件回归测试。
-4. 为 Agent 节点增加人工审批 checkpoint 与可恢复 replay API。
+4. 在已有人工审批、checkpoint inspection、replay/fork API 基础上，补充审核 UI、工作流版本兼容和轨迹回放可视化。
 5. 设计中英文国际化结构，并迁移首批核心页面。
 6. 建立模型/素材许可证 provenance 字段和发布前检查。
 

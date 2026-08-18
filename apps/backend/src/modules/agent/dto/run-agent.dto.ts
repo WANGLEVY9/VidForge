@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 
 export class RunAgentDto {
   @IsString()
@@ -30,4 +30,9 @@ export class RunAgentDto {
   @IsOptional()
   @IsString()
   productSpaceId?: string;
+
+  /** Pause after script generation until an authenticated human approves it. */
+  @IsOptional()
+  @IsBoolean()
+  requireHumanReview?: boolean;
 }

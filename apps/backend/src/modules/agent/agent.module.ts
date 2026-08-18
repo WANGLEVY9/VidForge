@@ -18,6 +18,8 @@ import { AgentMemoryService } from './memory/agent-memory.service';
 import { AgentCheckpointService } from './checkpoint/agent-checkpoint.service';
 import { ProviderOperation } from './provider-operations/provider-operation.entity';
 import { ProviderOperationService } from './provider-operations/provider-operation.service';
+import { AgentOutboxEvent } from './outbox/agent-outbox-event.entity';
+import { AgentOutboxService } from './outbox/agent-outbox.service';
 
 @Module({
   imports: [
@@ -25,7 +27,13 @@ import { ProviderOperationService } from './provider-operations/provider-operati
     AiModule,
     ScriptModule,
     ProductSpaceModule,
-    TypeOrmModule.forFeature([Material, AgentRun, AgentMemory, ProviderOperation]),
+    TypeOrmModule.forFeature([
+      Material,
+      AgentRun,
+      AgentMemory,
+      ProviderOperation,
+      AgentOutboxEvent,
+    ]),
   ],
   controllers: [AgentController],
   providers: [
@@ -38,7 +46,8 @@ import { ProviderOperationService } from './provider-operations/provider-operati
     AgentMemoryService,
     AgentCheckpointService,
     ProviderOperationService,
+    AgentOutboxService,
   ],
-  exports: [AgentService, OrchestratorService],
+  exports: [AgentService, OrchestratorService, AgentOutboxService],
 })
 export class AgentModule {}

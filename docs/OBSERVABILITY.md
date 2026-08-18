@@ -17,6 +17,16 @@ This ledger complements `trace_spans`; it does not make third-party calls
 exactly once. Provider-side idempotency and the remaining crash window are
 documented in [Agent reliability model](./RELIABILITY_MODEL.md).
 
+## Agent control-plane signals
+
+The `agent_outbox_events` table exposes dispatch intent separately from graph
+execution. Operators can distinguish a run that is waiting for delivery
+(`pending`), being claimed (`dispatching`), accepted by BullMQ (`dispatched`)
+or exhausted after bounded retries (`failed`). HITL pauses are represented by
+the `paused` AgentRun status and the redacted `control` payload returned to the
+run owner. Checkpoint replay and fork preserve these signals without exposing
+raw prompt or memory channels.
+
 ## Local benchmark
 
 The benchmark is deliberately offline: it never calls an AI provider, uploads media, or requires Redis/PostgreSQL.

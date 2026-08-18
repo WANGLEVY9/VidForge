@@ -165,7 +165,7 @@ Queue job は attempts、priority、delay、idempotent job ID をサポートし
 
 実装済み：フロントエンドワークスペース、認証、商品スペース、素材、脚本、タスク、Multi-Agent グラフ、品質再計画、基礎 RAG、スコープ付きメモリ、FFmpeg 合成、PostgreSQL checkpoint と node 復旧、独立 Agent Worker、Provider operation ledger、任意の Redis/BullMQ 経路。
 
-ロードマップ：人間承認と interrupt-resume、checkpoint replay/fork、workflow versioning、transactional outbox、creation/composition/export の真の独立 Worker、動的 subagent router、権限付き skills/tools、hybrid RAG と reranker、Agent trajectory 評価データセット。
+実装済み：オプトイン HITL の `interrupt()`/resume、redacted checkpoint inspection、分離 thread による replay/fork、Agent transactional outbox、Agent/Media Worker の役割分離。今後の課題は workflow versioning、creation/composition/export の業務実装、動的 subagent router、権限付き skills/tools、hybrid RAG と reranker、Agent trajectory 評価データセットです。
 
 設計の参考：[LangGraph.js](https://github.com/langchain-ai/langgraphjs)、[DeerFlow](https://github.com/bytedance/deer-flow)、[Letta](https://github.com/letta-ai/letta)、[Claude Code subagents](https://code.claude.com/docs/en/sub-agents)。機能同等やコード再利用を意味しません。
 
@@ -183,13 +183,14 @@ Queue job は attempts、priority、delay、idempotent job ID をサポートし
 | Durable queue and cross-process cache              | Optional implemented path    | Redis                                                 |
 | PostgreSQL checkpoint and node-level resume        | Implemented                  | PostgreSQL + dedicated Agent Worker                   |
 | Provider operation ledger and owner audit          | Implemented                  | PostgreSQL; Provider idempotency is adapter-dependent |
-| Human approval / interrupt-resume                  | Roadmap                      | Checkpoint persistence and review UI                  |
+| Human approval / interrupt-resume                  | Implemented (opt-in)         | Checkpoint persistence; review UI via API             |
+| Agent outbox and isolated replay/fork              | Implemented                  | PostgreSQL + Redis                                    |
 | Dynamic router, skills and tool registry           | Roadmap                      | Runtime and permission model                          |
 | Hybrid RAG, reranker and evaluation dataset        | Roadmap                      | Corpus and evaluation work                            |
 
 ### Agent engineering roadmap
 
-- **Durable execution and human oversight**：実装済みの checkpoint/lease 基盤の上に、`interrupt()` 承認 node、replay/fork、workflow versioning、transactional outbox を追加します。
+- **Durable execution and human oversight**：`interrupt()` 承認 node、redacted inspection、replay/fork、Agent outbox は実装済みです。workflow versioning は今後の課題です。
 - **Context engineering**：query planning、context compression、evidence gating、ノードごとの Token budget。
 - **Hierarchical Multi-Agent**：型付き specialist router、delegation budget、分離された state slice。
 - **Memory lifecycle**：consolidation、矛盾処理、decay、run memory から product knowledge への昇格。

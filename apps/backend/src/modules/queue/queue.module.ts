@@ -30,6 +30,7 @@ export class QueueModule {
   static forRoot(): DynamicModule {
     const redisUrl = process.env.REDIS_URL;
     const runtime = readQueueRuntimeConfig();
+    const processRole = process.env.PROCESS_ROLE || 'api';
     const useRealQueue =
       !!redisUrl && (redisUrl.startsWith('redis://') || redisUrl.startsWith('rediss://'));
 
@@ -84,11 +85,15 @@ export class QueueModule {
       ],
       providers: [
         QueueRunnerService,
-        CreationShotProcessor,
-        CreationComposeProcessor,
-        ExportEncodeProcessor,
-        MaterialAnalyzeProcessor,
-        ...(process.env.PROCESS_ROLE === 'agent-worker' ? [AgentRunProcessor] : []),
+        ...(processRole === 'media-worker'
+          ? [
+              CreationShotProcessor,
+              CreationComposeProcessor,
+              ExportEncodeProcessor,
+              MaterialAnalyzeProcessor,
+            ]
+          : []),
+        ...(processRole === 'agent-worker' ? [AgentRunProcessor] : []),
       ],
       exports: [BullModule, QueueRunnerService],
     };

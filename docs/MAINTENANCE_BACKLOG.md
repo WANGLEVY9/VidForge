@@ -17,7 +17,9 @@ This is a practical backlog for improving VidForge as a real open-source project
 - [x] Persist deterministic ARK responses in Redis with a bounded in-memory fallback.
 - [x] Recover pending Agent runs on startup and mark interrupted running runs for explicit replay.
 - [x] Add a durable Provider-operation ledger for Agent video requests, stable operation keys and owner-scoped audit output.
-- [ ] Add a transactional outbox that coordinates database writes, BullMQ dispatch and external Provider side effects.
+- [x] Add a transactional outbox that coordinates AgentRun writes and BullMQ dispatch.
+- [x] Add redacted checkpoint inspection, owner-scoped replay and isolated checkpoint fork.
+- [x] Add conditional multi-Worker claim tests, stale lease recovery and HITL resume tests.
 - [x] Add a security test for path traversal and unsafe local media filenames.
 - [ ] Review dependency update PRs in isolated branches before merging.
 
@@ -40,7 +42,7 @@ This is a practical backlog for improving VidForge as a real open-source project
 - [x] Add trace correlation IDs from HTTP request through async work and optional OTLP export.
 - [x] Add structured JSON HTTP logs with secret and prompt redaction by construction.
 - [ ] Add a provider latency, failure, and cost dashboard contract.
-- [ ] Add human-review checkpoints for policy-sensitive outputs.
+- [x] Add opt-in human-review checkpoints for policy-sensitive outputs.
 - [ ] Add bounded retry and backoff policies per provider class.
 - [x] Add a compact owner-scoped run audit with checkpoint summaries and sanitized Provider operations.
 - [ ] Add an exportable, versioned run package for offline reproduction and debugging.

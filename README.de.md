@@ -163,7 +163,7 @@ Queue-Jobs unterstützen Attempts, Prioritäten, Verzögerungen und idempotente 
 
 Implementiert: Frontend-Workspace, Authentifizierung, Produktbereiche, Medien, Skripte, Aufgaben, Multi-Agent-Graph, Qualitäts-Neuplanung, Basis-RAG, bereichsbezogenes Memory, FFmpeg-Komposition, PostgreSQL-Checkpoints mit Node-Recovery, separater Agent Worker, Provider-Operations-Ledger und optionale Redis/BullMQ-Pfade.
 
-Roadmap: menschliche Freigabe und interrupt-resume, Checkpoint replay/fork, Workflow-Versionierung, transaktionaler Outbox, echte unabhängige Worker für Creation/Composition/Export, dynamischer Subagent-Router, berechtigungsbewusste Skills/Tools, hybrides RAG mit Reranker und Agent-Trajectory-Evaluation.
+Implementiert sind außerdem opt-in Human-in-the-Loop mit `interrupt()`/resume, redigierte Checkpoint-Inspektion, Replay/Fork über isolierte Threads, ein transaktionaler Agent-Outbox und getrennte Agent-/Media-Worker-Rollen. Roadmap bleiben Workflow-Versionierung, echte Business-Implementierungen für Creation/Composition/Export, dynamischer Subagent-Router, berechtigungsbewusste Skills/Tools, hybrides RAG mit Reranker und Agent-Trajectory-Evaluation.
 
 Design-Referenzen sind [LangGraph.js](https://github.com/langchain-ai/langgraphjs), [DeerFlow](https://github.com/bytedance/deer-flow), [Letta](https://github.com/letta-ai/letta) und [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents). Daraus folgt weder Feature-Parität noch Code-Wiederverwendung.
 
@@ -181,13 +181,14 @@ Design-Referenzen sind [LangGraph.js](https://github.com/langchain-ai/langgraphj
 | Dauerhafte Queue und Cross-Process-Cache            | Optionaler Pfad implementiert   | Redis                                           |
 | PostgreSQL-Checkpoint und Node-Recovery             | Implementiert                   | PostgreSQL + separater Agent Worker             |
 | Provider-Operations-Ledger und Owner-Audit          | Implementiert                   | PostgreSQL; Provider-Idempotenz adapterabhängig |
-| Menschliche Freigabe / interrupt-resume             | Roadmap                         | Checkpoint-Persistenz und Review-UI             |
+| Menschliche Freigabe / interrupt-resume             | Implementiert optional          | Checkpoint-Persistenz; Review-UI per API        |
+| Agent-Outbox und isoliertes Replay/Fork             | Implementiert                   | PostgreSQL + Redis                              |
 | Dynamischer Router, Skills und Tool-Registry        | Roadmap                         | Runtime- und Berechtigungsmodell                |
 | Hybrides RAG, Reranker und Evaluationsdatensatz     | Roadmap                         | Corpus und Evaluationsdesign                    |
 
 ### Agent-Roadmap
 
-- **Dauerhafte Ausführung und menschliche Aufsicht**: auf der implementierten Checkpoint/Lease-Basis `interrupt()`-Freigabeknoten, Replay/Fork, Workflow-Versionierung und eine transaktionale Outbox ergänzen.
+- **Dauerhafte Ausführung und menschliche Aufsicht**: `interrupt()`-Freigabeknoten, redigierte Inspektion, Replay/Fork und Agent-Outbox sind implementiert; Workflow-Versionierung bleibt offen.
 - **Context Engineering**: Query Planning, Kompression, Evidence Gating und Token-Budget pro Node.
 - **Hierarchisches Multi-Agent**: typisierter Router, Delegationsbudgets und isolierte State-Slices.
 - **Memory-Lebenszyklus**: Konsolidierung, Widersprüche, Decay, Promotion zu Produktwissen und Retrieval-Metriken.

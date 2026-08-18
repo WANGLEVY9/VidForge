@@ -1,6 +1,12 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 
-export type AgentRunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type AgentRunStatus =
+  | 'pending'
+  | 'running'
+  | 'paused'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
 
 /** Durable control-plane record for a LangGraph workflow run. */
 @Entity('agent_runs')
@@ -50,6 +56,10 @@ export class AgentRun {
 
   @Column({ length: 220, nullable: true })
   checkpointId: string | null;
+
+  /** Parent run for an explicit checkpoint fork. */
+  @Column({ length: 220, nullable: true })
+  parentRunId: string | null;
 
   @Column('json')
   input: Record<string, unknown>;

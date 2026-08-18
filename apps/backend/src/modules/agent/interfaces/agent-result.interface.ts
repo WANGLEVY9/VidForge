@@ -9,4 +9,8 @@ export interface AgentResult {
   startedAt: Date;
   completedAt?: Date;
   error?: string;
+  control?: {
+    type: 'human_review';
+    request: Record<string, unknown>;
+  };
 }

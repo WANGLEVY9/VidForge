@@ -14,11 +14,13 @@ An Agent run has three persisted views, each with a different purpose:
 | `agent_runs`          | PostgreSQL                   | User-scoped run lifecycle, lease ownership, progress, attempt count and final result |
 | LangGraph checkpoints | PostgreSQL (`PostgresSaver`) | Node-boundary state used to resume an unfinished graph thread                        |
 | `provider_operations` | PostgreSQL                   | Sanitized audit ledger for external video-provider side effects                      |
+| `agent_outbox_events` | PostgreSQL                   | Transactional Agent dispatch intent and at-least-once BullMQ delivery                |
 
-The API process creates an `agent_runs` row and enqueues an `agent-run` job.
-Only the dedicated `PROCESS_ROLE=agent-worker` consumer claims and executes
-the graph. A conditional `pending → running` update and a renewable lease keep
-two workers from owning the same run.
+The API process creates an `agent_runs` row and an `agent_outbox_events` row in
+one transaction. The outbox dispatcher delivers an `agent-run` job with a
+stable BullMQ job ID. Only a dedicated `PROCESS_ROLE=agent-worker` consumer
+claims and executes the graph. A conditional `pending → running` update and a
+renewable lease keep two workers from owning the same run.
 
 ## Video-provider operation lifecycle
 
@@ -55,17 +57,20 @@ Implemented:
 - LangGraph node-boundary resume with PostgreSQL checkpoints;
 - stable video-provider operation keys plus persisted remote IDs and audit
   records;
-- compact checkpoint history and Provider operation audit for the run owner.
+- compact checkpoint history, redacted state inspection and Provider operation
+  audit for the run owner;
+- LangGraph `interrupt()` / `Command(resume)` human review for opt-in runs;
+- owner-scoped checkpoint replay and isolated fork runs with a copied thread;
+- transactional Agent outbox delivery with bounded retry and stale-lock recovery;
+- multiple Agent Worker processes with a bounded per-process concurrency.
 
 Not yet implemented:
 
-- a transactional outbox spanning PostgreSQL, BullMQ and third-party APIs;
 - exactly-once external provider calls independent of provider idempotency;
 - event-sourced workflow history, workflow code versioning or global replay
   compatibility checks;
-- human approval `interrupt()` / `Command(resume)` endpoints;
-- real dedicated Worker implementations for every creation, composition and
-  export queue;
+- real business implementations for the reserved creation, composition and
+  export Worker processors (the role boundary and material Worker are present);
 - an organization-level role, budget and policy engine.
 
 ## Owner audit API
@@ -77,6 +82,15 @@ owner. It returns:
 - a compact checkpoint timeline (ID, timestamp, step, status, current node,
   progress and retry count); and
 - sanitized Provider operations for that run.
+
+Additional owner-scoped controls are available through:
+
+- `GET /api/agent/runs/:taskId/checkpoints/:checkpointId` for a redacted state
+  projection;
+- `POST /api/agent/runs/:taskId/resume` for an interrupted human review;
+- `POST /api/agent/runs/:taskId/replay` to continue from the latest checkpoint;
+- `POST /api/agent/runs/:taskId/fork?checkpointId=...` to create an isolated
+  child thread from a checkpoint.
 
 Raw checkpoint values are intentionally excluded because they can contain
 prompts, material URLs, retrieval context and user-provided content. The API
@@ -91,8 +105,9 @@ pnpm --filter @vidforge/backend migration:run
 pnpm checkpointer:setup
 ```
 
-Run the API and Worker separately with the same PostgreSQL and Redis URLs. If
-an Agent task appears stuck, inspect its owner audit first, then verify:
+Run the API, Agent Worker and optional Media Worker separately with the same
+PostgreSQL and Redis URLs. If an Agent task appears stuck, inspect its owner
+audit first, then verify:
 
 1. `agent_runs.leaseUntil` and `heartbeatAt` are progressing;
 2. the `agent-run` queue has an active Worker;
@@ -100,8 +115,9 @@ an Agent task appears stuck, inspect its owner audit first, then verify:
    operation;
 4. the provider task's remote status agrees with the local ledger.
 
-Do not manually delete checkpoint or operation rows to retry a paid task. Use
-the stable run and operation keys so the provider can deduplicate safely.
+Do not manually delete checkpoint, operation or outbox rows to retry a paid
+task. Use replay and the stable run/operation keys so the provider can
+deduplicate safely.
 
 ## Verification
 

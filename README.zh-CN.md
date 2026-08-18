@@ -105,6 +105,9 @@ flowchart LR
 - 独立 Worker 会回收过期 lease，并以同一个 `thread_id` 和 `null` 输入恢复图；已经完成的前置节点不会被重复执行。
 - 每个 Agent 视频分镜都有一条 `provider_operations` 操作账本，记录稳定幂等键、请求哈希、远端任务 ID、尝试次数和脱敏终态；恢复时会优先复用已记录的远端任务。
 - `GET /api/agent/runs/:taskId/audit` 仅向任务拥有者返回控制面、紧凑 checkpoint 时间线和脱敏 Provider 操作；原始 Prompt 与图状态不会公开。
+- `requireHumanReview=true` 会在脚本生成后通过 LangGraph `interrupt()` 暂停，任务拥有者可调用 `POST /api/agent/runs/:taskId/resume` 提交审核决定。
+- `GET /api/agent/runs/:taskId/checkpoints/:checkpointId` 提供脱敏状态投影；`replay` 继续原线程，`fork` 会把 checkpoint 复制到隔离的新线程。
+- `agent_outbox_events` 与 `agent_runs` 在同一事务中提交 Agent 调度意图，再交由 BullMQ 投递，避免进程崩溃造成任务静默丢失。
 - `AbortController` 将取消信号传播到当前图执行。
 
 ## 知识库与检索
@@ -174,34 +177,35 @@ Composition Agent 的实际路径包括：
 
 ## 能力边界与路线图
 
-当前已经实现：前端工作台、认证、商品空间、素材、脚本、任务、Multi-Agent 状态图、质量重规划、基础 RAG、作用域记忆、FFmpeg 合成和可选队列/缓存路径。
+当前已经实现：前端工作台、认证、商品空间、素材、脚本、任务、Multi-Agent 状态图、质量重规划、基础 RAG、作用域记忆、FFmpeg 合成、PostgreSQL checkpoint、HITL interrupt/resume、脱敏状态检查、replay/fork、Agent Outbox 和独立 Agent Worker。
 
-当前仍属于路线图：人机审批与 interrupt-resume、checkpoint replay/fork、工作流版本兼容、事务性 Outbox、创建/合成/导出队列的真实独立 Worker、动态子 Agent 路由、技能和工具注册表、混合 RAG 重排以及 Agent 轨迹评测数据集。
+当前仍属于路线图：工作流版本兼容、事件溯源兼容性、创建/合成/导出队列的真实业务 Worker 实现、动态子 Agent 路由、技能和工具注册表、混合 RAG 重排以及 Agent 轨迹评测数据集。
 
 路线图参考了 [LangGraph.js](https://github.com/langchain-ai/langgraphjs)、[DeerFlow](https://github.com/bytedance/deer-flow)、[Letta](https://github.com/letta-ai/letta) 和 [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents) 所代表的设计方向，但不宣称功能对等或代码复用。
 
 ### 能力矩阵
 
-| 能力                                  | 仓库状态       | 外部要求                                  |
-| ------------------------------------- | -------------- | ----------------------------------------- |
-| 前端工作台与浏览器体验 `/try`         | 已实现         | `/try` 无额外要求                         |
-| 认证、商品空间、素材、脚本和任务      | 已实现         | PostgreSQL                                |
-| Multi-Agent 状态图与质量重规划        | 已实现         | 真实输出需要文本/视频 Provider            |
-| Script RAG 与引用传播                 | 已实现基线     | 语料检索无需额外服务                      |
-| 分作用域长期记忆与 Context Packet     | 已实现词法基线 | PostgreSQL                                |
-| 素材语义检索                          | 已实现可选路径 | pgvector 与 Embedding 端点                |
-| FFmpeg 合成 smoke path                | 已实现         | 本地 FFmpeg                               |
-| 持久化队列与跨进程缓存                | 已实现可选路径 | Redis                                     |
-| 对象存储                              | 已实现可选路径 | OSS 凭据                                  |
-| PostgreSQL checkpoint 与节点级恢复    | 已实现         | PostgreSQL 与独立 Agent Worker            |
-| Provider 操作账本与拥有者审计         | 已实现         | PostgreSQL；Provider 幂等语义取决于适配器 |
-| 人机审批 / interrupt-resume           | 路线图         | Checkpoint 持久化与审核 UI                |
-| 动态子 Agent 路由、Skills、工具注册表 | 路线图         | 运行时与权限模型                          |
-| Hybrid RAG、Reranker 与评测数据集     | 路线图         | 语料和评测工作                            |
+| 能力                                  | 仓库状态       | 外部要求                                      |
+| ------------------------------------- | -------------- | --------------------------------------------- |
+| 前端工作台与浏览器体验 `/try`         | 已实现         | `/try` 无额外要求                             |
+| 认证、商品空间、素材、脚本和任务      | 已实现         | PostgreSQL                                    |
+| Multi-Agent 状态图与质量重规划        | 已实现         | 真实输出需要文本/视频 Provider                |
+| Script RAG 与引用传播                 | 已实现基线     | 语料检索无需额外服务                          |
+| 分作用域长期记忆与 Context Packet     | 已实现词法基线 | PostgreSQL                                    |
+| 素材语义检索                          | 已实现可选路径 | pgvector 与 Embedding 端点                    |
+| FFmpeg 合成 smoke path                | 已实现         | 本地 FFmpeg                                   |
+| 持久化队列与跨进程缓存                | 已实现可选路径 | Redis                                         |
+| 对象存储                              | 已实现可选路径 | OSS 凭据                                      |
+| PostgreSQL checkpoint 与节点级恢复    | 已实现         | PostgreSQL 与独立 Agent Worker                |
+| Provider 操作账本与拥有者审计         | 已实现         | PostgreSQL；Provider 幂等语义取决于适配器     |
+| 人机审批 / interrupt-resume           | 已实现（可选） | Checkpoint 持久化；审核 UI 可基于 API 构建    |
+| Agent Outbox 与隔离 replay/fork       | 已实现         | PostgreSQL + Redis；Provider 幂等仍由外部保证 |
+| 动态子 Agent 路由、Skills、工具注册表 | 路线图         | 运行时与权限模型                              |
+| Hybrid RAG、Reranker 与评测数据集     | 路线图         | 语料和评测工作                                |
 
 ### Agent 工程路线
 
-- **持久执行与人机协作**：在已实现的 checkpoint/lease 基线上，加入 `interrupt()` 审批节点、轨迹 replay/fork、工作流版本兼容和事务性 Outbox。
+- **持久执行与人机协作**：`interrupt()` 审批节点、脱敏状态检查、replay/fork 和 Agent Outbox 已实现；工作流版本兼容与事件溯源兼容性仍待建设。
 - **上下文工程**：从有界记忆包演进到查询规划、上下文压缩、证据门控和节点级 Token 预算。
 - **分层 Multi-Agent**：引入类型化专家路由、委派预算和隔离的状态切片。
 - **记忆生命周期**：加入合并、矛盾处理、衰减、从运行记忆晋升为商品知识以及检索质量指标。

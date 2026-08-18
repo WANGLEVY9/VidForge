@@ -1,5 +1,5 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
-import { StateGraph } from '@langchain/langgraph';
+import { Command, interrupt, isGraphInterrupt, StateGraph } from '@langchain/langgraph';
 import type { RetryPolicy } from '@langchain/langgraph';
 import { RunnableConfig } from '@langchain/core/runnables';
 import { AgentState } from './interfaces/agent-state.interface';
@@ -23,6 +23,14 @@ import {
 type NodeReturn = Partial<AgentState>;
 export type AgentProgressUpdate = Partial<Pick<AgentState, 'status' | 'currentNode' | 'progress'>>;
 export type AgentProgressReporter = (update: AgentProgressUpdate) => Promise<void> | void;
+export interface HumanReviewDecision {
+  approved: boolean;
+  feedback?: string;
+}
+export interface AgentRunOptions {
+  resume?: HumanReviewDecision;
+  fork?: { threadId: string; checkpointId: string; nextNode: string; seeded?: boolean };
+}
 
 /**
  * Agent 编排器(LangGraph 状态机)
@@ -56,7 +64,8 @@ export class OrchestratorService {
   async run(
     dto: RunAgentDto,
     taskId = createAgentTaskId(),
-    reportProgress?: AgentProgressReporter
+    reportProgress?: AgentProgressReporter,
+    options?: AgentRunOptions
   ): Promise<AgentResult> {
     const startedAt = new Date();
     const report = async (update: AgentProgressUpdate) => {
@@ -66,7 +75,9 @@ export class OrchestratorService {
     // A worker restart resumes the last committed super-step. In that case
     // LangGraph must receive null input; supplying the original input would
     // start a fresh run instead of replaying only the unfinished node.
-    const hasCheckpoint = (await this.checkpointService?.hasCheckpoint(taskId)) ?? false;
+    const checkpointThreadId = options?.fork?.threadId ?? taskId;
+    const hasCheckpoint =
+      (await this.checkpointService?.hasCheckpoint(checkpointThreadId)) ?? false;
     const memoryContext = hasCheckpoint ? { recalled: [] } : await this.recallMemory(dto);
 
     const channels: Record<string, { value: (...args: any[]) => any; default: () => any }> = {
@@ -82,6 +93,11 @@ export class OrchestratorService {
       duration: { value: (a: any, b: any) => b ?? a, default: () => dto.duration },
       userId: { value: (a: any, b: any) => b ?? a, default: () => dto.userId },
       productSpaceId: { value: (a: any, b: any) => b ?? a, default: () => dto.productSpaceId },
+      requireHumanReview: {
+        value: (a: any, b: any) => b ?? a,
+        default: () => dto.requireHumanReview ?? false,
+      },
+      humanReview: { value: (a: any, b: any) => b ?? a, default: () => undefined },
       memoryContext: {
         value: (a: any, b: any) => b ?? a ?? { recalled: [] },
         default: () => memoryContext,
@@ -115,11 +131,43 @@ export class OrchestratorService {
         'script_generation',
         async (state: AgentState): Promise<NodeReturn> => {
           const result = await this.scriptAgent.generate(state);
-          await report({ status: 'running', currentNode: 'video_composition', progress: 50 });
-          return { ...result, currentNode: 'video_composition', progress: 50 };
+          const nextNode = state.requireHumanReview ? 'human_review' : 'video_composition';
+          await report({ status: 'running', currentNode: nextNode, progress: 50 });
+          return { ...result, currentNode: nextNode, progress: 50 };
         },
         { retryPolicy: this.retryPolicy }
       )
+      .addNode('human_review', async (state: AgentState): Promise<NodeReturn> => {
+        if (!state.requireHumanReview) {
+          return { currentNode: 'video_composition', progress: 60 };
+        }
+        if (!this.checkpointService?.configured) {
+          throw new Error('Human review requires a configured LangGraph Postgres checkpointer');
+        }
+        const decision = interrupt<Record<string, unknown>, HumanReviewDecision>({
+          type: 'human_review',
+          question: 'Approve the generated script before paid video generation starts.',
+          taskId,
+          productName: state.productName,
+          script: state.scriptGeneration?.shots?.map((shot) => ({
+            id: shot.id,
+            order: shot.order,
+            role: shot.role,
+            script: shot.script,
+            duration: shot.duration,
+          })),
+        });
+        return {
+          humanReview: {
+            approved: decision.approved === true,
+            feedback: decision.feedback,
+            reviewedAt: new Date().toISOString(),
+          },
+          status: decision.approved === true ? 'running' : 'failed',
+          currentNode: decision.approved === true ? 'video_composition' : '__end__',
+          progress: decision.approved === true ? 60 : 50,
+        };
+      })
       .addNode(
         'video_composition',
         async (state: AgentState): Promise<NodeReturn> => {
@@ -156,7 +204,12 @@ export class OrchestratorService {
       .addEdge('__start__', 'orchestrator')
       .addEdge('orchestrator', 'material_analysis')
       .addEdge('material_analysis', 'script_generation')
-      .addEdge('script_generation', 'video_composition')
+      .addConditionalEdges('script_generation', (state: any) =>
+        state.requireHumanReview ? 'human_review' : 'video_composition'
+      )
+      .addConditionalEdges('human_review', (state: any) =>
+        state.humanReview?.approved === false ? '__end__' : 'video_composition'
+      )
       .addEdge('video_composition', 'quality_control')
       /**
        * 条件边:quality_control → script_generation 重规划 or 结束
@@ -194,6 +247,7 @@ export class OrchestratorService {
         duration: dto.duration,
         userId: dto.userId,
         productSpaceId: dto.productSpaceId,
+        requireHumanReview: dto.requireHumanReview ?? false,
         memoryContext,
         trace: [],
         errors: [],
@@ -201,10 +255,40 @@ export class OrchestratorService {
       } as any;
       const config: RunnableConfig = {
         signal: controller.signal,
-        configurable: { thread_id: taskId },
+        configurable: {
+          thread_id: checkpointThreadId,
+          ...(options?.fork ? { checkpoint_id: options.fork.checkpointId } : {}),
+        },
         metadata: { taskId, userId: dto.userId },
       };
-      const finalState = await app.invoke(hasCheckpoint ? null : initialState, config);
+      const finalState = await app.invoke(
+        options?.fork && !options.fork.seeded
+          ? new Command({
+              update: { taskId, userId: dto.userId },
+              goto: options.fork.nextNode,
+            })
+          : options?.resume
+            ? new Command({ resume: options.resume })
+            : hasCheckpoint
+              ? null
+              : initialState,
+        config
+      );
+      const pendingInterrupt = (finalState as any)?.__interrupt__?.[0];
+      if (pendingInterrupt?.value) {
+        return {
+          taskId,
+          status: 'paused',
+          progress: 50,
+          currentNode: 'human_review',
+          result: {} as AgentState,
+          startedAt,
+          control: {
+            type: 'human_review',
+            request: pendingInterrupt.value as Record<string, unknown>,
+          },
+        };
+      }
 
       // ── 自学习闭环 ───────────────────────────────────────
       // 当本轮综合分 ≥85 + 通过合规,把核心信息沉淀到商品空间知识库,
@@ -230,6 +314,18 @@ export class OrchestratorService {
       );
       return result;
     } catch (error: any) {
+      if (isGraphInterrupt(error)) {
+        const request = (error.interrupts?.[0]?.value ?? {}) as Record<string, unknown>;
+        return {
+          taskId,
+          status: 'paused',
+          progress: 50,
+          currentNode: 'human_review',
+          result: {} as AgentState,
+          startedAt,
+          control: { type: 'human_review', request },
+        };
+      }
       const isAbort = error.name === 'AbortError' || error.message?.includes('abort');
       this.logger.error(
         `[${taskId}] Workflow ${isAbort ? 'cancelled' : 'failed'}: ${error.message}`

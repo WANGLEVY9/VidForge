@@ -97,6 +97,8 @@ orchestrator
   │
   ▼
 material_analysis ──▶ script_generation ──▶ video_composition ──▶ quality_control
+                             │
+                             └──────── optional human_review interrupt
                              ▲                                         │
                              └──────── bounded quality replan ─────────┘
 ```
@@ -119,6 +121,9 @@ material_analysis ──▶ script_generation ──▶ video_composition ──
 - A dedicated Worker reclaims expired leases and resumes the same graph thread with null input, so completed predecessor nodes are not replayed.
 - `provider_operations` records one stable key per Agent video shot, its request hash, remote provider task ID, attempt count and sanitized terminal outcome. A resumed node reuses a recorded remote ID when possible.
 - `GET /api/agent/runs/:taskId/audit` returns a user-scoped control-plane view, compact checkpoint history and sanitized Provider-operation records; raw graph state is intentionally excluded.
+- `requireHumanReview=true` pauses after script generation with LangGraph `interrupt()`. The owner resumes with `POST /api/agent/runs/:taskId/resume` and an approval decision.
+- `GET /api/agent/runs/:taskId/checkpoints/:checkpointId` exposes a redacted checkpoint projection; `replay` resumes a thread and `fork` copies a checkpoint into an isolated child thread.
+- `agent_outbox_events` commits the Agent dispatch intent with `agent_runs` before BullMQ delivery, so a process crash cannot silently lose the job.
 - An `AbortController` propagates cancellation to the active graph invocation.
 
 ## Context engineering
@@ -285,28 +290,29 @@ Trace writes and optional OTLP export are fail-soft: observability failure is no
 
 ## Capability matrix
 
-| Capability                                         | Repository status            | External requirement                                  |
-| -------------------------------------------------- | ---------------------------- | ----------------------------------------------------- |
-| Frontend studio and browser-only `/try` flow       | Implemented                  | None for `/try`                                       |
-| Auth, product spaces, materials, scripts and tasks | Implemented                  | PostgreSQL                                            |
-| Multi-Agent state graph and quality replan         | Implemented                  | Text/video providers for real output                  |
-| Script RAG and reference propagation               | Implemented baseline         | None for corpus retrieval                             |
-| Scoped long-term memory and Context Packet         | Implemented lexical baseline | PostgreSQL                                            |
-| Material semantic search                           | Implemented optional path    | pgvector + embedding endpoint                         |
-| FFmpeg composition smoke path                      | Implemented                  | Local FFmpeg                                          |
-| Durable queue and cross-process cache              | Implemented optional path    | Redis                                                 |
-| Object storage                                     | Implemented optional path    | OSS credentials                                       |
-| PostgreSQL checkpoint and node-level resume        | Implemented                  | PostgreSQL + dedicated Agent Worker                   |
-| Provider operation ledger and owner audit          | Implemented                  | PostgreSQL; Provider idempotency is adapter-dependent |
-| Human approval / interrupt-resume                  | Roadmap                      | Checkpoint persistence and review UI                  |
-| Dynamic subagent router, skills and tool registry  | Roadmap                      | Runtime and permission model                          |
-| Hybrid RAG, reranker and evaluation dataset        | Roadmap                      | Corpus and evaluation work                            |
+| Capability                                         | Repository status            | External requirement                                      |
+| -------------------------------------------------- | ---------------------------- | --------------------------------------------------------- |
+| Frontend studio and browser-only `/try` flow       | Implemented                  | None for `/try`                                           |
+| Auth, product spaces, materials, scripts and tasks | Implemented                  | PostgreSQL                                                |
+| Multi-Agent state graph and quality replan         | Implemented                  | Text/video providers for real output                      |
+| Script RAG and reference propagation               | Implemented baseline         | None for corpus retrieval                                 |
+| Scoped long-term memory and Context Packet         | Implemented lexical baseline | PostgreSQL                                                |
+| Material semantic search                           | Implemented optional path    | pgvector + embedding endpoint                             |
+| FFmpeg composition smoke path                      | Implemented                  | Local FFmpeg                                              |
+| Durable queue and cross-process cache              | Implemented optional path    | Redis                                                     |
+| Object storage                                     | Implemented optional path    | OSS credentials                                           |
+| PostgreSQL checkpoint and node-level resume        | Implemented                  | PostgreSQL + dedicated Agent Worker                       |
+| Provider operation ledger and owner audit          | Implemented                  | PostgreSQL; Provider idempotency is adapter-dependent     |
+| Human approval / interrupt-resume                  | Implemented opt-in           | Checkpointer; review UI can be built on the API           |
+| Agent outbox and isolated replay/fork              | Implemented                  | PostgreSQL + Redis; provider idempotency remains external |
+| Dynamic subagent router, skills and tool registry  | Roadmap                      | Runtime and permission model                              |
+| Hybrid RAG, reranker and evaluation dataset        | Roadmap                      | Corpus and evaluation work                                |
 
 ## Agent engineering roadmap
 
 VidForge follows several directions visible in modern agent runtimes while keeping a strict distinction between architectural influence and implemented capability:
 
-- **Durable execution and human oversight** — add `interrupt()` approval nodes, trajectory replay/fork, workflow versioning and an outbox beyond the implemented checkpoint-and-lease baseline.
+- **Durable execution and human oversight** — the opt-in `interrupt()` approval gate, redacted inspection, replay/fork and Agent outbox are implemented; workflow versioning and event-sourced compatibility remain open work.
 - **Context engineering** — evolve from bounded memory packets to query planning, context compression, evidence gating and token-budget allocation per node.
 - **Hierarchical Multi-Agent execution** — introduce a typed router for specialist subagents, explicit delegation budgets and isolated state slices.
 - **Memory lifecycle** — add consolidation, contradiction handling, decay, promotion from run memory to product knowledge and measurable retrieval quality.

@@ -18,6 +18,9 @@ import { QueueRunnerService } from '../queue/queue-runner.service';
 import { JOB_NAMES, QUEUE_NAMES } from '../queue/queue.constants';
 import { AgentCheckpointService } from './checkpoint/agent-checkpoint.service';
 import { ProviderOperationService } from './provider-operations/provider-operation.service';
+import type { AgentDispatchPayload } from './outbox/agent-outbox.service';
+import { AgentOutboxService } from './outbox/agent-outbox.service';
+import type { HumanReviewDecision } from './orchestrator.service';
 
 @Injectable()
 export class AgentService implements OnModuleInit, OnModuleDestroy {
@@ -34,7 +37,8 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     private readonly orchestrator: OrchestratorService,
     @Optional() private readonly queueRunner?: QueueRunnerService,
     @Optional() private readonly checkpointService?: AgentCheckpointService,
-    @Optional() private readonly providerOperations?: ProviderOperationService
+    @Optional() private readonly providerOperations?: ProviderOperationService,
+    @Optional() private readonly outboxService?: AgentOutboxService
   ) {}
 
   /**
@@ -43,6 +47,9 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
    * a terminal failure, so a worker restart can resume its LangGraph thread.
    */
   async onModuleInit(): Promise<void> {
+    this.outboxService?.registerAgentFallback((payload) =>
+      this.executeQueuedRun(payload.taskId, payload)
+    );
     if (!this.isWorker) return;
 
     await this.recoverAndDispatch();
@@ -118,27 +125,59 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     const taskId = createAgentTaskId();
     const startedAt = new Date();
     try {
-      await this.runRepo.save(
-        this.runRepo.create({
-          id: taskId,
-          userId: dto.userId!,
-          idempotencyKey,
-          status: 'pending',
-          currentNode: 'queued',
-          progress: 0,
-          attempt: 0,
-          workerId: null,
-          leaseUntil: null,
-          heartbeatAt: null,
-          graphThreadId: taskId,
-          checkpointId: null,
-          input: this.toStoredInput(dto),
-          result: null,
-          errorMessage: null,
-          startedAt: null,
-          completedAt: null,
-        })
-      );
+      if (this.outboxService) {
+        await this.runRepo.manager.transaction(async (manager) => {
+          const runRepo = manager.getRepository(AgentRun);
+          const run = runRepo.create({
+            id: taskId,
+            userId: dto.userId!,
+            idempotencyKey,
+            status: 'pending',
+            currentNode: 'queued',
+            progress: 0,
+            attempt: 0,
+            workerId: null,
+            leaseUntil: null,
+            heartbeatAt: null,
+            graphThreadId: taskId,
+            checkpointId: null,
+            parentRunId: null,
+            input: this.toStoredInput(dto),
+            result: null,
+            errorMessage: null,
+            startedAt: null,
+            completedAt: null,
+          });
+          await runRepo.save(run);
+          await this.outboxService!.addRunEvent(manager, {
+            taskId,
+            mode: 'initial',
+          });
+        });
+      } else {
+        await this.runRepo.save(
+          this.runRepo.create({
+            id: taskId,
+            userId: dto.userId!,
+            idempotencyKey,
+            status: 'pending',
+            currentNode: 'queued',
+            progress: 0,
+            attempt: 0,
+            workerId: null,
+            leaseUntil: null,
+            heartbeatAt: null,
+            graphThreadId: taskId,
+            checkpointId: null,
+            parentRunId: null,
+            input: this.toStoredInput(dto),
+            result: null,
+            errorMessage: null,
+            startedAt: null,
+            completedAt: null,
+          })
+        );
+      }
     } catch (error) {
       if (idempotencyKey && this.isUniqueViolation(error)) {
         const existing = await this.runRepo.findOne({
@@ -150,7 +189,11 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
-      await this.dispatch(taskId);
+      if (this.outboxService) {
+        void this.outboxService.flush();
+      } else {
+        await this.dispatch(taskId);
+      }
     } catch (error: any) {
       await this.runRepo.update(taskId, {
         status: 'failed',
@@ -217,6 +260,153 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  async inspectCheckpoint(userId: string, taskId: string, checkpointId: string) {
+    const run = await this.runRepo.findOne({ where: { id: taskId, userId } });
+    if (!run) throw new NotFoundException('Agent 任务不存在');
+    if (!this.checkpointService || !run.graphThreadId) {
+      throw new BadRequestException('该运行没有配置 LangGraph checkpointer');
+    }
+    const inspection = await this.checkpointService.inspect(run.graphThreadId, checkpointId);
+    if (!inspection) throw new NotFoundException('Checkpoint 不存在');
+    return inspection;
+  }
+
+  async replay(userId: string, taskId: string): Promise<{ taskId: string; status: 'pending' }> {
+    const run = await this.runRepo.findOne({ where: { id: taskId, userId } });
+    if (!run) throw new NotFoundException('Agent 任务不存在');
+    if (!['failed', 'paused', 'cancelled'].includes(run.status)) {
+      throw new BadRequestException('只有失败、暂停或取消的运行可以 replay');
+    }
+    if (
+      !this.checkpointService ||
+      !run.graphThreadId ||
+      !(await this.checkpointService.hasCheckpoint(run.graphThreadId))
+    ) {
+      throw new BadRequestException('该运行没有可恢复的 LangGraph checkpoint');
+    }
+    if (this.outboxService) {
+      await this.runRepo.manager.transaction(async (manager) => {
+        await manager.getRepository(AgentRun).update(taskId, {
+          status: 'pending',
+          currentNode: 'replay_pending',
+          errorMessage: null,
+          completedAt: null,
+          workerId: null,
+          leaseUntil: null,
+          heartbeatAt: null,
+        });
+        await this.outboxService!.addRunEvent(manager, { taskId, mode: 'replay' });
+      });
+      void this.outboxService.flush();
+    } else {
+      await this.runRepo.update(taskId, {
+        status: 'pending',
+        currentNode: 'replay_pending',
+        errorMessage: null,
+        completedAt: null,
+        workerId: null,
+        leaseUntil: null,
+        heartbeatAt: null,
+      });
+      await this.dispatch(taskId, { taskId, mode: 'replay' });
+    }
+    return { taskId, status: 'pending' };
+  }
+
+  async fork(
+    userId: string,
+    taskId: string,
+    checkpointId?: string
+  ): Promise<{ taskId: string; status: 'pending'; parentRunId: string }> {
+    const parent = await this.runRepo.findOne({ where: { id: taskId, userId } });
+    if (!parent) throw new NotFoundException('Agent 任务不存在');
+    if (!this.checkpointService || !parent.graphThreadId) {
+      throw new BadRequestException('该运行没有配置 LangGraph checkpointer');
+    }
+    const selectedCheckpoint = checkpointId ?? parent.checkpointId;
+    if (!selectedCheckpoint) throw new BadRequestException('请指定一个可分叉的 checkpoint');
+    const checkpoint = await this.checkpointService.inspect(
+      parent.graphThreadId,
+      selectedCheckpoint
+    );
+    if (!checkpoint) throw new NotFoundException('Checkpoint 不存在');
+    const nextNode = checkpoint.summary.currentNode;
+    if (!nextNode || nextNode === '__end__' || nextNode === 'human_review') {
+      throw new BadRequestException('该 checkpoint 没有可继续执行的下游节点');
+    }
+
+    const childId = createAgentTaskId();
+    const forkedCheckpointId = await this.checkpointService.cloneCheckpoint(
+      parent.graphThreadId,
+      selectedCheckpoint,
+      childId,
+      { taskId: childId, userId }
+    );
+    const payload: AgentDispatchPayload = {
+      taskId: childId,
+      mode: 'fork',
+      fork: {
+        threadId: childId,
+        checkpointId: forkedCheckpointId,
+        nextNode,
+        seeded: true,
+      },
+    };
+    if (this.outboxService) {
+      await this.runRepo.manager.transaction(async (manager) => {
+        const runRepo = manager.getRepository(AgentRun);
+        const child = runRepo.create({
+          id: childId,
+          userId,
+          idempotencyKey: null,
+          status: 'pending',
+          currentNode: nextNode,
+          progress: checkpoint.summary.progress ?? 0,
+          attempt: 0,
+          workerId: null,
+          leaseUntil: null,
+          heartbeatAt: null,
+          graphThreadId: childId,
+          checkpointId: forkedCheckpointId,
+          parentRunId: parent.id,
+          input: parent.input,
+          result: null,
+          errorMessage: null,
+          startedAt: null,
+          completedAt: null,
+        });
+        await runRepo.save(child);
+        await this.outboxService!.addRunEvent(manager, payload);
+      });
+      void this.outboxService.flush();
+    } else {
+      await this.runRepo.save(
+        this.runRepo.create({
+          id: childId,
+          userId,
+          idempotencyKey: null,
+          status: 'pending',
+          currentNode: nextNode,
+          progress: checkpoint.summary.progress ?? 0,
+          attempt: 0,
+          workerId: null,
+          leaseUntil: null,
+          heartbeatAt: null,
+          graphThreadId: childId,
+          checkpointId: forkedCheckpointId,
+          parentRunId: parent.id,
+          input: parent.input,
+          result: null,
+          errorMessage: null,
+          startedAt: null,
+          completedAt: null,
+        })
+      );
+      await this.dispatch(childId, payload);
+    }
+    return { taskId: childId, status: 'pending', parentRunId: parent.id };
+  }
+
   async cancel(userId: string, taskId: string): Promise<{ cancelled: boolean }> {
     const run = await this.runRepo.findOne({ where: { id: taskId, userId } });
     if (!run) throw new NotFoundException('Agent 任务不存在');
@@ -235,7 +425,7 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Entry point used by BullMQ's independent AgentRunProcessor. */
-  async executeQueuedRun(taskId: string): Promise<void> {
+  async executeQueuedRun(taskId: string, dispatch?: AgentDispatchPayload): Promise<void> {
     const queued = await this.runRepo.findOne({ where: { id: taskId } });
     if (!queued || this.isTerminal(queued.status)) return;
 
@@ -260,16 +450,25 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
 
     try {
       const dto = { ...queued.input, userId: queued.userId } as RunAgentDto;
-      const result = await this.orchestrator.run(dto, taskId, async (update) => {
-        await this.runRepo.update(taskId, {
-          status: update.status,
-          currentNode: update.currentNode,
-          progress: update.progress,
-          workerId: this.workerId,
-          leaseUntil: this.leaseUntil(),
-          heartbeatAt: new Date(),
-        });
-      });
+      const result = await this.orchestrator.run(
+        dto,
+        taskId,
+        async (update) => {
+          await this.runRepo.update(taskId, {
+            status: update.status,
+            currentNode: update.currentNode,
+            progress: update.progress,
+            workerId: this.workerId,
+            leaseUntil: this.leaseUntil(),
+            heartbeatAt: new Date(),
+          });
+        },
+        dispatch?.mode === 'fork' && dispatch.fork
+          ? { fork: dispatch.fork }
+          : dispatch?.resume
+            ? { resume: dispatch.resume }
+            : undefined
+      );
       let checkpointId: string | null = null;
       try {
         checkpointId = await this.checkpointService?.latestCheckpointId(
@@ -282,9 +481,12 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
         status: result.status as AgentRunStatus,
         currentNode: result.currentNode,
         progress: result.progress,
-        result: result.result as Record<string, unknown>,
+        result: {
+          ...(result.result as Record<string, unknown>),
+          ...(result.control ? { control: result.control } : {}),
+        },
         errorMessage: result.error ?? null,
-        completedAt: result.completedAt ?? new Date(),
+        completedAt: result.status === 'paused' ? null : (result.completedAt ?? new Date()),
         leaseUntil: null,
         heartbeatAt: new Date(),
         checkpointId,
@@ -303,8 +505,68 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async dispatch(taskId: string): Promise<void> {
-    const fallback = () => this.executeQueuedRun(taskId);
+  async resumeWithHumanReview(
+    userId: string,
+    taskId: string,
+    decision: HumanReviewDecision
+  ): Promise<{ taskId: string; status: 'pending' }> {
+    const run = await this.runRepo.findOne({ where: { id: taskId, userId } });
+    if (!run) throw new NotFoundException('Agent 任务不存在');
+    if (run.status !== 'paused' || run.currentNode !== 'human_review') {
+      throw new BadRequestException('Agent 任务当前不在等待人工审核状态');
+    }
+    if (typeof decision.approved !== 'boolean') {
+      throw new BadRequestException('approved 必须是布尔值');
+    }
+
+    if (this.outboxService) {
+      await this.runRepo.manager.transaction(async (manager) => {
+        await manager.getRepository(AgentRun).update(taskId, {
+          status: 'pending',
+          currentNode: 'human_review',
+          errorMessage: null,
+          completedAt: null,
+          workerId: null,
+          leaseUntil: null,
+          heartbeatAt: null,
+        });
+        await this.outboxService!.addRunEvent(manager, {
+          taskId,
+          mode: 'resume',
+          resume: {
+            approved: decision.approved,
+            feedback: decision.feedback?.slice(0, 2_000),
+          },
+        });
+      });
+      void this.outboxService.flush();
+    } else {
+      await this.runRepo.update(taskId, {
+        status: 'pending',
+        currentNode: 'human_review',
+        errorMessage: null,
+        completedAt: null,
+        workerId: null,
+        leaseUntil: null,
+        heartbeatAt: null,
+      });
+      await this.dispatch(taskId, {
+        taskId,
+        mode: 'resume',
+        resume: {
+          approved: decision.approved,
+          feedback: decision.feedback?.slice(0, 2_000),
+        },
+      });
+    }
+    return { taskId, status: 'pending' };
+  }
+
+  private async dispatch(
+    taskId: string,
+    payload: AgentDispatchPayload = { taskId, mode: 'initial' }
+  ): Promise<void> {
+    const fallback = () => this.executeQueuedRun(taskId, payload);
     if (!this.queueRunner) {
       // Unit-test / minimal embedding fallback. The real Nest application
       // always receives QueueRunnerService from the global QueueModule.
@@ -313,13 +575,10 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
       });
       return;
     }
-    await this.queueRunner.enqueue(
-      QUEUE_NAMES.AGENT_RUN,
-      JOB_NAMES.RUN_AGENT,
-      { taskId },
-      fallback,
-      { jobId: `agent-run:${taskId}`, attempts: 3 }
-    );
+    await this.queueRunner.enqueue(QUEUE_NAMES.AGENT_RUN, JOB_NAMES.RUN_AGENT, payload, fallback, {
+      jobId: `agent-run:${taskId}:${payload.mode ?? 'initial'}`,
+      attempts: 3,
+    });
   }
 
   private toResult(run: AgentRun): AgentResult {

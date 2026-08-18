@@ -9,6 +9,7 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
     "start:worker": "node dist/worker-main",
+    "start:media-worker": "PROCESS_ROLE=media-worker node dist/worker-main",
     "start:worker:dev": "PROCESS_ROLE=agent-worker nest start --entryFile worker-main --watch",
     "checkpointer:setup": "node ../../scripts/setup-agent-checkpointer.mjs",
     "migration:show": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:show",

@@ -36,7 +36,7 @@ export interface ShotOutput {
 
 export interface AgentState {
   taskId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status: 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
   currentNode: string;
   progress: number;
 
@@ -51,6 +51,14 @@ export interface AgentState {
   userId?: string;
   /** 当前商品空间(用于隔离查询) */
   productSpaceId?: string;
+
+  /** Explicit opt-in for a persisted human approval gate. */
+  requireHumanReview?: boolean;
+  humanReview?: {
+    approved: boolean;
+    feedback?: string;
+    reviewedAt?: string;
+  };
 
   /**
    * Retrieved long-term context. Hits are scored and provenance-aware so

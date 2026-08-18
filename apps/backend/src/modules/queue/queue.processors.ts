@@ -5,6 +5,7 @@ import { Job } from 'bullmq';
 import { QUEUE_NAMES } from './queue.constants';
 import { MaterialService } from '../material/material.service';
 import { AgentService } from '../agent/agent.service';
+import type { AgentDispatchPayload } from '../agent/outbox/agent-outbox.service';
 
 /**
  * 通用日志 Processor 基类(暂不绑定具体业务逻辑)
@@ -104,7 +105,7 @@ export class MaterialAnalyzeProcessor extends WorkerHost {
  * process can therefore enqueue durable runs without also consuming them.
  * ModuleRef keeps QueueModule independent from AgentModule's provider graph.
  */
-@Processor(QUEUE_NAMES.AGENT_RUN)
+@Processor(QUEUE_NAMES.AGENT_RUN, { concurrency: readAgentWorkerConcurrency() })
 export class AgentRunProcessor extends WorkerHost {
   private readonly logger = new Logger(AgentRunProcessor.name);
   private agentService: AgentService | null = null;
@@ -113,14 +114,22 @@ export class AgentRunProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<{ taskId: string }>): Promise<{ ok: true; taskId: string }> {
+  async process(job: Job<AgentDispatchPayload>): Promise<{ ok: true; taskId: string }> {
     if (!this.agentService) {
       this.agentService = this.moduleRef.get(AgentService, { strict: false });
     }
     const { taskId } = job.data;
     if (!taskId) throw new Error('Agent worker job 缺少 taskId');
     this.logger.log(`[agent] processing task=${taskId} job=${job.id}`);
-    await this.agentService.executeQueuedRun(taskId);
+    await this.agentService.executeQueuedRun(taskId, job.data);
     return { ok: true, taskId };
   }
 }
+
+function readAgentWorkerConcurrency(env: NodeJS.ProcessEnv = process.env): number {
+  const parsed = Number.parseInt(env.AGENT_WORKER_CONCURRENCY ?? '2', 10);
+  if (!Number.isFinite(parsed)) return 2;
+  return Math.max(1, Math.min(parsed, 16));
+}
+
+export const __queueProcessorTestables = { readAgentWorkerConcurrency };

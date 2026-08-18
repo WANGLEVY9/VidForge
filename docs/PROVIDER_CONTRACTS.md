@@ -23,10 +23,10 @@ terminal result. This lets a resumed graph poll a known remote task rather than
 blindly submit another request.
 
 The ledger stores only a deterministic request hash and sanitized metadata; it
-must not contain raw secrets. It does not provide exactly-once delivery by
-itself: adapters must forward idempotency keys to providers that support them,
-and a future transactional outbox is still needed to coordinate database,
-queue and remote side effects.
+must not contain raw secrets. The Agent run and its first queue dispatch are
+now coordinated by `agent_outbox_events`, but this still does not provide
+provider-independent exactly-once delivery: adapters must forward idempotency
+keys to providers that support them.
 
 Run owners can inspect sanitized records through
 `GET /api/agent/runs/:taskId/audit`. See

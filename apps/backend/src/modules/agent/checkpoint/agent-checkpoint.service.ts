@@ -13,6 +13,20 @@ export interface AgentCheckpointSummary {
   nextNodes: string[];
 }
 
+export interface AgentCheckpointInspection {
+  summary: AgentCheckpointSummary;
+  state: {
+    status: string | null;
+    currentNode: string | null;
+    progress: number | null;
+    retryCount: number | null;
+    script: { source: string | null; style: string | null; shotCount: number } | null;
+    composition: { hasVideo: boolean; composed: boolean } | null;
+    quality: { score: number | null; passed: boolean | null; issueCount: number } | null;
+    memoryHitCount: number;
+  };
+}
+
 /**
  * Owns the LangGraph persistence boundary.
  *
@@ -85,6 +99,55 @@ export class AgentCheckpointService implements OnApplicationShutdown {
     return summaries;
   }
 
+  /** Inspect one checkpoint through a redacted, owner-scoped state projection. */
+  async inspect(threadId: string, checkpointId: string): Promise<AgentCheckpointInspection | null> {
+    const saver = this.get();
+    if (!saver) return null;
+    const tuple = await saver.getTuple({
+      configurable: { thread_id: threadId, checkpoint_id: checkpointId },
+    });
+    if (!tuple) return null;
+    return {
+      summary: toSummary(tuple),
+      state: toSafeState(tuple.checkpoint?.channel_values ?? {}),
+    };
+  }
+
+  /**
+   * Copy a checkpoint into a new LangGraph thread for an isolated fork.
+   * The checkpoint ID can remain stable because thread_id is part of the
+   * checkpointer key. Only control-plane identity fields are rewritten.
+   */
+  async cloneCheckpoint(
+    sourceThreadId: string,
+    checkpointId: string,
+    targetThreadId: string,
+    identity: { taskId: string; userId?: string }
+  ): Promise<string> {
+    const saver = this.get();
+    if (!saver) throw new Error('LangGraph Postgres checkpointer is not configured');
+    const tuple = await saver.getTuple({
+      configurable: { thread_id: sourceThreadId, checkpoint_id: checkpointId },
+    });
+    if (!tuple) throw new Error('Source checkpoint does not exist');
+    const channelValues = {
+      ...(tuple.checkpoint.channel_values as Record<string, unknown>),
+      taskId: identity.taskId,
+      ...(identity.userId ? { userId: identity.userId } : {}),
+    };
+    const clonedCheckpoint = {
+      ...tuple.checkpoint,
+      channel_values: channelValues,
+    };
+    const nextConfig = await saver.put(
+      { configurable: { thread_id: targetThreadId } },
+      clonedCheckpoint as any,
+      { ...(tuple.metadata as Record<string, unknown>), source: 'fork' } as any,
+      tuple.checkpoint.channel_versions
+    );
+    return String(nextConfig.configurable?.checkpoint_id ?? checkpointId);
+  }
+
   async onApplicationShutdown(): Promise<void> {
     if (!this.saver) return;
     await this.saver.end();
@@ -138,6 +201,48 @@ function checkpointSource(value: unknown): AgentCheckpointSummary['source'] {
   return value === 'input' || value === 'loop' || value === 'update' || value === 'fork'
     ? value
     : 'unknown';
+}
+
+function toSafeState(values: Record<string, unknown>): AgentCheckpointInspection['state'] {
+  const script = recordValue(values.scriptGeneration);
+  const composition = recordValue(values.videoComposition);
+  const quality = recordValue(values.qualityControl);
+  const memory = recordValue(values.memoryContext);
+  const shots = Array.isArray(script?.shots) ? script.shots : [];
+  const issues = Array.isArray(quality?.issues) ? quality.issues : [];
+  return {
+    status: stringValue(values.status),
+    currentNode: stringValue(values.currentNode),
+    progress: numberValue(values.progress),
+    retryCount: numberValue(values.retryCount),
+    script: script
+      ? {
+          source: stringValue(script.source),
+          style: stringValue(script.style),
+          shotCount: shots.length,
+        }
+      : null,
+    composition: composition
+      ? {
+          hasVideo: Boolean(stringValue(composition.videoUrl)),
+          composed: composition.composed === true,
+        }
+      : null,
+    quality: quality
+      ? {
+          score: numberValue(quality.qualityScore),
+          passed: typeof quality.passed === 'boolean' ? quality.passed : null,
+          issueCount: issues.length,
+        }
+      : null,
+    memoryHitCount: Array.isArray(memory?.recalled) ? memory.recalled.length : 0,
+  };
+}
+
+function recordValue(value: unknown): Record<string, any> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, any>)
+    : null;
 }
 
 export const __checkpointTestables = { toSummary };

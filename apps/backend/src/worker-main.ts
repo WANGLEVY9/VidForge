@@ -10,7 +10,7 @@ async function bootstrap(): Promise<void> {
   });
 
   const shutdown = async (signal: string) => {
-    console.log(`[agent-worker] shutting down on ${signal}`);
+    console.log(`[${process.env.PROCESS_ROLE ?? 'worker'}] shutting down on ${signal}`);
     await app.close();
     process.exit(0);
   };
@@ -19,6 +19,6 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap().catch((error) => {
-  console.error('[agent-worker] failed to start', error);
+  console.error(`[${process.env.PROCESS_ROLE ?? 'worker'}] failed to start`, error);
   process.exitCode = 1;
 });

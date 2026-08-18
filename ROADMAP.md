@@ -9,9 +9,11 @@ VidForge 的路线图以可复现、可贡献和可部署为优先级。时间�
 - [ ] 将 TypeScript `any` 警告逐步降至可阻断的新代码基线
 - [x] 建立数据库迁移，生产环境不再依赖 schema synchronize
 - [x] 为 Agent 视频调用增加 Provider 操作账本、稳定幂等键和运行审计接口
+- [x] 以事务性 Outbox 协调 AgentRun 与 BullMQ 调度意图
+- [x] 增加 LangGraph 状态检查、HITL interrupt/resume、replay 与隔离 fork
+- [x] 支持多个 Agent Worker 进程、租约竞争与故障恢复测试
 - [ ] 补充端到端最小冒烟测试
-- [ ] 以事务性 Outbox 协调数据库、BullMQ 与外部 Provider 副作用
-- [ ] 将创建、合成、导出队列迁移为真实独立 Worker
+- [ ] 将创建、合成、导出队列的保留 Processor 迁移为真实业务 Worker
 
 ## Next — 可观察、可扩展的视频管线
 
