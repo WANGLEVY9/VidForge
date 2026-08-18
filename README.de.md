@@ -163,7 +163,7 @@ Queue-Jobs unterstützen Attempts, Prioritäten, Verzögerungen und idempotente 
 
 Implementiert: Frontend-Workspace, Authentifizierung, Produktbereiche, Medien, Skripte, Aufgaben, Multi-Agent-Graph, Qualitäts-Neuplanung, Basis-RAG, bereichsbezogenes Memory, FFmpeg-Komposition, PostgreSQL-Checkpoints mit Node-Recovery, separater Agent Worker, Provider-Operations-Ledger und optionale Redis/BullMQ-Pfade.
 
-Implementiert sind außerdem opt-in Human-in-the-Loop mit `interrupt()`/resume, redigierte Checkpoint-Inspektion, Replay/Fork über isolierte Threads, ein transaktionaler Agent-Outbox und getrennte Agent-/Media-Worker-Rollen. Roadmap bleiben Workflow-Versionierung, echte Business-Implementierungen für Creation/Composition/Export, dynamischer Subagent-Router, berechtigungsbewusste Skills/Tools, hybrides RAG mit Reranker und Agent-Trajectory-Evaluation.
+Implementiert sind außerdem opt-in Human-in-the-Loop mit `interrupt()`/resume, redigierte Checkpoint-Inspektion, Replay/Fork über isolierte Threads, ein transaktionaler Agent-Outbox, getrennte Agent-/Media-Worker-Rollen und echte Business-Verarbeitung für Creation/Composition/Export. Roadmap bleiben Workflow-Versionierung, dynamischer Subagent-Router, berechtigungsbewusste Skills/Tools, hybrides RAG mit Reranker und Agent-Trajectory-Evaluation.
 
 Design-Referenzen sind [LangGraph.js](https://github.com/langchain-ai/langgraphjs), [DeerFlow](https://github.com/bytedance/deer-flow), [Letta](https://github.com/letta-ai/letta) und [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents). Daraus folgt weder Feature-Parität noch Code-Wiederverwendung.
 
@@ -183,6 +183,7 @@ Design-Referenzen sind [LangGraph.js](https://github.com/langchain-ai/langgraphj
 | Provider-Operations-Ledger und Owner-Audit          | Implementiert                   | PostgreSQL; Provider-Idempotenz adapterabhängig |
 | Menschliche Freigabe / interrupt-resume             | Implementiert optional          | Checkpoint-Persistenz; Review-UI per API        |
 | Agent-Outbox und isoliertes Replay/Fork             | Implementiert                   | PostgreSQL + Redis                              |
+| Medien-Worker für Shot/Komposition/Export           | Implementiert                   | Redis, FFmpeg und konfigurierte Provider        |
 | Dynamischer Router, Skills und Tool-Registry        | Roadmap                         | Runtime- und Berechtigungsmodell                |
 | Hybrides RAG, Reranker und Evaluationsdatensatz     | Roadmap                         | Corpus und Evaluationsdesign                    |
 

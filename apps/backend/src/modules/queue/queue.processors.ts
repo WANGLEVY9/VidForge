@@ -5,36 +5,38 @@ import { Job } from 'bullmq';
 import { QUEUE_NAMES } from './queue.constants';
 import { MaterialService } from '../material/material.service';
 import { AgentService } from '../agent/agent.service';
+import { CreationService } from '../creation/creation.service';
+import { ExportService } from '../export/export.service';
 import type { AgentDispatchPayload } from '../agent/outbox/agent-outbox.service';
+import type { CreationComposeJob, CreationShotJob, ExportEncodeJob } from './queue.payloads';
 
 /**
- * 通用日志 Processor 基类(暂不绑定具体业务逻辑)
+ * Media Worker business processors.
  *
- * 在当前阶段,业务 Service 已经通过 QueueRunnerService 实现了
- * 「Redis 可用 → 走队列;否则进程内执行」的双轨。
- *
- * 这里给 4 个队列各注册一个轻量级 worker,作用是:
- * 1. 确保队列里堆积的任务能被消费(避免 active=0 但 waiting=N)
- * 2. 落 trace + 日志,便于在管理台 / Dashboard 查看
- * 3. 真正的业务执行通过 job.data.fn 的反射调用 — 但这种写法跨进程会出问题
- *
- * 实际策略:V1 把 BullMQ 当"任务持久化 + 重试 + DLQ"层,
- * Worker 内只接收"通知信号",真正执行体仍在原 Service 进程。
- * 这等价于:Service 入队后立即 enqueue,Worker 收到后调原 Service 方法。
- *
- * 由于 NestJS DI 里跨模块循环引用问题,V1 我们只先开 active 心跳监控,
- * 让队列状态在 Dashboard 上能显示真实数据。
- * Phase 2 再把 creation/export 的 process 函数迁到这里。
+ * Jobs contain JSON-serializable snapshots and the processor resolves the
+ * domain service inside the worker process. No function references or API
+ * process callbacks cross the Redis boundary. Stable job IDs are assigned by
+ * the enqueueing service, while BullMQ retries transient worker failures.
  */
-@Processor(QUEUE_NAMES.CREATION_SHOT)
+@Processor(QUEUE_NAMES.CREATION_SHOT, { concurrency: readMediaWorkerConcurrency() })
 export class CreationShotProcessor extends WorkerHost {
   private readonly logger = new Logger(CreationShotProcessor.name);
 
-  async process(job: Job): Promise<any> {
+  private creationService: CreationService | null = null;
+
+  constructor(private readonly moduleRef: ModuleRef) {
+    super();
+  }
+
+  async process(job: Job<CreationShotJob>): Promise<{ ok: true; taskId: string }> {
+    if (!this.creationService) {
+      this.creationService = this.moduleRef.get(CreationService, { strict: false });
+    }
+    const { taskId, dto } = job.data;
+    if (!taskId || !dto) throw new Error('creation-shot job 缺少 taskId 或 dto');
     this.logger.log(`[creation:shot] processing ${job.name} id=${job.id}`);
-    // 占位:V1 将业务体留在 CreationService.processTask 中,
-    //       入队仅用于"持久化 + 监控"。Phase 2 会把执行体迁过来。
-    return { ok: true, jobId: job.id };
+    await this.creationService.processShots(taskId, dto);
+    return { ok: true, taskId };
   }
 
   @OnWorkerEvent('completed')
@@ -48,23 +50,47 @@ export class CreationShotProcessor extends WorkerHost {
   }
 }
 
-@Processor(QUEUE_NAMES.CREATION_COMPOSE)
+@Processor(QUEUE_NAMES.CREATION_COMPOSE, { concurrency: readMediaWorkerConcurrency() })
 export class CreationComposeProcessor extends WorkerHost {
   private readonly logger = new Logger(CreationComposeProcessor.name);
 
-  async process(job: Job): Promise<any> {
+  private creationService: CreationService | null = null;
+
+  constructor(private readonly moduleRef: ModuleRef) {
+    super();
+  }
+
+  async process(job: Job<CreationComposeJob>): Promise<{ ok: true; taskId: string }> {
+    if (!this.creationService) {
+      this.creationService = this.moduleRef.get(CreationService, { strict: false });
+    }
+    const { taskId, dto } = job.data;
+    if (!taskId || !dto) throw new Error('creation-compose job 缺少 taskId 或 dto');
     this.logger.log(`[creation:compose] processing ${job.name} id=${job.id}`);
-    return { ok: true, jobId: job.id };
+    await this.creationService.processComposition(taskId, dto);
+    return { ok: true, taskId };
   }
 }
 
-@Processor(QUEUE_NAMES.EXPORT_ENCODE)
+@Processor(QUEUE_NAMES.EXPORT_ENCODE, { concurrency: readMediaWorkerConcurrency() })
 export class ExportEncodeProcessor extends WorkerHost {
   private readonly logger = new Logger(ExportEncodeProcessor.name);
 
-  async process(job: Job): Promise<any> {
+  private exportService: ExportService | null = null;
+
+  constructor(private readonly moduleRef: ModuleRef) {
+    super();
+  }
+
+  async process(job: Job<ExportEncodeJob>): Promise<{ ok: true; taskId: string }> {
+    if (!this.exportService) {
+      this.exportService = this.moduleRef.get(ExportService, { strict: false });
+    }
+    const { taskId, sourceUrl } = job.data;
+    if (!taskId) throw new Error('export-encode job 缺少 taskId');
     this.logger.log(`[export:encode] processing ${job.name} id=${job.id}`);
-    return { ok: true, jobId: job.id };
+    await this.exportService.processExport(taskId, sourceUrl);
+    return { ok: true, taskId };
   }
 }
 
@@ -132,4 +158,13 @@ function readAgentWorkerConcurrency(env: NodeJS.ProcessEnv = process.env): numbe
   return Math.max(1, Math.min(parsed, 16));
 }
 
-export const __queueProcessorTestables = { readAgentWorkerConcurrency };
+function readMediaWorkerConcurrency(env: NodeJS.ProcessEnv = process.env): number {
+  const parsed = Number.parseInt(env.MEDIA_WORKER_CONCURRENCY ?? '2', 10);
+  if (!Number.isFinite(parsed)) return 2;
+  return Math.max(1, Math.min(parsed, 8));
+}
+
+export const __queueProcessorTestables = {
+  readAgentWorkerConcurrency,
+  readMediaWorkerConcurrency,
+};

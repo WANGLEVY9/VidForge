@@ -163,7 +163,7 @@ Queue jobs поддерживают attempts, priorities, delays и idempotent j
 
 Реализовано: frontend workspace, аутентификация, продуктовые пространства, материалы, сценарии, задачи, Multi-Agent graph, перепланирование качества, базовый RAG, memory по scope, FFmpeg-композиция, PostgreSQL checkpoint с node-level recovery, отдельный Agent Worker, Provider-operation ledger и опциональные Redis/BullMQ пути.
 
-Уже реализованы: опциональный HITL через `interrupt()`/resume, redacted inspection checkpoint, replay/fork в изолированных threads, transactional Agent outbox и разделение ролей Agent/Media Worker. В плане остаются versioning workflow, полноценная бизнес-реализация Workers для creation/composition/export, динамический subagent router, управляемый реестр skills/tools, hybrid RAG с reranker и evaluation dataset для Agent trajectories.
+Уже реализованы: опциональный HITL через `interrupt()`/resume, redacted inspection checkpoint, replay/fork в изолированных threads, transactional Agent outbox, разделение ролей Agent/Media Worker и реальное выполнение бизнес-задач в очередях creation/composition/export. В плане остаются versioning workflow, динамический subagent router, управляемый реестр skills/tools, hybrid RAG с reranker и evaluation dataset для Agent trajectories.
 
 Архитектурные ориентиры: [LangGraph.js](https://github.com/langchain-ai/langgraphjs), [DeerFlow](https://github.com/bytedance/deer-flow), [Letta](https://github.com/letta-ai/letta), [Claude Code subagents](https://code.claude.com/docs/en/sub-agents). Это не означает функционального равенства или повторного использования кода.
 
@@ -183,6 +183,7 @@ Queue jobs поддерживают attempts, priorities, delays и idempotent j
 | Provider-operation ledger и audit владельца        | Реализовано                     | PostgreSQL; идемпотентность зависит от адаптера |
 | Human approval / interrupt-resume                  | Реализовано опционально         | Checkpoint persistence; review UI через API     |
 | Agent outbox и изолированный replay/fork           | Реализовано                     | PostgreSQL + Redis                              |
+| Media Worker для shot/compose/export               | Реализовано                     | Redis, FFmpeg и настроенные Provider            |
 | Dynamic router, skills и tool registry             | Roadmap                         | Runtime и permission model                      |
 | Hybrid RAG, reranker и evaluation dataset          | Roadmap                         | Corpus и evaluation design                      |
 

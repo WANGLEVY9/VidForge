@@ -63,14 +63,15 @@ Implemented:
 - owner-scoped checkpoint replay and isolated fork runs with a copied thread;
 - transactional Agent outbox delivery with bounded retry and stale-lock recovery;
 - multiple Agent Worker processes with a bounded per-process concurrency.
+- JSON-serializable media jobs for shot generation, composition and export;
+- independent Media Worker execution for all three media queues, with stable job
+  IDs, bounded concurrency and processor failures propagated to BullMQ retry/DLQ.
 
 Not yet implemented:
 
 - exactly-once external provider calls independent of provider idempotency;
 - event-sourced workflow history, workflow code versioning or global replay
   compatibility checks;
-- real business implementations for the reserved creation, composition and
-  export Worker processors (the role boundary and material Worker are present);
 - an organization-level role, budget and policy engine.
 
 ## Owner audit API
@@ -105,9 +106,11 @@ pnpm --filter @vidforge/backend migration:run
 pnpm checkpointer:setup
 ```
 
-Run the API, Agent Worker and optional Media Worker separately with the same
-PostgreSQL and Redis URLs. If an Agent task appears stuck, inspect its owner
-audit first, then verify:
+Run the API, Agent Worker and Media Worker separately with the same PostgreSQL
+and Redis URLs. If a media task appears stuck, verify that the Media Worker is
+consuming `creation-shot`, `creation-compose`, `export-encode` and
+`material-analyze`. If an Agent task appears stuck, inspect its owner audit
+first, then verify:
 
 1. `agent_runs.leaseUntil` and `heartbeatAt` are progressing;
 2. the `agent-run` queue has an active Worker;

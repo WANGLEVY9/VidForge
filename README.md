@@ -278,6 +278,9 @@ This separation is the main extension point for community adapters. A new provid
 ### Execution infrastructure
 
 - BullMQ queues cover shot generation, composition, export and material analysis.
+- With `PROCESS_ROLE=media-worker`, shot generation, composition and export are
+  executed by real cross-process processors; the API only persists the task and
+  enqueues a JSON job with a stable ID.
 - Redis health is checked and cached; an unavailable Redis falls back to fire-and-forget in-process execution for local development.
 - Queue jobs support bounded attempts, priorities, delays and idempotent job IDs.
 - Deterministic ARK responses use Redis as a cross-process cache with an in-memory LRU fallback.
@@ -305,6 +308,7 @@ Trace writes and optional OTLP export are fail-soft: observability failure is no
 | Provider operation ledger and owner audit          | Implemented                  | PostgreSQL; Provider idempotency is adapter-dependent     |
 | Human approval / interrupt-resume                  | Implemented opt-in           | Checkpointer; review UI can be built on the API           |
 | Agent outbox and isolated replay/fork              | Implemented                  | PostgreSQL + Redis; provider idempotency remains external |
+| Cross-process media Workers (shot/compose/export)  | Implemented                  | Redis, FFmpeg and configured video/storage providers      |
 | Dynamic subagent router, skills and tool registry  | Roadmap                      | Runtime and permission model                              |
 | Hybrid RAG, reranker and evaluation dataset        | Roadmap                      | Corpus and evaluation work                                |
 

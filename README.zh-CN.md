@@ -171,15 +171,16 @@ Composition Agent 的实际路径包括：
 文本、视频、TTS、对象存储和媒体处理都通过业务级 TypeScript 契约隔离。当前适配器包括 ARK 文本/视频、Volcano/OpenSpeech TTS、阿里云 OSS 和 FFmpeg。
 
 - BullMQ 覆盖镜头生成、合成、导出和素材分析；Redis 不可用时，开发环境可使用进程内 fallback。
+- 配置 `PROCESS_ROLE=media-worker` 后，镜头生成、合成和导出由真实的跨进程业务 Processor 执行；API 只负责持久化任务并投递带稳定 Job ID 的 JSON 载荷。
 - ARK 响应使用 Redis 跨进程缓存，并以进程内 LRU 作为 fallback。
 - `trace_spans` 记录任务、作用域、span、延迟、状态、模型、Token、估算成本、缓存命中和元数据；`provider_operations` 单独记录 Agent 视频调用的外部副作用。
 - Agent 额外记录重试次数、trace-span 数量、记忆命中数、最高记忆得分和 RAG 引用数量。
 
 ## 能力边界与路线图
 
-当前已经实现：前端工作台、认证、商品空间、素材、脚本、任务、Multi-Agent 状态图、质量重规划、基础 RAG、作用域记忆、FFmpeg 合成、PostgreSQL checkpoint、HITL interrupt/resume、脱敏状态检查、replay/fork、Agent Outbox 和独立 Agent Worker。
+当前已经实现：前端工作台、认证、商品空间、素材、脚本、任务、Multi-Agent 状态图、质量重规划、基础 RAG、作用域记忆、FFmpeg 合成、PostgreSQL checkpoint、HITL interrupt/resume、脱敏状态检查、replay/fork、Agent Outbox、独立 Agent Worker，以及真实消费创建/合成/导出队列的 Media Worker。
 
-当前仍属于路线图：工作流版本兼容、事件溯源兼容性、创建/合成/导出队列的真实业务 Worker 实现、动态子 Agent 路由、技能和工具注册表、混合 RAG 重排以及 Agent 轨迹评测数据集。
+当前仍属于路线图：工作流版本兼容、事件溯源兼容性、动态子 Agent 路由、技能和工具注册表、混合 RAG 重排以及 Agent 轨迹评测数据集。
 
 路线图参考了 [LangGraph.js](https://github.com/langchain-ai/langgraphjs)、[DeerFlow](https://github.com/bytedance/deer-flow)、[Letta](https://github.com/letta-ai/letta) 和 [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents) 所代表的设计方向，但不宣称功能对等或代码复用。
 
@@ -200,6 +201,7 @@ Composition Agent 的实际路径包括：
 | Provider 操作账本与拥有者审计         | 已实现         | PostgreSQL；Provider 幂等语义取决于适配器     |
 | 人机审批 / interrupt-resume           | 已实现（可选） | Checkpoint 持久化；审核 UI 可基于 API 构建    |
 | Agent Outbox 与隔离 replay/fork       | 已实现         | PostgreSQL + Redis；Provider 幂等仍由外部保证 |
+| 跨进程 Media Worker（创建/合成/导出） | 已实现         | Redis、FFmpeg 与视频/存储 Provider            |
 | 动态子 Agent 路由、Skills、工具注册表 | 路线图         | 运行时与权限模型                              |
 | Hybrid RAG、Reranker 与评测数据集     | 路线图         | 语料和评测工作                                |
 

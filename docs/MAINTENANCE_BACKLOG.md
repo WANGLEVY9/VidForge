@@ -20,6 +20,7 @@ This is a practical backlog for improving VidForge as a real open-source project
 - [x] Add a transactional outbox that coordinates AgentRun writes and BullMQ dispatch.
 - [x] Add redacted checkpoint inspection, owner-scoped replay and isolated checkpoint fork.
 - [x] Add conditional multi-Worker claim tests, stale lease recovery and HITL resume tests.
+- [x] Move creation shot, composition and export processing into real Media Worker consumers with stable job IDs and retry propagation.
 - [x] Add a security test for path traversal and unsafe local media filenames.
 - [ ] Review dependency update PRs in isolated branches before merging.
 

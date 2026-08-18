@@ -16,6 +16,7 @@
 - LangGraph PostgreSQL checkpoint、节点级恢复和独立 Agent Worker
 - Agent transactional outbox、HITL interrupt/resume、checkpoint inspection、replay/fork API
 - API、Agent Worker 与 Media Worker 的角色隔离，以及可配置 Agent Worker 并发度
+- creation-shot、creation-compose、export-encode 三类媒体队列接入真实业务 Service，支持稳定 Job ID、独立 Media Worker 和失败重试
 
 ### Changed
 

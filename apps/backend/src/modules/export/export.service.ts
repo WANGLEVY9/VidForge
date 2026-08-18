@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +14,9 @@ import { CreateExportDto } from './dto/create-export.dto';
 import { CreationTask } from '../creation/entities/creation-task.entity';
 import { FfmpegService } from '../media/services/ffmpeg.service';
 import { StorageService } from '../media/services/storage.service';
+import { QueueRunnerService } from '../queue/queue-runner.service';
+import { JOB_NAMES, QUEUE_NAMES } from '../queue/queue.constants';
+import type { ExportEncodeJob } from '../queue/queue.payloads';
 
 /**
  * 导出服务
@@ -49,7 +53,8 @@ export class ExportService {
     @InjectRepository(CreationTask)
     private creationRepo: Repository<CreationTask>,
     private readonly ffmpeg: FfmpegService,
-    private readonly storage: StorageService
+    private readonly storage: StorageService,
+    @Optional() private readonly queueRunner?: QueueRunnerService
   ) {}
 
   async create(userId: string, dto: CreateExportDto): Promise<ExportTask> {
@@ -79,10 +84,27 @@ export class ExportService {
     });
     const saved = await this.exportRepo.save(task);
 
-    // fire-and-forget,内部更新 progress
-    void this.processExport(saved.id, sourceUrl).catch((err) => {
-      this.logger.error(`[export ${saved.id}] 异常: ${err?.message ?? err}`);
-    });
+    const job: ExportEncodeJob = { taskId: saved.id, sourceUrl };
+    if (this.queueRunner) {
+      void this.queueRunner
+        .enqueue(
+          QUEUE_NAMES.EXPORT_ENCODE,
+          JOB_NAMES.ENCODE_EXPORT,
+          job,
+          () => this.processExport(job.taskId, job.sourceUrl),
+          { jobId: `export-encode:${saved.id}`, attempts: 3 }
+        )
+        .catch(async (err: any) => {
+          await this.exportRepo.update(saved.id, {
+            status: 'failed',
+            errorMessage: `导出任务入队失败: ${(err?.message ?? String(err)).slice(0, 500)}`,
+          });
+        });
+    } else {
+      void this.processExport(job.taskId, job.sourceUrl).catch((err) => {
+        this.logger.error(`[export ${saved.id}] 异常: ${err?.message ?? err}`);
+      });
+    }
 
     return saved;
   }
@@ -95,21 +117,36 @@ export class ExportService {
    * - 转码阶段 FFmpeg 内部使用 8MB I/O 缓冲区,适配 4K 素材
    * - 进度更新合并批量写入,减少 DB roundtrip(每 5% 写一次而非每 1%)
    */
-  private async processExport(taskId: string, sourceUrl: string): Promise<void> {
+  async processExport(taskId: string, sourceUrl?: string): Promise<void> {
     const task = await this.exportRepo.findOneOrFail({ where: { id: taskId } });
+    if (task.status === 'completed') return;
+    if (!sourceUrl) {
+      const creation = await this.creationRepo.findOne({ where: { id: task.creationTaskId } });
+      sourceUrl = (creation?.result as any)?.url;
+    }
+    if (!sourceUrl) {
+      const error = new BadRequestException('导出任务缺少源视频 URL');
+      await this.exportRepo.update(taskId, {
+        status: 'failed',
+        errorMessage: error.message,
+      });
+      throw error;
+    }
     task.status = 'processing';
     task.progress = 5;
     await this.exportRepo.save(task);
 
-    const workdir = await this.storage.createTaskWorkdir('export', taskId);
+    let workdir: string | null = null;
 
     try {
+      workdir = await this.storage.createTaskWorkdir('export', taskId);
       // ── Step 1: 下载源视频(若是本地静态托管的 URL,这一步会迅速完成)─────────
       const localSource = path.join(workdir, 'source.mp4');
       // 当 sourceUrl 是本地 /static/... 路径时,我们其实可以直接 localFile,
       // 但走一遍 download 既支持本地也支持外链(ARK 的远程 OSS URL)
       await this.ffmpeg.downloadTo(this.normalizeUrl(sourceUrl), localSource);
       await this.updateProgress(taskId, 30, 'downloaded');
+      await this.assertActive(taskId);
 
       // ── Step 2: 真实转码 ─────────────────────────────
       // H.265 回退:当 creation.result.codec 为 'hevc' 或设备 UA 指示仅支持 H.265 时,
@@ -122,11 +159,13 @@ export class ExportService {
         ratio: '9:16', // 默认竖版,后续可从 creation.result 推断
       });
       await this.updateProgress(taskId, 80, 'transcoded');
+      await this.assertActive(taskId);
 
       // ── Step 3: 发布产物 ─────────────────────────────
       const publishName = `${taskId}.${ext}`;
       const published = await this.storage.publish(localOut, 'export', publishName);
       await this.updateProgress(taskId, 95, 'published');
+      await this.assertActive(taskId);
 
       // ── Step 4: 写最终结果 ─────────────────────────────
       const final = await this.exportRepo.findOneOrFail({ where: { id: taskId } });
@@ -144,9 +183,15 @@ export class ExportService {
         status: 'failed',
         errorMessage: msg.slice(0, 500),
       });
+      throw err;
     } finally {
-      await this.storage.cleanupTaskWorkdir('export', taskId);
+      if (workdir) await this.storage.cleanupTaskWorkdir('export', taskId);
     }
+  }
+
+  private async assertActive(taskId: string): Promise<void> {
+    const task = await this.exportRepo.findOne({ where: { id: taskId } });
+    if (!task || task.status === 'failed') throw new Error('导出任务已取消或不存在');
   }
 
   private async updateProgress(taskId: string, progress: number, _stage: string): Promise<void> {

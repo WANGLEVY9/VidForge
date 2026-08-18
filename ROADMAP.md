@@ -13,7 +13,7 @@ VidForge 的路线图以可复现、可贡献和可部署为优先级。时间�
 - [x] 增加 LangGraph 状态检查、HITL interrupt/resume、replay 与隔离 fork
 - [x] 支持多个 Agent Worker 进程、租约竞争与故障恢复测试
 - [ ] 补充端到端最小冒烟测试
-- [ ] 将创建、合成、导出队列的保留 Processor 迁移为真实业务 Worker
+- [x] 将创建、合成、导出队列的 Processor 迁移为真实业务 Worker
 
 ## Next — 可观察、可扩展的视频管线
 

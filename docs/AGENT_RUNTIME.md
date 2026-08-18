@@ -31,6 +31,14 @@ material_analysis -> script_generation -> [human_review] -> video_composition ->
   `PROCESS_ROLE=agent-worker` process starts a separate Nest application
   context with the Agent consumer; the worker claims a pending run with a
   conditional status update. Progress updates renew its lease and heartbeat.
+- Creation, composition and export HTTP requests enqueue JSON-only jobs with
+  stable IDs. The `PROCESS_ROLE=media-worker` process resolves the owning
+  service from Nest's application context and executes the real provider or
+  FFmpeg operation; no API-process callback is serialized into Redis.
+- `creation-shot` schedules `creation-compose` after successful shots are
+  persisted. `export-encode` resumes from the persisted export task and source
+  URL. A completed export or creation task is a no-op on a duplicate delivery,
+  while transient processor errors are rethrown so BullMQ can retry them.
 - LangGraph is compiled with `PostgresSaver` and invoked with the run's stable
   `thread_id`. Each graph super-step is persisted. When a worker lease expires,
   the next worker changes the run back to `pending` and invokes the same thread
@@ -95,6 +103,7 @@ AGENT_LEASE_DURATION_MS=120000
 # PROCESS_ROLE=media-worker        # material/media queue consumer
 # AGENT_WORKER_ID=agent-worker-1
 # AGENT_WORKER_CONCURRENCY=2       # bounded 1..16 per process
+# MEDIA_WORKER_CONCURRENCY=2       # bounded 1..8 per process
 # QUEUE_INLINE_FALLBACK=false      # production default
 ```
 
@@ -122,10 +131,9 @@ The durable execution boundary is now implemented for the LangGraph workflow:
 - PostgreSQL/Redis must be configured in production. Inline execution is only
   a development fallback and should not be enabled for a production API.
 
-Workflow code versioning, event-sourced history, provider-independent
-exactly-once semantics and full business implementations for every reserved
-media queue remain follow-up milestones. See [the reliability model](./RELIABILITY_MODEL.md)
-for the current guarantee and failure boundary.
+Workflow code versioning, event-sourced history and provider-independent
+exactly-once semantics remain follow-up milestones. See [the reliability
+model](./RELIABILITY_MODEL.md) for the current guarantee and failure boundary.
 
 ## Deployment checklist
 
@@ -137,7 +145,7 @@ pnpm --filter @vidforge/backend migration:run
 pnpm checkpointer:setup
 ```
 
-Run the API and Agent Worker as separate processes with the same
+Run the API, Agent Worker and Media Worker as separate processes with the same
 `DATABASE_URL`, `REDIS_URL`, and provider credentials:
 
 ```bash
@@ -148,6 +156,6 @@ PROCESS_ROLE=media-worker pnpm --filter @vidforge/backend start:media-worker
 
 `render.yaml` contains the API and Agent Worker definitions. For Railway,
 deploy the normal `railway.json` as the API service, `railway.worker.json` for
-the Agent Worker, and `railway.media-worker.json` for the optional Media
-Worker. Workers do not expose HTTP; health is represented by BullMQ activity
-and AgentRun lease heartbeats.
+the Agent Worker, and `railway.media-worker.json` for the Media Worker. Workers
+do not expose HTTP; health is represented by BullMQ activity and AgentRun lease
+heartbeats.

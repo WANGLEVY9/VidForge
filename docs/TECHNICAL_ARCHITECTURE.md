@@ -96,8 +96,8 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 │  │  Queue System (BullMQ + explicit dev fallback)                │   │
 │  │  5 queues: creation-shot / creation-compose / export-encode  │   │
 │  │            / material-analyze / agent-run                     │   │
-│  │  agent-run is consumed by a dedicated Agent Worker            │   │
-│  │  Redis available → persistent queue; dev-only fallback         │   │
+│  │  agent-run is consumed by Agent Worker; media queues by Media  │   │
+│  │  Worker. Redis available → persistent queue; dev fallback      │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
                                 │
@@ -127,7 +127,7 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 - **Separation of Concerns**: Frontend (React) and Backend (NestJS) communicate via REST API + WebSocket
 - **Modular Design**: Business logic is organized into independent feature modules
 - **Graceful Degradation**: All AI/ML integrations have fallback mechanisms; no single dependency is critical
-- **Async Processing**: Long-running media tasks use BullMQ; the Agent workflow is consumed by an independent worker, while inline fallback is development-only and production-like environments fail closed by default
+- **Async Processing**: Long-running media tasks use BullMQ; Agent and media workflows are consumed by independent workers, while inline fallback is development-only and production-like environments fail closed by default
 - **Durable Graph State**: LangGraph `PostgresSaver` persists super-step checkpoints under a stable `thread_id`; stale leases are requeued and resumed with null input
 - **Provider Side-effect Ledger**: Agent video requests persist a stable idempotency key, request hash and remote task ID so paid external work remains inspectable across worker restarts
 - **Agent-Driven Pipeline**: LangGraph orchestrates multi-step AI workflows with self-reflection and feedback loops
@@ -153,7 +153,7 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 |              | PostgreSQL                             | 14+     | Primary database                          |
 |              | pgvector                               | -       | Vector similarity search                  |
 |              | Redis                                  | 7+      | Cache / Queue / PubSub                    |
-|              | BullMQ                                 | 5.x     | Task queue (5 queues, dual-mode)          |
+|              | BullMQ                                 | 5.x     | Task queue (5 queues, worker roles)       |
 |              | Socket.IO                              | 4.x     | WebSocket                                 |
 |              | LangChain / LangGraph                  | 1.x     | Agent orchestration                       |
 |              | FFmpeg                                 | 5+      | Media processing (spawn-based)            |
@@ -346,6 +346,16 @@ Knowledge: Product space selling points, brand voice, best practices
 - Subtitle burn failure → returns un-subtitled video
 - Auto-retry with exponential backoff for transient ARK API errors
 
+**Worker Boundary**:
+
+- `creation-shot` executes the provider polling flow in `PROCESS_ROLE=media-worker`.
+- Successful shot persistence schedules `creation-compose` with a stable job ID;
+  composition publishes the final creation artifact and is safe on duplicate
+  completed deliveries.
+- `export-encode` executes download, FFmpeg transcode and storage publish in the
+  same Media Worker role. Processor failures are rethrown for BullMQ retry/DLQ;
+  cancellation is checked between expensive stages.
+
 ---
 
 ### 4.4 Agent Orchestration
@@ -443,6 +453,10 @@ AnalyticsService injects `QueueRunnerService` and `TraceService` — both from `
 1. Export task creation → download source → FFmpeg transcode → publish → completion notification
 2. Supports per-shot individual download
 3. Multiple export formats and resolutions (see Creation Module)
+
+**Worker Boundary**: `POST /api/export` only persists the task and enqueues an
+idempotent `export-encode:<taskId>` job. The Media Worker resolves
+`ExportService` and performs the complete pipeline outside the API process.
 
 **Tracking**: ExportTask entity with status, progress, and completion tracking.
 

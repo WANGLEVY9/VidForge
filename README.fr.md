@@ -169,7 +169,7 @@ Les jobs BullMQ supportent attempts, priorités, délais et identifiants idempot
 
 Implémenté : workspace frontend, authentification, espaces produit, médias, scripts, tâches, graphe Multi-Agent, replanification qualité, RAG de base, mémoire scopée, composition FFmpeg, checkpoints PostgreSQL avec reprise de nœud, Agent Worker séparé, ledger d’opérations Provider et chemins Redis/BullMQ optionnels.
 
-Sont également implémentés : HITL optionnel avec `interrupt()`/resume, inspection de checkpoint redigée, replay/fork sur des threads isolés, outbox transactionnelle Agent et rôles séparés Agent/Media Worker. Restent dans la feuille de route : versioning du workflow, implémentations métier complètes des Workers création/composition/export, routeur de subagents, registre skills/tools, RAG hybride avec reranker et évaluation des trajectoires Agent.
+Sont également implémentés : HITL optionnel avec `interrupt()`/resume, inspection de checkpoint redigée, replay/fork sur des threads isolés, outbox transactionnelle Agent, rôles séparés Agent/Media Worker et exécution métier réelle des queues création/composition/export. Restent dans la feuille de route : versioning du workflow, routeur de subagents, registre skills/tools, RAG hybride avec reranker et évaluation des trajectoires Agent.
 
 Références de conception : [LangGraph.js](https://github.com/langchain-ai/langgraphjs), [DeerFlow](https://github.com/bytedance/deer-flow), [Letta](https://github.com/letta-ai/letta) et [Claude Code subagents](https://code.claude.com/docs/en/sub-agents). Ces liens n’impliquent ni parité fonctionnelle ni réutilisation de code.
 
@@ -189,6 +189,7 @@ Références de conception : [LangGraph.js](https://github.com/langchain-ai/lang
 | Ledger Provider et audit du propriétaire       | Implémenté                    | PostgreSQL; idempotence Provider dépendante de l’adaptateur |
 | Approbation humaine / interrupt-resume         | Implémenté optionnel          | Checkpoint persistant ; UI via API                          |
 | Outbox Agent et replay/fork isolé              | Implémenté                    | PostgreSQL + Redis                                          |
+| Workers média shot/composition/export          | Implémenté                    | Redis, FFmpeg et Providers configurés                       |
 | Routeur dynamique, skills et registry tools    | Feuille de route              | Modèle runtime et permissions                               |
 | RAG hybride, reranker et dataset d’évaluation  | Feuille de route              | Corpus et protocole d’évaluation                            |
 

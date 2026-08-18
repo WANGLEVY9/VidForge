@@ -165,7 +165,7 @@ Queue job は attempts、priority、delay、idempotent job ID をサポートし
 
 実装済み：フロントエンドワークスペース、認証、商品スペース、素材、脚本、タスク、Multi-Agent グラフ、品質再計画、基礎 RAG、スコープ付きメモリ、FFmpeg 合成、PostgreSQL checkpoint と node 復旧、独立 Agent Worker、Provider operation ledger、任意の Redis/BullMQ 経路。
 
-実装済み：オプトイン HITL の `interrupt()`/resume、redacted checkpoint inspection、分離 thread による replay/fork、Agent transactional outbox、Agent/Media Worker の役割分離。今後の課題は workflow versioning、creation/composition/export の業務実装、動的 subagent router、権限付き skills/tools、hybrid RAG と reranker、Agent trajectory 評価データセットです。
+実装済み：オプトイン HITL の `interrupt()`/resume、redacted checkpoint inspection、分離 thread による replay/fork、Agent transactional outbox、Agent/Media Worker の役割分離、creation/composition/export キューの実業務処理。今後の課題は workflow versioning、動的 subagent router、権限付き skills/tools、hybrid RAG と reranker、Agent trajectory 評価データセットです。
 
 設計の参考：[LangGraph.js](https://github.com/langchain-ai/langgraphjs)、[DeerFlow](https://github.com/bytedance/deer-flow)、[Letta](https://github.com/letta-ai/letta)、[Claude Code subagents](https://code.claude.com/docs/en/sub-agents)。機能同等やコード再利用を意味しません。
 
@@ -185,6 +185,7 @@ Queue job は attempts、priority、delay、idempotent job ID をサポートし
 | Provider operation ledger and owner audit          | Implemented                  | PostgreSQL; Provider idempotency is adapter-dependent |
 | Human approval / interrupt-resume                  | Implemented (opt-in)         | Checkpoint persistence; review UI via API             |
 | Agent outbox and isolated replay/fork              | Implemented                  | PostgreSQL + Redis                                    |
+| Cross-process media Worker (shot/compose/export)   | Implemented                  | Redis、FFmpeg、設定済み Provider                      |
 | Dynamic router, skills and tool registry           | Roadmap                      | Runtime and permission model                          |
 | Hybrid RAG, reranker and evaluation dataset        | Roadmap                      | Corpus and evaluation work                            |
 
