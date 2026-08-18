@@ -1,6 +1,18 @@
 import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 
+export interface AgentCheckpointSummary {
+  checkpointId: string;
+  createdAt: string;
+  source: 'input' | 'loop' | 'update' | 'fork' | 'unknown';
+  step: number | null;
+  status: string | null;
+  currentNode: string | null;
+  progress: number | null;
+  retryCount: number | null;
+  nextNodes: string[];
+}
+
 /**
  * Owns the LangGraph persistence boundary.
  *
@@ -54,6 +66,25 @@ export class AgentCheckpointService implements OnApplicationShutdown {
       : null;
   }
 
+  /**
+   * Returns a deliberately compact, user-safe checkpoint timeline. Raw graph
+   * channel values may include prompts, assets and memory, so they are not
+   * exposed through the control-plane API.
+   */
+  async listSummaries(threadId: string, limit = 20): Promise<AgentCheckpointSummary[]> {
+    const saver = this.get();
+    if (!saver) return [];
+    const boundedLimit = Math.max(1, Math.min(Math.floor(limit), 50));
+    const summaries: AgentCheckpointSummary[] = [];
+    for await (const tuple of saver.list(
+      { configurable: { thread_id: threadId } },
+      { limit: boundedLimit }
+    )) {
+      summaries.push(toSummary(tuple));
+    }
+    return summaries;
+  }
+
   async onApplicationShutdown(): Promise<void> {
     if (!this.saver) return;
     await this.saver.end();
@@ -75,3 +106,38 @@ function resolveDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string | unde
 }
 
 export { resolveDatabaseUrl };
+
+function toSummary(tuple: any): AgentCheckpointSummary {
+  const values = (tuple?.checkpoint?.channel_values ?? {}) as Record<string, unknown>;
+  const metadata = (tuple?.metadata ?? {}) as Record<string, unknown>;
+  const configurable = (tuple?.config?.configurable ?? {}) as Record<string, unknown>;
+  const currentNode = stringValue(values.currentNode);
+  return {
+    checkpointId:
+      stringValue(configurable.checkpoint_id) ?? stringValue(tuple?.checkpoint?.id) ?? '',
+    createdAt: stringValue(tuple?.checkpoint?.ts) ?? new Date(0).toISOString(),
+    source: checkpointSource(metadata.source),
+    step: numberValue(metadata.step),
+    status: stringValue(values.status),
+    currentNode,
+    progress: numberValue(values.progress),
+    retryCount: numberValue(values.retryCount),
+    nextNodes: currentNode && currentNode !== '__end__' ? [currentNode] : [],
+  };
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function numberValue(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function checkpointSource(value: unknown): AgentCheckpointSummary['source'] {
+  return value === 'input' || value === 'loop' || value === 'update' || value === 'fork'
+    ? value
+    : 'unknown';
+}
+
+export const __checkpointTestables = { toSummary };

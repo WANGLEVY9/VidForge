@@ -79,7 +79,7 @@ flowchart LR
     MEDIA --> STORAGE[Local or object storage]
 ```
 
-Состояние графа содержит запрос, найденную память, анализ материалов, план сценария, RAG-доказательства, результат композиции, измерения качества, ошибки и сводки trace. PostgreSQL хранит запись запуска и финальное состояние; выполнение графа пока остаётся внутри процесса. Persistent LangGraph checkpointer и восстановление узлов после перезапуска Worker находятся в roadmap.
+Состояние графа содержит запрос, найденную память, анализ материалов, план сценария, RAG-доказательства, результат композиции, измерения качества, ошибки и сводки trace. PostgreSQL хранит control plane запуска и финальное состояние. `PostgresSaver` сохраняет super-step checkpoint LangGraph; отдельный Agent Worker забирает просроченный lease и продолжает тот же thread с последнего незавершённого узла. Это восстановление на границе узла, а не event-sourced workflow engine и не гарантия exactly-once для сторонних Provider.
 
 ### Управление и семантика ошибок
 
@@ -161,32 +161,33 @@ Queue jobs поддерживают attempts, priorities, delays и idempotent j
 
 ## Реализовано и план развития
 
-Реализовано: frontend workspace, аутентификация, продуктовые пространства, материалы, сценарии, задачи, Multi-Agent graph, перепланирование качества, базовый RAG, memory по scope, FFmpeg-композиция и опциональные Redis/BullMQ пути.
+Реализовано: frontend workspace, аутентификация, продуктовые пространства, материалы, сценарии, задачи, Multi-Agent graph, перепланирование качества, базовый RAG, memory по scope, FFmpeg-композиция, PostgreSQL checkpoint с node-level recovery, отдельный Agent Worker, Provider-operation ledger и опциональные Redis/BullMQ пути.
 
-В плане: persistent LangGraph checkpoint, восстановление узлов после перезапуска Worker, человеческое подтверждение и interrupt-resume, динамический subagent router, управляемый реестр skills/tools, hybrid RAG с reranker и evaluation dataset для Agent trajectories.
+В плане: человеческое подтверждение и interrupt-resume, checkpoint replay/fork, versioning workflow, transactional outbox, настоящие отдельные Worker для creation/composition/export, динамический subagent router, управляемый реестр skills/tools, hybrid RAG с reranker и evaluation dataset для Agent trajectories.
 
 Архитектурные ориентиры: [LangGraph.js](https://github.com/langchain-ai/langgraphjs), [DeerFlow](https://github.com/bytedance/deer-flow), [Letta](https://github.com/letta-ai/letta), [Claude Code subagents](https://code.claude.com/docs/en/sub-agents). Это не означает функционального равенства или повторного использования кода.
 
 ### Матрица возможностей
 
-| Возможность                                        | Статус                          | Внешнее требование                            |
-| -------------------------------------------------- | ------------------------------- | --------------------------------------------- |
-| Frontend studio и browser-only `/try`              | Реализовано                     | Для `/try` ничего дополнительного             |
-| Auth, product spaces, материалы, сценарии и задачи | Реализовано                     | PostgreSQL                                    |
-| Multi-Agent graph и перепланирование качества      | Реализовано                     | Text/video Provider для настоящего результата |
-| Script RAG и передача ссылок                       | Реализована базовая версия      | Для встроенных seed ничего дополнительного    |
-| Scoped memory и Context Packet                     | Реализована лексическая база    | PostgreSQL                                    |
-| Семантический поиск материалов                     | Опциональный реализованный путь | pgvector + embedding endpoint                 |
-| FFmpeg-композиция                                  | Реализовано                     | Локальный FFmpeg                              |
-| Durable queue и cross-process cache                | Опциональный реализованный путь | Redis                                         |
-| Точное восстановление checkpoint                   | Roadmap                         | LangGraph checkpointer                        |
-| Human approval / interrupt-resume                  | Roadmap                         | Checkpoint persistence и review UI            |
-| Dynamic router, skills и tool registry             | Roadmap                         | Runtime и permission model                    |
-| Hybrid RAG, reranker и evaluation dataset          | Roadmap                         | Corpus и evaluation design                    |
+| Возможность                                        | Статус                          | Внешнее требование                              |
+| -------------------------------------------------- | ------------------------------- | ----------------------------------------------- |
+| Frontend studio и browser-only `/try`              | Реализовано                     | Для `/try` ничего дополнительного               |
+| Auth, product spaces, материалы, сценарии и задачи | Реализовано                     | PostgreSQL                                      |
+| Multi-Agent graph и перепланирование качества      | Реализовано                     | Text/video Provider для настоящего результата   |
+| Script RAG и передача ссылок                       | Реализована базовая версия      | Для встроенных seed ничего дополнительного      |
+| Scoped memory и Context Packet                     | Реализована лексическая база    | PostgreSQL                                      |
+| Семантический поиск материалов                     | Опциональный реализованный путь | pgvector + embedding endpoint                   |
+| FFmpeg-композиция                                  | Реализовано                     | Локальный FFmpeg                                |
+| Durable queue и cross-process cache                | Опциональный реализованный путь | Redis                                           |
+| PostgreSQL checkpoint и node-level recovery        | Реализовано                     | PostgreSQL + отдельный Agent Worker             |
+| Provider-operation ledger и audit владельца        | Реализовано                     | PostgreSQL; идемпотентность зависит от адаптера |
+| Human approval / interrupt-resume                  | Roadmap                         | Checkpoint persistence и review UI              |
+| Dynamic router, skills и tool registry             | Roadmap                         | Runtime и permission model                      |
+| Hybrid RAG, reranker и evaluation dataset          | Roadmap                         | Corpus и evaluation design                      |
 
 ### Roadmap Agent-системы
 
-- **Durable execution и human oversight**: database-backed checkpoints, `interrupt()` approval nodes, trajectory replay.
+- **Durable execution и human oversight**: поверх реализованной базы checkpoint/lease добавить `interrupt()` approval nodes, replay/fork, versioning workflow и transactional outbox.
 - **Context engineering**: query planning, context compression, evidence gating и Token budget на узел.
 - **Hierarchical Multi-Agent**: типизированный router, delegation budget и изолированные state slices.
 - **Memory lifecycle**: consolidation, обработка противоречий, decay, promotion в product knowledge и retrieval metrics.
@@ -244,7 +245,7 @@ Frontend: `http://localhost:3000`, demo-flow `/try`, workspace `/workspace`, API
 
 ## API и участие
 
-Основные endpoints: `POST /api/agent/run`, `GET /api/agent/status/:taskId`, `POST /api/agent/cancel/:taskId`, `GET /api/agent/memory`, `GET /api/spaces`, `PATCH /api/material/:id/analyze`. Swagger является каноническим описанием запросов и ответов.
+Основные endpoints: `POST /api/agent/run`, `GET /api/agent/status/:taskId`, `GET /api/agent/runs/:taskId/audit`, `POST /api/agent/cancel/:taskId`, `GET /api/agent/memory`, `GET /api/spaces`, `PATCH /api/material/:id/analyze`. Swagger является каноническим описанием запросов и ответов.
 
 Будут полезны адаптеры Provider, оценка RAG, консолидация памяти, checkpoints, человеческое подтверждение, качество видео, субтитры, аудио, accessibility и надёжность деплоя. Начните с [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`docs/CONTRIBUTOR_QUICKSTART.md`](./docs/CONTRIBUTOR_QUICKSTART.md) и [`GOVERNANCE.md`](./GOVERNANCE.md).
 

@@ -79,7 +79,7 @@ flowchart LR
     MEDIA --> STORAGE[Local or object storage]
 ```
 
-グラフ状態はリクエスト、検索メモリ、素材解析、脚本、RAG の証拠、合成結果、品質軸、エラー、trace 概要を保持します。PostgreSQL は実行記録と最終状態を永続化しますが、グラフ実行は現在プロセス内です。永続 LangGraph checkpointer と Worker 再起動後のノード復旧はロードマップです。
+グラフ状態はリクエスト、検索メモリ、素材解析、脚本、RAG の証拠、合成結果、品質軸、エラー、trace 概要を保持します。PostgreSQL は実行 control plane と最終状態を永続化します。`PostgresSaver` は LangGraph の super-step checkpoint を保存し、独立した Agent Worker は期限切れ lease を回収して同じ thread を未完了 node から再開します。これは node 境界の復旧であり、event-sourced workflow engine や第三者 Provider の exactly-once を意味しません。
 
 ### 制御と失敗の扱い
 
@@ -163,32 +163,33 @@ Queue job は attempts、priority、delay、idempotent job ID をサポートし
 
 ## 実装状況とロードマップ
 
-実装済み：フロントエンドワークスペース、認証、商品スペース、素材、脚本、タスク、Multi-Agent グラフ、品質再計画、基礎 RAG、スコープ付きメモリ、FFmpeg 合成、任意の Redis/BullMQ 経路。
+実装済み：フロントエンドワークスペース、認証、商品スペース、素材、脚本、タスク、Multi-Agent グラフ、品質再計画、基礎 RAG、スコープ付きメモリ、FFmpeg 合成、PostgreSQL checkpoint と node 復旧、独立 Agent Worker、Provider operation ledger、任意の Redis/BullMQ 経路。
 
-ロードマップ：永続 LangGraph checkpoint、Worker 再起動後のノード復旧、人間承認と interrupt-resume、動的 subagent router、権限付き skills/tools、hybrid RAG と reranker、Agent trajectory 評価データセット。
+ロードマップ：人間承認と interrupt-resume、checkpoint replay/fork、workflow versioning、transactional outbox、creation/composition/export の真の独立 Worker、動的 subagent router、権限付き skills/tools、hybrid RAG と reranker、Agent trajectory 評価データセット。
 
 設計の参考：[LangGraph.js](https://github.com/langchain-ai/langgraphjs)、[DeerFlow](https://github.com/bytedance/deer-flow)、[Letta](https://github.com/letta-ai/letta)、[Claude Code subagents](https://code.claude.com/docs/en/sub-agents)。機能同等やコード再利用を意味しません。
 
 ### Capability matrix
 
-| Capability                                         | Status                       | External requirement                 |
-| -------------------------------------------------- | ---------------------------- | ------------------------------------ |
-| Frontend studio and browser-only `/try`            | Implemented                  | None for `/try`                      |
-| Auth, product spaces, materials, scripts and tasks | Implemented                  | PostgreSQL                           |
-| Multi-Agent graph and quality replan               | Implemented                  | Text/video Provider for real output  |
-| Script RAG and reference propagation               | Implemented baseline         | None for seed retrieval              |
-| Scoped memory and Context Packet                   | Implemented lexical baseline | PostgreSQL                           |
-| Material semantic search                           | Optional implemented path    | pgvector + embedding endpoint        |
-| FFmpeg composition                                 | Implemented                  | Local FFmpeg                         |
-| Durable queue and cross-process cache              | Optional implemented path    | Redis                                |
-| Exact checkpoint resume                            | Roadmap                      | LangGraph checkpointer               |
-| Human approval / interrupt-resume                  | Roadmap                      | Checkpoint persistence and review UI |
-| Dynamic router, skills and tool registry           | Roadmap                      | Runtime and permission model         |
-| Hybrid RAG, reranker and evaluation dataset        | Roadmap                      | Corpus and evaluation work           |
+| Capability                                         | Status                       | External requirement                                  |
+| -------------------------------------------------- | ---------------------------- | ----------------------------------------------------- |
+| Frontend studio and browser-only `/try`            | Implemented                  | None for `/try`                                       |
+| Auth, product spaces, materials, scripts and tasks | Implemented                  | PostgreSQL                                            |
+| Multi-Agent graph and quality replan               | Implemented                  | Text/video Provider for real output                   |
+| Script RAG and reference propagation               | Implemented baseline         | None for seed retrieval                               |
+| Scoped memory and Context Packet                   | Implemented lexical baseline | PostgreSQL                                            |
+| Material semantic search                           | Optional implemented path    | pgvector + embedding endpoint                         |
+| FFmpeg composition                                 | Implemented                  | Local FFmpeg                                          |
+| Durable queue and cross-process cache              | Optional implemented path    | Redis                                                 |
+| PostgreSQL checkpoint and node-level resume        | Implemented                  | PostgreSQL + dedicated Agent Worker                   |
+| Provider operation ledger and owner audit          | Implemented                  | PostgreSQL; Provider idempotency is adapter-dependent |
+| Human approval / interrupt-resume                  | Roadmap                      | Checkpoint persistence and review UI                  |
+| Dynamic router, skills and tool registry           | Roadmap                      | Runtime and permission model                          |
+| Hybrid RAG, reranker and evaluation dataset        | Roadmap                      | Corpus and evaluation work                            |
 
 ### Agent engineering roadmap
 
-- **Durable execution and human oversight**：database-backed checkpoint、`interrupt()` 承認ノード、trajectory replay。
+- **Durable execution and human oversight**：実装済みの checkpoint/lease 基盤の上に、`interrupt()` 承認 node、replay/fork、workflow versioning、transactional outbox を追加します。
 - **Context engineering**：query planning、context compression、evidence gating、ノードごとの Token budget。
 - **Hierarchical Multi-Agent**：型付き specialist router、delegation budget、分離された state slice。
 - **Memory lifecycle**：consolidation、矛盾処理、decay、run memory から product knowledge への昇格。
@@ -246,7 +247,7 @@ pnpm dev
 
 ## API とコントリビューション
 
-主要 API は `POST /api/agent/run`、`GET /api/agent/status/:taskId`、`POST /api/agent/cancel/:taskId`、`GET /api/agent/memory`、`GET /api/spaces`、`PATCH /api/material/:id/analyze` です。Swagger がリクエストとレスポンスの正規リファレンスです。
+主要 API は `POST /api/agent/run`、`GET /api/agent/status/:taskId`、`GET /api/agent/runs/:taskId/audit`、`POST /api/agent/cancel/:taskId`、`GET /api/agent/memory`、`GET /api/spaces`、`PATCH /api/material/:id/analyze` です。Swagger がリクエストとレスポンスの正規リファレンスです。
 
 Provider アダプター、RAG 評価、メモリ統合、checkpoint、人間承認、動画品質、字幕・音声、アクセシビリティ、デプロイ信頼性の貢献を歓迎します。まず [`CONTRIBUTING.md`](./CONTRIBUTING.md)、[`docs/CONTRIBUTOR_QUICKSTART.md`](./docs/CONTRIBUTOR_QUICKSTART.md)、[`GOVERNANCE.md`](./GOVERNANCE.md) をお読みください。
 

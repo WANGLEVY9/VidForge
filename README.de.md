@@ -79,7 +79,7 @@ flowchart LR
     MEDIA --> STORAGE[Local or object storage]
 ```
 
-Der Graph-State enthält Anfrage, abgerufene Memory, Medienanalyse, Skriptplan, RAG-Belege, Kompositionsergebnis, Qualitätsdimensionen, Fehler und Trace-Zusammenfassungen. PostgreSQL speichert Laufdatensatz und Endzustand; die Graph-Ausführung ist derzeit prozesslokal. Persistente LangGraph-Checkpoints und Wiederaufnahme nach Worker-Neustart sind Roadmap-Themen.
+Der Graph-State enthält Anfrage, abgerufene Memory, Medienanalyse, Skriptplan, RAG-Belege, Kompositionsergebnis, Qualitätsdimensionen, Fehler und Trace-Zusammenfassungen. PostgreSQL speichert die Lauf-Kontrollebene und den Endzustand. `PostgresSaver` persistiert LangGraph-Supersteps; ein separater Agent Worker übernimmt abgelaufene Leases und setzt denselben Thread am letzten unvollständigen Node fort. Dies ist Recovery an Node-Grenzen, kein eventgesourcter Workflow-Engine-Ersatz und keine Exactly-once-Garantie für Provider-Aufrufe.
 
 ### Steuerung und Fehlersemantik
 
@@ -161,32 +161,33 @@ Queue-Jobs unterstützen Attempts, Prioritäten, Verzögerungen und idempotente 
 
 ## Implementiert und Roadmap
 
-Implementiert: Frontend-Workspace, Authentifizierung, Produktbereiche, Medien, Skripte, Aufgaben, Multi-Agent-Graph, Qualitäts-Neuplanung, Basis-RAG, bereichsbezogenes Memory, FFmpeg-Komposition und optionale Redis/BullMQ-Pfade.
+Implementiert: Frontend-Workspace, Authentifizierung, Produktbereiche, Medien, Skripte, Aufgaben, Multi-Agent-Graph, Qualitäts-Neuplanung, Basis-RAG, bereichsbezogenes Memory, FFmpeg-Komposition, PostgreSQL-Checkpoints mit Node-Recovery, separater Agent Worker, Provider-Operations-Ledger und optionale Redis/BullMQ-Pfade.
 
-Roadmap: persistente LangGraph-Checkpoints, Wiederaufnahme nach Worker-Neustart, menschliche Freigabe und interrupt-resume, dynamischer Subagent-Router, berechtigungsbewusste Skills/Tools, hybrides RAG mit Reranker und Agent-Trajectory-Evaluation.
+Roadmap: menschliche Freigabe und interrupt-resume, Checkpoint replay/fork, Workflow-Versionierung, transaktionaler Outbox, echte unabhängige Worker für Creation/Composition/Export, dynamischer Subagent-Router, berechtigungsbewusste Skills/Tools, hybrides RAG mit Reranker und Agent-Trajectory-Evaluation.
 
 Design-Referenzen sind [LangGraph.js](https://github.com/langchain-ai/langgraphjs), [DeerFlow](https://github.com/bytedance/deer-flow), [Letta](https://github.com/letta-ai/letta) und [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents). Daraus folgt weder Feature-Parität noch Code-Wiederverwendung.
 
 ### Fähigkeitsmatrix
 
-| Fähigkeit                                           | Status                          | Externe Voraussetzung                  |
-| --------------------------------------------------- | ------------------------------- | -------------------------------------- |
-| Frontend-Studio und browser-only `/try`             | Implementiert                   | Keine für `/try`                       |
-| Auth, Produktbereiche, Medien, Skripte und Aufgaben | Implementiert                   | PostgreSQL                             |
-| Multi-Agent-Graph und Qualitäts-Neuplanung          | Implementiert                   | Text-/Video-Provider für echte Ausgabe |
-| Script-RAG und Referenzweitergabe                   | Baseline implementiert          | Keine für integrierte Seeds            |
-| Bereichsbezogenes Memory und Context Packet         | Lexikale Baseline implementiert | PostgreSQL                             |
-| Semantische Mediensuche                             | Optionaler Pfad implementiert   | pgvector + Embedding-Endpunkt          |
-| FFmpeg-Komposition                                  | Implementiert                   | Lokales FFmpeg                         |
-| Dauerhafte Queue und Cross-Process-Cache            | Optionaler Pfad implementiert   | Redis                                  |
-| Exakte Checkpoint-Wiederaufnahme                    | Roadmap                         | LangGraph-Checkpointer                 |
-| Menschliche Freigabe / interrupt-resume             | Roadmap                         | Checkpoint-Persistenz und Review-UI    |
-| Dynamischer Router, Skills und Tool-Registry        | Roadmap                         | Runtime- und Berechtigungsmodell       |
-| Hybrides RAG, Reranker und Evaluationsdatensatz     | Roadmap                         | Corpus und Evaluationsdesign           |
+| Fähigkeit                                           | Status                          | Externe Voraussetzung                           |
+| --------------------------------------------------- | ------------------------------- | ----------------------------------------------- |
+| Frontend-Studio und browser-only `/try`             | Implementiert                   | Keine für `/try`                                |
+| Auth, Produktbereiche, Medien, Skripte und Aufgaben | Implementiert                   | PostgreSQL                                      |
+| Multi-Agent-Graph und Qualitäts-Neuplanung          | Implementiert                   | Text-/Video-Provider für echte Ausgabe          |
+| Script-RAG und Referenzweitergabe                   | Baseline implementiert          | Keine für integrierte Seeds                     |
+| Bereichsbezogenes Memory und Context Packet         | Lexikale Baseline implementiert | PostgreSQL                                      |
+| Semantische Mediensuche                             | Optionaler Pfad implementiert   | pgvector + Embedding-Endpunkt                   |
+| FFmpeg-Komposition                                  | Implementiert                   | Lokales FFmpeg                                  |
+| Dauerhafte Queue und Cross-Process-Cache            | Optionaler Pfad implementiert   | Redis                                           |
+| PostgreSQL-Checkpoint und Node-Recovery             | Implementiert                   | PostgreSQL + separater Agent Worker             |
+| Provider-Operations-Ledger und Owner-Audit          | Implementiert                   | PostgreSQL; Provider-Idempotenz adapterabhängig |
+| Menschliche Freigabe / interrupt-resume             | Roadmap                         | Checkpoint-Persistenz und Review-UI             |
+| Dynamischer Router, Skills und Tool-Registry        | Roadmap                         | Runtime- und Berechtigungsmodell                |
+| Hybrides RAG, Reranker und Evaluationsdatensatz     | Roadmap                         | Corpus und Evaluationsdesign                    |
 
 ### Agent-Roadmap
 
-- **Dauerhafte Ausführung und menschliche Aufsicht**: DB-Checkpoints, `interrupt()`-Freigabeknoten und Trajectory-Replay.
+- **Dauerhafte Ausführung und menschliche Aufsicht**: auf der implementierten Checkpoint/Lease-Basis `interrupt()`-Freigabeknoten, Replay/Fork, Workflow-Versionierung und eine transaktionale Outbox ergänzen.
 - **Context Engineering**: Query Planning, Kompression, Evidence Gating und Token-Budget pro Node.
 - **Hierarchisches Multi-Agent**: typisierter Router, Delegationsbudgets und isolierte State-Slices.
 - **Memory-Lebenszyklus**: Konsolidierung, Widersprüche, Decay, Promotion zu Produktwissen und Retrieval-Metriken.
@@ -244,7 +245,7 @@ Keine Secrets in `VITE_*` ablegen: Vite bettet sie in Browser-Assets ein.
 
 ## API und Beiträge
 
-Wichtige Endpunkte sind `POST /api/agent/run`, `GET /api/agent/status/:taskId`, `POST /api/agent/cancel/:taskId`, `GET /api/agent/memory`, `GET /api/spaces` und `PATCH /api/material/:id/analyze`. Swagger ist die maßgebliche Referenz für Request und Response.
+Wichtige Endpunkte sind `POST /api/agent/run`, `GET /api/agent/status/:taskId`, `GET /api/agent/runs/:taskId/audit`, `POST /api/agent/cancel/:taskId`, `GET /api/agent/memory`, `GET /api/spaces` und `PATCH /api/material/:id/analyze`. Swagger ist die maßgebliche Referenz für Request und Response.
 
 Beiträge zu Provider-Adaptern, RAG-Evaluation, Memory-Konsolidierung, Checkpoints, menschlicher Freigabe, Videoqualität, Untertiteln, Audio, Accessibility und Deployment-Zuverlässigkeit sind willkommen. Bitte zuerst [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`docs/CONTRIBUTOR_QUICKSTART.md`](./docs/CONTRIBUTOR_QUICKSTART.md) und [`GOVERNANCE.md`](./GOVERNANCE.md) lesen.
 

@@ -3,6 +3,8 @@ import { AgentState } from '../interfaces/agent-state.interface';
 import { ArkVideoService } from '../../ai/services/ark-video.service';
 import { ArkConfigService } from '../../ai/services/ark-config.service';
 import { ComposerService, ComposeShotInput } from '../../media/services/composer.service';
+import { ProviderOperation } from '../provider-operations/provider-operation.entity';
+import { ProviderOperationService } from '../provider-operations/provider-operation.service';
 
 const POLL_INTERVAL_MS = 4000;
 const POLL_TIMEOUT_MS = 8 * 60 * 1000;
@@ -27,7 +29,8 @@ export class CompositionAgentService {
   constructor(
     private readonly arkVideo: ArkVideoService,
     private readonly arkConfig: ArkConfigService,
-    private readonly composer: ComposerService
+    private readonly composer: ComposerService,
+    private readonly providerOperations: ProviderOperationService
   ) {}
 
   async compose(state: AgentState): Promise<Partial<AgentState>> {
@@ -92,6 +95,7 @@ export class CompositionAgentService {
       const batch = shots.slice(i, i + MAX_PARALLEL_SHOTS);
       const results = await Promise.all(
         batch.map(async (shot) => {
+          let operation: ProviderOperation | undefined;
           try {
             // A resumed LangGraph node should not regenerate completed shots.
             // If only the remote task ID was checkpointed, continue polling it.
@@ -99,13 +103,46 @@ export class CompositionAgentService {
               return { shotId: shot.id, videoUrl: shot.videoUrl };
             }
 
-            let arkTaskId = shot.arkTaskId;
+            const ratio = '9:16';
+            const resolution = '720p';
+            const prompt = this.buildShotPrompt(shot.description, shot.script, shot.cameraMovement);
+            const idempotencyKey = `${state.taskId}:shot:${shot.id}`;
+            operation = await this.providerOperations.begin({
+              userId: state.userId ?? 'system',
+              runId: state.taskId,
+              nodeName: 'video_composition',
+              provider: 'ark-video',
+              capability: 'video',
+              idempotencyKey,
+              request: {
+                prompt,
+                ratio,
+                resolution,
+                duration: shot.duration,
+                firstFrameMaterialId: shot.materialId ?? null,
+              },
+              requestMetadata: {
+                shotId: shot.id,
+                shotOrder: shot.order,
+                duration: shot.duration,
+                ratio,
+                resolution,
+                hasFirstFrame: Boolean(shot.materialId),
+                recoveredFromCheckpoint: Boolean(shot.arkTaskId),
+              },
+            });
+
+            const storedVideoUrl = readVideoUrl(operation.resultMetadata);
+            if (operation.status === 'succeeded' && storedVideoUrl) {
+              shot.videoUrl = storedVideoUrl;
+              return { shotId: shot.id, videoUrl: storedVideoUrl };
+            }
+
+            let arkTaskId = shot.arkTaskId ?? operation.remoteOperationId ?? undefined;
             if (!arkTaskId) {
-              const ratio = '9:16';
-              const resolution = '720p';
               const created = await this.arkVideo.createTask({
-                prompt: this.buildShotPrompt(shot.description, shot.script, shot.cameraMovement),
-                idempotencyKey: `${state.taskId}:shot:${shot.id}`,
+                prompt,
+                idempotencyKey,
                 ratio: ratio as any,
                 resolution: resolution as any,
                 firstFrameUrl: shot.materialId
@@ -113,15 +150,31 @@ export class CompositionAgentService {
                   : undefined,
                 duration: shot.duration,
               });
+              operation = await this.providerOperations.markDispatched(operation, created.id);
               arkTaskId = created.id;
-              shot.arkTaskId = arkTaskId;
+            } else if (!operation.remoteOperationId) {
+              operation = await this.providerOperations.markDispatched(operation, arkTaskId);
             }
+            shot.arkTaskId = arkTaskId;
 
             const final = await this.poll(arkTaskId);
             shot.videoUrl = final.videoUrl;
+            await this.providerOperations.markSucceeded(operation, {
+              videoUrl: final.videoUrl,
+              providerStatus: 'succeeded',
+            });
             return { shotId: shot.id, videoUrl: final.videoUrl };
           } catch (err: any) {
             const msg = err?.message ?? String(err);
+            if (operation) {
+              try {
+                await this.providerOperations.markFailed(operation, msg);
+              } catch (ledgerError: any) {
+                this.logger.warn(
+                  `[${state.taskId}] Provider ledger 写入失败: ${ledgerError?.message ?? ledgerError}`
+                );
+              }
+            }
             this.logger.error(`[${state.taskId}] 分镜 ${shot.order} 失败: ${msg}`);
             shot.errorMessage = msg;
             return { shotId: shot.id, error: msg };
@@ -230,4 +283,9 @@ export class CompositionAgentService {
       }
     }
   }
+}
+
+function readVideoUrl(metadata: Record<string, unknown> | null): string | undefined {
+  const candidate = metadata?.videoUrl;
+  return typeof candidate === 'string' && candidate.trim() ? candidate : undefined;
 }

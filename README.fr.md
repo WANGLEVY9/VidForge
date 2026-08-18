@@ -79,7 +79,7 @@ flowchart LR
     MEDIA --> STORAGE[Local or object storage]
 ```
 
-L’état du graphe porte la demande, la mémoire récupérée, l’analyse des médias, le plan de script, les preuves RAG, le résultat de composition, les dimensions de qualité, les erreurs et les résumés de trace. PostgreSQL conserve l’exécution durable et l’état final ; l’exécution du graphe reste actuellement dans le processus. Le checkpointer LangGraph persistant et la reprise après redémarrage sont dans la feuille de route.
+L’état du graphe porte la demande, la mémoire récupérée, l’analyse des médias, le plan de script, les preuves RAG, le résultat de composition, les dimensions de qualité, les erreurs et les résumés de trace. PostgreSQL conserve le plan de contrôle de l’exécution et l’état final. `PostgresSaver` persiste les super-steps LangGraph ; un Agent Worker séparé récupère un lease expiré et reprend le même thread au dernier nœud inachevé. Il s’agit d’une reprise à la frontière d’un nœud, pas d’un moteur event-sourced ni d’une garantie exactly-once auprès des Providers.
 
 ### Contrôle et échecs
 
@@ -167,32 +167,33 @@ Les jobs BullMQ supportent attempts, priorités, délais et identifiants idempot
 
 ## Implémenté et feuille de route
 
-Implémenté : workspace frontend, authentification, espaces produit, médias, scripts, tâches, graphe Multi-Agent, replanification qualité, RAG de base, mémoire scopée, composition FFmpeg et chemins Redis/BullMQ optionnels.
+Implémenté : workspace frontend, authentification, espaces produit, médias, scripts, tâches, graphe Multi-Agent, replanification qualité, RAG de base, mémoire scopée, composition FFmpeg, checkpoints PostgreSQL avec reprise de nœud, Agent Worker séparé, ledger d’opérations Provider et chemins Redis/BullMQ optionnels.
 
-Feuille de route : checkpoints LangGraph persistants, reprise après redémarrage Worker, approbation humaine et interrupt-resume, routeur de subagents, registre de skills/tools, RAG hybride avec reranker et évaluation des trajectoires Agent.
+Feuille de route : approbation humaine et interrupt-resume, replay/fork de checkpoints, versioning de workflow, outbox transactionnelle, vrais Workers séparés pour création/composition/export, routeur de subagents, registre de skills/tools, RAG hybride avec reranker et évaluation des trajectoires Agent.
 
 Références de conception : [LangGraph.js](https://github.com/langchain-ai/langgraphjs), [DeerFlow](https://github.com/bytedance/deer-flow), [Letta](https://github.com/letta-ai/letta) et [Claude Code subagents](https://code.claude.com/docs/en/sub-agents). Ces liens n’impliquent ni parité fonctionnelle ni réutilisation de code.
 
 ### Matrice des capacités
 
-| Capacité                                       | Statut                        | Exigence externe                            |
-| ---------------------------------------------- | ----------------------------- | ------------------------------------------- |
-| Studio frontend et parcours `/try`             | Implémenté                    | Aucune pour `/try`                          |
-| Auth, espaces produit, médias, scripts, tâches | Implémenté                    | PostgreSQL                                  |
-| Graphe Multi-Agent et replanification qualité  | Implémenté                    | Provider texte/vidéo pour une sortie réelle |
-| Script RAG et propagation des références       | Baseline implémentée          | Aucune pour le corpus intégré               |
-| Mémoire scopée et Context Packet               | Baseline lexicale implémentée | PostgreSQL                                  |
-| Recherche média sémantique                     | Chemin optionnel implémenté   | pgvector + endpoint embedding               |
-| Composition FFmpeg                             | Implémenté                    | FFmpeg local                                |
-| Queue durable et cache inter-processus         | Chemin optionnel implémenté   | Redis                                       |
-| Reprise exacte par checkpoint                  | Feuille de route              | Checkpointer LangGraph                      |
-| Approbation humaine / interrupt-resume         | Feuille de route              | Checkpoint persistant et UI de revue        |
-| Routeur dynamique, skills et registry tools    | Feuille de route              | Modèle runtime et permissions               |
-| RAG hybride, reranker et dataset d’évaluation  | Feuille de route              | Corpus et protocole d’évaluation            |
+| Capacité                                       | Statut                        | Exigence externe                                            |
+| ---------------------------------------------- | ----------------------------- | ----------------------------------------------------------- |
+| Studio frontend et parcours `/try`             | Implémenté                    | Aucune pour `/try`                                          |
+| Auth, espaces produit, médias, scripts, tâches | Implémenté                    | PostgreSQL                                                  |
+| Graphe Multi-Agent et replanification qualité  | Implémenté                    | Provider texte/vidéo pour une sortie réelle                 |
+| Script RAG et propagation des références       | Baseline implémentée          | Aucune pour le corpus intégré                               |
+| Mémoire scopée et Context Packet               | Baseline lexicale implémentée | PostgreSQL                                                  |
+| Recherche média sémantique                     | Chemin optionnel implémenté   | pgvector + endpoint embedding                               |
+| Composition FFmpeg                             | Implémenté                    | FFmpeg local                                                |
+| Queue durable et cache inter-processus         | Chemin optionnel implémenté   | Redis                                                       |
+| Checkpoint PostgreSQL et reprise de nœud       | Implémenté                    | PostgreSQL + Agent Worker séparé                            |
+| Ledger Provider et audit du propriétaire       | Implémenté                    | PostgreSQL; idempotence Provider dépendante de l’adaptateur |
+| Approbation humaine / interrupt-resume         | Feuille de route              | Checkpoint persistant et UI de revue                        |
+| Routeur dynamique, skills et registry tools    | Feuille de route              | Modèle runtime et permissions                               |
+| RAG hybride, reranker et dataset d’évaluation  | Feuille de route              | Corpus et protocole d’évaluation                            |
 
 ### Feuille de route Agent
 
-- **Exécution durable et supervision humaine** : checkpoints DB, nœuds `interrupt()` et replay de trajectoires.
+- **Exécution durable et supervision humaine** : sur la base checkpoint/lease déjà implémentée, ajouter des nœuds `interrupt()`, replay/fork, versioning de workflow et outbox transactionnelle.
 - **Context engineering** : query planning, compression, evidence gating et budget Token par nœud.
 - **Multi-Agent hiérarchique** : routeur typé, budgets de délégation et slices d’état isolés.
 - **Cycle de vie mémoire** : consolidation, contradictions, decay, promotion vers la connaissance produit et métriques de retrieval.
@@ -250,7 +251,7 @@ Ne mettez jamais de secrets dans `VITE_*` : Vite les intègre aux assets du navi
 
 ## API et contribution
 
-Endpoints représentatifs : `POST /api/agent/run`, `GET /api/agent/status/:taskId`, `POST /api/agent/cancel/:taskId`, `GET /api/agent/memory`, `GET /api/spaces`, `PATCH /api/material/:id/analyze`. Swagger fait foi pour les requêtes et réponses.
+Endpoints représentatifs : `POST /api/agent/run`, `GET /api/agent/status/:taskId`, `GET /api/agent/runs/:taskId/audit`, `POST /api/agent/cancel/:taskId`, `GET /api/agent/memory`, `GET /api/spaces`, `PATCH /api/material/:id/analyze`. Swagger fait foi pour les requêtes et réponses.
 
 Les contributions sur les adaptateurs Provider, l’évaluation RAG, la consolidation mémoire, les checkpoints, l’approbation humaine, la qualité vidéo, l’accessibilité et la fiabilité du déploiement sont les bienvenues. Consultez [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`docs/CONTRIBUTOR_QUICKSTART.md`](./docs/CONTRIBUTOR_QUICKSTART.md) et [`GOVERNANCE.md`](./GOVERNANCE.md).
 

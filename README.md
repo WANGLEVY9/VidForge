@@ -83,7 +83,7 @@ flowchart LR
     MEDIA --> STORAGE[Local or object storage]
 ```
 
-The graph state carries the request, retrieved memory, material analysis, script plan, RAG evidence, composition result, quality dimensions, errors and node-level trace summaries. PostgreSQL stores the durable run record and final state, while graph execution itself remains in-process. A persistent LangGraph checkpointer and node-level resume after worker restart remain roadmap items.
+The graph state carries the request, retrieved memory, material analysis, script plan, RAG evidence, composition result, quality dimensions, errors and node-level trace summaries. PostgreSQL stores the durable run control plane and final state. `PostgresSaver` persists LangGraph super-step checkpoints; a dedicated Agent Worker can reclaim a stale lease and resume the same thread from the latest unfinished node. This is node-boundary recovery, not a general event-sourced workflow engine or an exactly-once guarantee for third-party calls.
 
 ## Multi-Agent runtime
 
@@ -116,7 +116,9 @@ material_analysis ──▶ script_generation ──▶ video_composition ──
 - Cancellation, syntax/type errors and HTTP 4xx input errors are not retried.
 - Quality-driven replanning is separately bounded by `AGENT_QC_MAX_RETRIES`.
 - `agent_runs` persists queued/running/terminal status, progress, input and final result for user-scoped status queries.
-- Interrupted `running` tasks are marked failed on startup rather than automatically replayed, avoiding accidental duplicate provider charges.
+- A dedicated Worker reclaims expired leases and resumes the same graph thread with null input, so completed predecessor nodes are not replayed.
+- `provider_operations` records one stable key per Agent video shot, its request hash, remote provider task ID, attempt count and sanitized terminal outcome. A resumed node reuses a recorded remote ID when possible.
+- `GET /api/agent/runs/:taskId/audit` returns a user-scoped control-plane view, compact checkpoint history and sanitized Provider-operation records; raw graph state is intentionally excluded.
 - An `AbortController` propagates cancellation to the active graph invocation.
 
 ## Context engineering
@@ -283,27 +285,28 @@ Trace writes and optional OTLP export are fail-soft: observability failure is no
 
 ## Capability matrix
 
-| Capability                                         | Repository status            | External requirement                 |
-| -------------------------------------------------- | ---------------------------- | ------------------------------------ |
-| Frontend studio and browser-only `/try` flow       | Implemented                  | None for `/try`                      |
-| Auth, product spaces, materials, scripts and tasks | Implemented                  | PostgreSQL                           |
-| Multi-Agent state graph and quality replan         | Implemented                  | Text/video providers for real output |
-| Script RAG and reference propagation               | Implemented baseline         | None for corpus retrieval            |
-| Scoped long-term memory and Context Packet         | Implemented lexical baseline | PostgreSQL                           |
-| Material semantic search                           | Implemented optional path    | pgvector + embedding endpoint        |
-| FFmpeg composition smoke path                      | Implemented                  | Local FFmpeg                         |
-| Durable queue and cross-process cache              | Implemented optional path    | Redis                                |
-| Object storage                                     | Implemented optional path    | OSS credentials                      |
-| Exact node checkpoint resume                       | Roadmap                      | LangGraph checkpointer design        |
-| Human approval / interrupt-resume                  | Roadmap                      | Checkpoint persistence and review UI |
-| Dynamic subagent router, skills and tool registry  | Roadmap                      | Runtime and permission model         |
-| Hybrid RAG, reranker and evaluation dataset        | Roadmap                      | Corpus and evaluation work           |
+| Capability                                         | Repository status            | External requirement                                  |
+| -------------------------------------------------- | ---------------------------- | ----------------------------------------------------- |
+| Frontend studio and browser-only `/try` flow       | Implemented                  | None for `/try`                                       |
+| Auth, product spaces, materials, scripts and tasks | Implemented                  | PostgreSQL                                            |
+| Multi-Agent state graph and quality replan         | Implemented                  | Text/video providers for real output                  |
+| Script RAG and reference propagation               | Implemented baseline         | None for corpus retrieval                             |
+| Scoped long-term memory and Context Packet         | Implemented lexical baseline | PostgreSQL                                            |
+| Material semantic search                           | Implemented optional path    | pgvector + embedding endpoint                         |
+| FFmpeg composition smoke path                      | Implemented                  | Local FFmpeg                                          |
+| Durable queue and cross-process cache              | Implemented optional path    | Redis                                                 |
+| Object storage                                     | Implemented optional path    | OSS credentials                                       |
+| PostgreSQL checkpoint and node-level resume        | Implemented                  | PostgreSQL + dedicated Agent Worker                   |
+| Provider operation ledger and owner audit          | Implemented                  | PostgreSQL; Provider idempotency is adapter-dependent |
+| Human approval / interrupt-resume                  | Roadmap                      | Checkpoint persistence and review UI                  |
+| Dynamic subagent router, skills and tool registry  | Roadmap                      | Runtime and permission model                          |
+| Hybrid RAG, reranker and evaluation dataset        | Roadmap                      | Corpus and evaluation work                            |
 
 ## Agent engineering roadmap
 
 VidForge follows several directions visible in modern agent runtimes while keeping a strict distinction between architectural influence and implemented capability:
 
-- **Durable execution and human oversight** — add database-backed LangGraph checkpoints, `interrupt()` approval nodes and trajectory replay.
+- **Durable execution and human oversight** — add `interrupt()` approval nodes, trajectory replay/fork, workflow versioning and an outbox beyond the implemented checkpoint-and-lease baseline.
 - **Context engineering** — evolve from bounded memory packets to query planning, context compression, evidence gating and token-budget allocation per node.
 - **Hierarchical Multi-Agent execution** — introduce a typed router for specialist subagents, explicit delegation budgets and isolated state slices.
 - **Memory lifecycle** — add consolidation, contradiction handling, decay, promotion from run memory to product knowledge and measurable retrieval quality.
@@ -405,16 +408,16 @@ Never place secrets in `VITE_*` variables: Vite embeds them in browser assets.
 
 All business endpoints except health and authentication require a JWT. Swagger is the canonical request/response reference.
 
-| Domain         | Representative endpoints                                                                             |
-| -------------- | ---------------------------------------------------------------------------------------------------- |
-| Auth           | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`                                |
-| Product spaces | `GET /api/spaces`, `POST /api/spaces`, `PATCH /api/spaces/:id`                                       |
-| Materials      | `POST /api/material/upload`, `PATCH /api/material/:id/analyze`, `POST /api/material/search/semantic` |
-| Scripts        | `POST /api/script/generate`, `GET /api/script/inspire`, `PATCH /api/script/:id/shots`                |
-| Agent runtime  | `POST /api/agent/run`, `GET /api/agent/status/:taskId`, `POST /api/agent/cancel/:taskId`             |
-| Agent memory   | `GET /api/agent/memory`, `DELETE /api/agent/memory/:id`                                              |
-| Video tasks    | `POST /api/creation/task`, `GET /api/creation/task/:id`, `PATCH /api/creation/task/:id/shot`         |
-| Analytics      | `GET /api/analytics/overview`, `GET /api/analytics/traces`, `GET /api/analytics/cost`                |
+| Domain         | Representative endpoints                                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Auth           | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`                                                         |
+| Product spaces | `GET /api/spaces`, `POST /api/spaces`, `PATCH /api/spaces/:id`                                                                |
+| Materials      | `POST /api/material/upload`, `PATCH /api/material/:id/analyze`, `POST /api/material/search/semantic`                          |
+| Scripts        | `POST /api/script/generate`, `GET /api/script/inspire`, `PATCH /api/script/:id/shots`                                         |
+| Agent runtime  | `POST /api/agent/run`, `GET /api/agent/status/:taskId`, `GET /api/agent/runs/:taskId/audit`, `POST /api/agent/cancel/:taskId` |
+| Agent memory   | `GET /api/agent/memory`, `DELETE /api/agent/memory/:id`                                                                       |
+| Video tasks    | `POST /api/creation/task`, `GET /api/creation/task/:id`, `PATCH /api/creation/task/:id/shot`                                  |
+| Analytics      | `GET /api/analytics/overview`, `GET /api/analytics/traces`, `GET /api/analytics/cost`                                         |
 
 Provider-neutral request fixtures are available in [`examples/`](./examples).
 

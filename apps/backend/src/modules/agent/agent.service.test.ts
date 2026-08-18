@@ -150,6 +150,51 @@ test('agent status is scoped to the authenticated user', async () => {
   assert.equal(result.status, 'completed');
 });
 
+test('agent audit returns a compact checkpoint timeline and owner-scoped provider operations', async () => {
+  const run = {
+    id: 'task_1',
+    userId: 'user-1',
+    status: 'completed',
+    currentNode: '__end__',
+    progress: 100,
+    result: {},
+    errorMessage: null,
+    attempt: 2,
+    workerId: 'agent-worker-1',
+    leaseUntil: null,
+    heartbeatAt: new Date('2026-01-01T00:00:03.000Z'),
+    graphThreadId: 'task_1',
+    checkpointId: 'checkpoint-2',
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    startedAt: new Date('2026-01-01T00:00:01.000Z'),
+    completedAt: new Date('2026-01-01T00:00:02.000Z'),
+  };
+  const repo = { findOne: async () => run };
+  const checkpoint = {
+    configured: true,
+    listSummaries: async () => [{ checkpointId: 'checkpoint-2', currentNode: '__end__' }],
+  };
+  const operations = {
+    listAuditForRun: async (userId: string, runId: string) => [
+      { userId, runId, status: 'succeeded' },
+    ],
+  };
+  const service = new AgentService(
+    repo as never,
+    { run: async () => ({}), cancel: () => false } as never,
+    undefined,
+    checkpoint as never,
+    operations as never
+  );
+
+  const audit = await service.getAudit('user-1', 'task_1');
+  assert.equal(audit.controlPlane.latestCheckpointId, 'checkpoint-2');
+  assert.equal(audit.checkpointing.history[0]?.checkpointId, 'checkpoint-2');
+  assert.deepEqual(audit.providerOperations, [
+    { userId: 'user-1', runId: 'task_1', status: 'succeeded' },
+  ]);
+});
+
 test('agent worker requeues expired leases for checkpoint resume', async () => {
   const previousRole = process.env.PROCESS_ROLE;
   process.env.PROCESS_ROLE = 'agent-worker';

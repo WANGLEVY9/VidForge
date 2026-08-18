@@ -95,14 +95,16 @@ flowchart LR
     MEDIA --> STORAGE[本地或对象存储]
 ```
 
-图状态携带请求、检索记忆、素材分析、脚本方案、RAG 证据、合成结果、质量维度、错误和节点级 trace 摘要。PostgreSQL 保存持久化运行记录与最终状态；图执行目前仍在进程内，持久化 LangGraph checkpointer 和 Worker 重启后的节点恢复属于路线图。
+图状态携带请求、检索记忆、素材分析、脚本方案、RAG 证据、合成结果、质量维度、错误和节点级 trace 摘要。PostgreSQL 保存运行控制面与最终状态；`PostgresSaver` 会保存 LangGraph 的 super-step checkpoint，独立 Agent Worker 能回收过期 lease 并从最近未完成节点恢复同一线程。这是节点边界恢复，不是通用事件溯源工作流引擎，也不承诺第三方调用的 exactly-once。
 
 ### 控制与失败语义
 
 - Provider、数据库和瞬时网络错误采用指数退避与抖动的 LangGraph 重试策略。
 - 取消、语法/类型错误和 HTTP 4xx 输入错误不会重试。
 - `agent_runs` 保存排队、运行中和终态，包含进度、输入、结果以及用户作用域查询所需的状态。
-- 服务启动时会把中断的 `running` 任务标记为失败，不自动重放，避免重复产生 Provider 费用。
+- 独立 Worker 会回收过期 lease，并以同一个 `thread_id` 和 `null` 输入恢复图；已经完成的前置节点不会被重复执行。
+- 每个 Agent 视频分镜都有一条 `provider_operations` 操作账本，记录稳定幂等键、请求哈希、远端任务 ID、尝试次数和脱敏终态；恢复时会优先复用已记录的远端任务。
+- `GET /api/agent/runs/:taskId/audit` 仅向任务拥有者返回控制面、紧凑 checkpoint 时间线和脱敏 Provider 操作；原始 Prompt 与图状态不会公开。
 - `AbortController` 将取消信号传播到当前图执行。
 
 ## 知识库与检索
@@ -167,38 +169,39 @@ Composition Agent 的实际路径包括：
 
 - BullMQ 覆盖镜头生成、合成、导出和素材分析；Redis 不可用时，开发环境可使用进程内 fallback。
 - ARK 响应使用 Redis 跨进程缓存，并以进程内 LRU 作为 fallback。
-- `trace_spans` 记录任务、作用域、span、延迟、状态、模型、Token、估算成本、缓存命中和元数据。
+- `trace_spans` 记录任务、作用域、span、延迟、状态、模型、Token、估算成本、缓存命中和元数据；`provider_operations` 单独记录 Agent 视频调用的外部副作用。
 - Agent 额外记录重试次数、trace-span 数量、记忆命中数、最高记忆得分和 RAG 引用数量。
 
 ## 能力边界与路线图
 
 当前已经实现：前端工作台、认证、商品空间、素材、脚本、任务、Multi-Agent 状态图、质量重规划、基础 RAG、作用域记忆、FFmpeg 合成和可选队列/缓存路径。
 
-当前仍属于路线图：持久化 LangGraph checkpoint、Worker 重启后的节点级恢复、人机审批与 interrupt-resume、动态子 Agent 路由、技能和工具注册表、混合 RAG 重排以及 Agent 轨迹评测数据集。
+当前仍属于路线图：人机审批与 interrupt-resume、checkpoint replay/fork、工作流版本兼容、事务性 Outbox、创建/合成/导出队列的真实独立 Worker、动态子 Agent 路由、技能和工具注册表、混合 RAG 重排以及 Agent 轨迹评测数据集。
 
 路线图参考了 [LangGraph.js](https://github.com/langchain-ai/langgraphjs)、[DeerFlow](https://github.com/bytedance/deer-flow)、[Letta](https://github.com/letta-ai/letta) 和 [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents) 所代表的设计方向，但不宣称功能对等或代码复用。
 
 ### 能力矩阵
 
-| 能力                                  | 仓库状态       | 外部要求                       |
-| ------------------------------------- | -------------- | ------------------------------ |
-| 前端工作台与浏览器体验 `/try`         | 已实现         | `/try` 无额外要求              |
-| 认证、商品空间、素材、脚本和任务      | 已实现         | PostgreSQL                     |
-| Multi-Agent 状态图与质量重规划        | 已实现         | 真实输出需要文本/视频 Provider |
-| Script RAG 与引用传播                 | 已实现基线     | 语料检索无需额外服务           |
-| 分作用域长期记忆与 Context Packet     | 已实现词法基线 | PostgreSQL                     |
-| 素材语义检索                          | 已实现可选路径 | pgvector 与 Embedding 端点     |
-| FFmpeg 合成 smoke path                | 已实现         | 本地 FFmpeg                    |
-| 持久化队列与跨进程缓存                | 已实现可选路径 | Redis                          |
-| 对象存储                              | 已实现可选路径 | OSS 凭据                       |
-| 精确节点 checkpoint 恢复              | 路线图         | LangGraph checkpointer 设计    |
-| 人机审批 / interrupt-resume           | 路线图         | Checkpoint 持久化与审核 UI     |
-| 动态子 Agent 路由、Skills、工具注册表 | 路线图         | 运行时与权限模型               |
-| Hybrid RAG、Reranker 与评测数据集     | 路线图         | 语料和评测工作                 |
+| 能力                                  | 仓库状态       | 外部要求                                  |
+| ------------------------------------- | -------------- | ----------------------------------------- |
+| 前端工作台与浏览器体验 `/try`         | 已实现         | `/try` 无额外要求                         |
+| 认证、商品空间、素材、脚本和任务      | 已实现         | PostgreSQL                                |
+| Multi-Agent 状态图与质量重规划        | 已实现         | 真实输出需要文本/视频 Provider            |
+| Script RAG 与引用传播                 | 已实现基线     | 语料检索无需额外服务                      |
+| 分作用域长期记忆与 Context Packet     | 已实现词法基线 | PostgreSQL                                |
+| 素材语义检索                          | 已实现可选路径 | pgvector 与 Embedding 端点                |
+| FFmpeg 合成 smoke path                | 已实现         | 本地 FFmpeg                               |
+| 持久化队列与跨进程缓存                | 已实现可选路径 | Redis                                     |
+| 对象存储                              | 已实现可选路径 | OSS 凭据                                  |
+| PostgreSQL checkpoint 与节点级恢复    | 已实现         | PostgreSQL 与独立 Agent Worker            |
+| Provider 操作账本与拥有者审计         | 已实现         | PostgreSQL；Provider 幂等语义取决于适配器 |
+| 人机审批 / interrupt-resume           | 路线图         | Checkpoint 持久化与审核 UI                |
+| 动态子 Agent 路由、Skills、工具注册表 | 路线图         | 运行时与权限模型                          |
+| Hybrid RAG、Reranker 与评测数据集     | 路线图         | 语料和评测工作                            |
 
 ### Agent 工程路线
 
-- **持久执行与人机协作**：加入数据库级 LangGraph checkpoint、`interrupt()` 审批节点和轨迹回放。
+- **持久执行与人机协作**：在已实现的 checkpoint/lease 基线上，加入 `interrupt()` 审批节点、轨迹 replay/fork、工作流版本兼容和事务性 Outbox。
 - **上下文工程**：从有界记忆包演进到查询规划、上下文压缩、证据门控和节点级 Token 预算。
 - **分层 Multi-Agent**：引入类型化专家路由、委派预算和隔离的状态切片。
 - **记忆生命周期**：加入合并、矛盾处理、衰减、从运行记忆晋升为商品知识以及检索质量指标。
@@ -274,15 +277,15 @@ pnpm verify
 
 ## API 导航
 
-| 领域     | 示例端点                                                                                             |
-| -------- | ---------------------------------------------------------------------------------------------------- |
-| 认证     | `POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/me`                                |
-| 商品空间 | `GET /api/spaces`、`POST /api/spaces`、`PATCH /api/spaces/:id`                                       |
-| 素材     | `POST /api/material/upload`、`PATCH /api/material/:id/analyze`、`POST /api/material/search/semantic` |
-| 脚本     | `POST /api/script/generate`、`GET /api/script/inspire`、`PATCH /api/script/:id/shots`                |
-| Agent    | `POST /api/agent/run`、`GET /api/agent/status/:taskId`、`POST /api/agent/cancel/:taskId`             |
-| 记忆     | `GET /api/agent/memory`、`DELETE /api/agent/memory/:id`                                              |
-| 追踪     | `GET /api/analytics/traces`、`GET /api/analytics/cost`                                               |
+| 领域     | 示例端点                                                                                                                      |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 认证     | `POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/me`                                                         |
+| 商品空间 | `GET /api/spaces`、`POST /api/spaces`、`PATCH /api/spaces/:id`                                                                |
+| 素材     | `POST /api/material/upload`、`PATCH /api/material/:id/analyze`、`POST /api/material/search/semantic`                          |
+| 脚本     | `POST /api/script/generate`、`GET /api/script/inspire`、`PATCH /api/script/:id/shots`                                         |
+| Agent    | `POST /api/agent/run`、`GET /api/agent/status/:taskId`、`GET /api/agent/runs/:taskId/audit`、`POST /api/agent/cancel/:taskId` |
+| 记忆     | `GET /api/agent/memory`、`DELETE /api/agent/memory/:id`                                                                       |
+| 追踪     | `GET /api/analytics/traces`、`GET /api/analytics/cost`                                                                        |
 
 完整请求与响应以 Swagger 为准，Provider-neutral 请求样例位于 [`examples/`](./examples)。
 

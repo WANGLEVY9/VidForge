@@ -16,6 +16,8 @@ import { AgentRun } from './entities/agent-run.entity';
 import { AgentMemory } from './memory/agent-memory.entity';
 import { AgentMemoryService } from './memory/agent-memory.service';
 import { AgentCheckpointService } from './checkpoint/agent-checkpoint.service';
+import { ProviderOperation } from './provider-operations/provider-operation.entity';
+import { ProviderOperationService } from './provider-operations/provider-operation.service';
 
 @Module({
   imports: [
@@ -23,7 +25,7 @@ import { AgentCheckpointService } from './checkpoint/agent-checkpoint.service';
     AiModule,
     ScriptModule,
     ProductSpaceModule,
-    TypeOrmModule.forFeature([Material, AgentRun, AgentMemory]),
+    TypeOrmModule.forFeature([Material, AgentRun, AgentMemory, ProviderOperation]),
   ],
   controllers: [AgentController],
   providers: [
@@ -35,6 +37,7 @@ import { AgentCheckpointService } from './checkpoint/agent-checkpoint.service';
     QualityAgentService,
     AgentMemoryService,
     AgentCheckpointService,
+    ProviderOperationService,
   ],
   exports: [AgentService, OrchestratorService],
 })

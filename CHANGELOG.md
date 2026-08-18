@@ -11,6 +11,9 @@
 - 本地环境检查及其自动化测试
 - 无需登录的响应式项目展示页与交互式工作流说明
 - 搜索引擎、Open Graph、robots.txt 和 sitemap 元数据
+- Agent Provider 操作账本：稳定幂等键、远端任务 ID、尝试次数和终态审计
+- Agent 运行审计接口：用户可查看控制面、紧凑 checkpoint 时间线和脱敏 Provider 操作
+- LangGraph PostgreSQL checkpoint、节点级恢复和独立 Agent Worker
 
 ### Changed
 

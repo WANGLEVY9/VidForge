@@ -43,6 +43,12 @@ export class AgentController {
     return this.agentService.getStatus(user.sub, taskId);
   }
 
+  @Get('runs/:taskId/audit')
+  @ApiOperation({ summary: '查看 Agent 运行控制面、checkpoint 时间线与 Provider 操作账本' })
+  getAudit(@CurrentUser() user: JwtPayload, @Param('taskId') taskId: string) {
+    return this.agentService.getAudit(user.sub, taskId);
+  }
+
   @Post('cancel/:taskId')
   @ApiOperation({ summary: '取消进行中的工作流' })
   cancel(@CurrentUser() user: JwtPayload, @Param('taskId') taskId: string) {

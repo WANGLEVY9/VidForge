@@ -129,6 +129,7 @@ VidForge is an end-to-end AIGC (AI-Generated Content) video production system de
 - **Graceful Degradation**: All AI/ML integrations have fallback mechanisms; no single dependency is critical
 - **Async Processing**: Long-running media tasks use BullMQ; the Agent workflow is consumed by an independent worker, while inline fallback is development-only and production-like environments fail closed by default
 - **Durable Graph State**: LangGraph `PostgresSaver` persists super-step checkpoints under a stable `thread_id`; stale leases are requeued and resumed with null input
+- **Provider Side-effect Ledger**: Agent video requests persist a stable idempotency key, request hash and remote task ID so paid external work remains inspectable across worker restarts
 - **Agent-Driven Pipeline**: LangGraph orchestrates multi-step AI workflows with self-reflection and feedback loops
 - **Observability First**: All AI calls and agent steps emit structured traces for cost monitoring and debugging
 
@@ -413,15 +414,16 @@ User Input → Orchestrator → Material Analysis → Script Generation → Vide
 
 **Available Endpoints**:
 
-| Method | Path                          | Description                                          |
-| ------ | ----------------------------- | ---------------------------------------------------- |
-| GET    | `/api/analytics/overview`     | Summary cards (totals, trends, MoM changes)          |
-| GET    | `/api/analytics/trends`       | Time-series production data (7/30/90 days)           |
-| GET    | `/api/analytics/distribution` | Category/style distribution                          |
-| GET    | `/api/analytics/queue`        | BullMQ queue status (depth, throughput)              |
-| GET    | `/api/analytics/attribution`  | Factor attribution analysis (style × status heatmap) |
-| GET    | `/api/analytics/traces`       | Agent execution traces (waterfall)                   |
-| GET    | `/api/analytics/cost`         | AI cost overview (tokens, cache hit rate, latency)   |
+| Method | Path                            | Description                                                                              |
+| ------ | ------------------------------- | ---------------------------------------------------------------------------------------- |
+| GET    | `/api/analytics/overview`       | Summary cards (totals, trends, MoM changes)                                              |
+| GET    | `/api/analytics/trends`         | Time-series production data (7/30/90 days)                                               |
+| GET    | `/api/analytics/distribution`   | Category/style distribution                                                              |
+| GET    | `/api/analytics/queue`          | BullMQ queue status (depth, throughput)                                                  |
+| GET    | `/api/analytics/attribution`    | Factor attribution analysis (style × status heatmap)                                     |
+| GET    | `/api/analytics/traces`         | Agent execution traces (waterfall)                                                       |
+| GET    | `/api/analytics/cost`           | AI cost overview (tokens, cache hit rate, latency)                                       |
+| GET    | `/api/agent/runs/:taskId/audit` | Owner-scoped Agent control plane, checkpoint summaries and sanitized Provider operations |
 
 All endpoints return empty fallbacks on failure (soft-fail pattern).
 AnalyticsService injects `QueueRunnerService` and `TraceService` — both from `@Global()` modules.
@@ -563,15 +565,16 @@ The ARK configuration system supports three-tier key resolution:
 
 **Key Entities**:
 
-| Entity       | Table            | Key Fields                                                                                                                              |
-| ------------ | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| User         | `users`          | email, password, avatar, role                                                                                                           |
-| ProductSpace | `product_spaces` | name, category, knowledge (JSONB)                                                                                                       |
-| Material     | `materials`      | type, url, tags (JSONB), productTags (JSONB), videoTags (JSONB), clipTags (JSONB), embedding (vector(1024), optional), metadata (JSONB) |
-| Script       | `scripts`        | title, content (JSONB shots), voiceover, bgmSuggestion, tags, compliance, duration                                                      |
-| CreationTask | `creation_tasks` | status, progress, storyboard (JSONB), result (JSONB), agentTrace                                                                        |
-| ExportTask   | `export_tasks`   | format, resolution, status, progress, result (JSONB)                                                                                    |
-| TraceSpan    | `trace_spans`    | span, taskId, startedAt, endedAt, latencyMs, status, summary, errorMessage                                                              |
+| Entity            | Table                 | Key Fields                                                                                                                              |
+| ----------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| User              | `users`               | email, password, avatar, role                                                                                                           |
+| ProductSpace      | `product_spaces`      | name, category, knowledge (JSONB)                                                                                                       |
+| Material          | `materials`           | type, url, tags (JSONB), productTags (JSONB), videoTags (JSONB), clipTags (JSONB), embedding (vector(1024), optional), metadata (JSONB) |
+| Script            | `scripts`             | title, content (JSONB shots), voiceover, bgmSuggestion, tags, compliance, duration                                                      |
+| CreationTask      | `creation_tasks`      | status, progress, storyboard (JSONB), result (JSONB), agentTrace                                                                        |
+| ExportTask        | `export_tasks`        | format, resolution, status, progress, result (JSONB)                                                                                    |
+| TraceSpan         | `trace_spans`         | span, taskId, startedAt, endedAt, latencyMs, status, summary, errorMessage                                                              |
+| ProviderOperation | `provider_operations` | user/run owner, node, provider, stable idempotency key, request hash, remote task ID, attempt, status and sanitized outcome             |
 
 **Vector Search**: pgvector extension enables cosine similarity search via `<=>` operator on `embedding` column. Requires manual extension setup:
 
@@ -584,6 +587,7 @@ ALTER TABLE materials ADD COLUMN IF NOT EXISTS "embedding" vector(1024);
 
 - **BullMQ Queues**: 5 queues (creation-shot, creation-compose, export-encode, material-analyze, agent-run) with delayed retry; `agent-run` is consumed by the independent Agent Worker
 - **LangGraph Checkpoints**: `PostgresSaver` stores graph super-steps in PostgreSQL. A stable `thread_id` allows a requeued worker to resume from the unfinished node.
+- **Provider Operations**: `provider_operations` stores the external video-operation lifecycle independently from graph state. It links a run to a remote task ID without storing credentials or raw prompts.
 - **Cache**: Hot data caching (material lists, dashboard aggregation)
 - **Session**: WebSocket session mapping for real-time progress
 - **Pub/Sub**: Cross-instance event broadcasting

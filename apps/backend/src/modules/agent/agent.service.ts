@@ -17,6 +17,7 @@ import { createAgentTaskId, readAgentRuntimeConfig } from './agent-runtime.confi
 import { QueueRunnerService } from '../queue/queue-runner.service';
 import { JOB_NAMES, QUEUE_NAMES } from '../queue/queue.constants';
 import { AgentCheckpointService } from './checkpoint/agent-checkpoint.service';
+import { ProviderOperationService } from './provider-operations/provider-operation.service';
 
 @Injectable()
 export class AgentService implements OnModuleInit, OnModuleDestroy {
@@ -32,7 +33,8 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     private readonly runRepo: Repository<AgentRun>,
     private readonly orchestrator: OrchestratorService,
     @Optional() private readonly queueRunner?: QueueRunnerService,
-    @Optional() private readonly checkpointService?: AgentCheckpointService
+    @Optional() private readonly checkpointService?: AgentCheckpointService,
+    @Optional() private readonly providerOperations?: ProviderOperationService
   ) {}
 
   /**
@@ -172,6 +174,47 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     const run = await this.runRepo.findOne({ where: { id: taskId, userId } });
     if (!run) throw new NotFoundException('Agent 任务不存在');
     return this.toResult(run);
+  }
+
+  /**
+   * Read-only runtime audit for an authenticated run owner. It intentionally
+   * returns a compact checkpoint timeline instead of raw LangGraph state,
+   * because state can contain prompts, material URLs and long-term memory.
+   */
+  async getAudit(userId: string, taskId: string) {
+    const run = await this.runRepo.findOne({ where: { id: taskId, userId } });
+    if (!run) throw new NotFoundException('Agent 任务不存在');
+
+    let checkpointHistory: Awaited<ReturnType<AgentCheckpointService['listSummaries']>> = [];
+    let checkpointError: string | null = null;
+    if (this.checkpointService && run.graphThreadId) {
+      try {
+        checkpointHistory = await this.checkpointService.listSummaries(run.graphThreadId);
+      } catch (error: any) {
+        checkpointError = String(error?.message ?? error).slice(0, 500);
+        this.logger.warn(`读取 Agent checkpoint 时间线失败 ${taskId}: ${checkpointError}`);
+      }
+    }
+
+    return {
+      run: this.toResult(run),
+      controlPlane: {
+        attempt: run.attempt ?? 0,
+        workerId: run.workerId ?? null,
+        leaseUntil: run.leaseUntil ?? null,
+        heartbeatAt: run.heartbeatAt ?? null,
+        graphThreadId: run.graphThreadId ?? null,
+        latestCheckpointId: run.checkpointId ?? null,
+      },
+      checkpointing: {
+        configured: this.checkpointService?.configured ?? false,
+        history: checkpointHistory,
+        error: checkpointError,
+      },
+      providerOperations: this.providerOperations
+        ? await this.providerOperations.listAuditForRun(userId, taskId)
+        : [],
+    };
   }
 
   async cancel(userId: string, taskId: string): Promise<{ cancelled: boolean }> {

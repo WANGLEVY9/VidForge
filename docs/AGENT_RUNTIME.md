@@ -36,6 +36,14 @@ material_analysis -> script_generation -> video_composition -> quality_control
   `pnpm checkpointer:setup`; schema setup is never hidden in a request path.
   The CI PostgreSQL job runs a failure-and-resume smoke test that asserts the
   completed predecessor node executes exactly once.
+- Every Agent video-shot request has a persisted `provider_operations` ledger
+  record. It contains a stable operation key, a deterministic request hash,
+  sanitized metadata, remote provider task ID, attempt count and terminal
+  outcome. A recovered node reuses the remote task ID when it is available.
+- `GET /api/agent/runs/:taskId/audit` is owner-scoped and exposes the durable
+  run control plane, a compact checkpoint timeline and sanitized Provider
+  operation records. It deliberately excludes raw prompts and checkpoint
+  channel values.
 - Provider, database, and transient network failures use LangGraph retry
   policies with exponential backoff.
 - Cancellation, syntax/type errors, and HTTP 4xx input errors are not retried.
@@ -96,15 +104,18 @@ The durable execution boundary is now implemented for the LangGraph workflow:
   execution;
 - the conditional claim and lease reclaimer protect a run from concurrent
   ownership and recover stale workers;
-- the composition node stores stable ARK operation keys and reuses checkpointed
-  remote task IDs or completed URLs where possible. A provider must honor the
-  `Idempotency-Key` header for provider-side deduplication; the graph's own
-  state and the run control plane remain the source of truth;
+- the composition node writes a durable Provider operation record before a
+  paid ARK request, then saves the remote task ID immediately after acceptance;
+  it reuses checkpointed remote task IDs or completed URLs where possible. A
+  provider must honor the `Idempotency-Key` header to close the crash window
+  between remote acceptance and local remote-ID persistence;
 - PostgreSQL/Redis must be configured in production. Inline execution is only
   a development fallback and should not be enabled for a production API.
 
-Human approval checkpoints, cost budgets and richer provider operation ledgers
-remain follow-up milestones rather than undocumented guarantees.
+Human approval checkpoints, a transactional outbox, workflow code versioning
+and a complete cross-queue Worker split remain follow-up milestones rather than
+undocumented guarantees. See [the reliability model](./RELIABILITY_MODEL.md)
+for the current guarantee and failure boundary.
 
 ## Deployment checklist
 

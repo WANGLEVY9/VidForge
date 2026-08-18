@@ -4,6 +4,19 @@ VidForge keeps the database trace table as the durable product-level record. It 
 
 HTTP logs contain only `event`, request ID, method, route path, status, and latency. Query strings, authorization headers, request bodies, and provider credentials are intentionally excluded.
 
+## Provider operation audit
+
+For Agent video generation, `provider_operations` is a separate durable audit
+ledger. It correlates a stable idempotency key, a request hash, remote task ID,
+attempt count and terminal provider outcome without copying secrets or raw
+prompts into telemetry. An authenticated run owner can inspect a compact
+checkpoint timeline and these sanitized records through
+`GET /api/agent/runs/:taskId/audit`.
+
+This ledger complements `trace_spans`; it does not make third-party calls
+exactly once. Provider-side idempotency and the remaining crash window are
+documented in [Agent reliability model](./RELIABILITY_MODEL.md).
+
 ## Local benchmark
 
 The benchmark is deliberately offline: it never calls an AI provider, uploads media, or requires Redis/PostgreSQL.
